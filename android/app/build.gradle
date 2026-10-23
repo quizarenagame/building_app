@@ -8,14 +8,34 @@ android {
     namespace "com.example.building_app"
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
-    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-    kotlinOptions { jvmTarget = "17" }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
     defaultConfig {
         applicationId "com.example.building_app"
         minSdk flutter.minSdkVersion
         targetSdk flutter.targetSdkVersion
-        versionCode flutter.versionCode
+        versionCode flutter.versionCode.toInteger()
         versionName flutter.versionName
     }
+
+    buildTypes {
+        release {
+            // استفاده از امضای پیش‌فرض برای حل خطای نصب روی گوشی (در صورت نداشتن کلید اختصاصی)
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
 }
-flutter { source "../.." }
+
+flutter {
+    source "../.."
+}
