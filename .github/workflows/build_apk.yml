@@ -50,6 +50,12 @@ jobs:
             sed -i 's/versionName flutter.versionName/versionName "1.0.0"/g' "$BUILD_GRADLE"
           fi
           
+          # رفع خطای عدم وجود آیکون mipmap در AndroidManifest.xml
+          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_FILE" ]; then
+            sed -i 's/android:icon="@mipmap\/ic_launcher"//g' "$MANIFEST_FILE"
+          fi
+          
           # ساخت و تنظیم گرادل 8.4
           mkdir -p android/gradle/wrapper
           PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
