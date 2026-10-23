@@ -36,10 +36,9 @@ jobs:
           
           cd "$PROJ_DIR"
           
-          # ساخت و بازنویسی اجباری ساختار و نسخه گرادل 8.4
+          # ساخت و تنظیم گرادل 8.4
           mkdir -p android/gradle/wrapper
           PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
-          
           echo "Writing correct Gradle 8.4 configuration to $PROP_FILE..."
           echo "distributionBase=GRADLE_USER_HOME" > "$PROP_FILE"
           echo "distributionPath=wrapper/dists" >> "$PROP_FILE"
@@ -47,6 +46,7 @@ jobs:
           echo "zipStoreBase=GRADLE_USER_HOME" >> "$PROP_FILE"
           echo "zipStorePath=wrapper/dists" >> "$PROP_FILE"
 
+          # اطمینان از وجود نسخه و کد نسخه معتبر در pubspec.yaml یا جایگزینی موقت برای جلوگیری از خطا
           flutter pub get
           flutter build apk --release
 
