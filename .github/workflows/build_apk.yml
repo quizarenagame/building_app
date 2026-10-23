@@ -35,6 +35,15 @@ jobs:
           echo "Found project root at: $PROJ_DIR"
           
           cd "$PROJ_DIR"
+          
+          # اصلاح نسخه گرادل به نسخه سازگار ۸.۴
+          PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
+          if [ -f "$PROP_FILE" ]; then
+            echo "Upgrading gradle-wrapper.properties version to 8.4..."
+            sed -i 's/gradle-7\.[0-9]\(\.[0-9]\)\?-all\.zip/gradle-8.4-all.zip/g' "$PROP_FILE"
+            sed -i 's/gradle-7\.[0-9]\(\.[0-9]\)\?-bin\.zip/gradle-8.4-all.zip/g' "$PROP_FILE"
+          fi
+
           flutter pub get
           flutter build apk --release
 
