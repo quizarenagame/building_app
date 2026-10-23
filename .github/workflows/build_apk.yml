@@ -1,75 +1,35 @@
-name: Build Flutter APK
+name: Build APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.x'
-          channel: 'stable'
-          cache: true
+    - uses: actions/checkout@v4
 
-      - name: Locate project root and build
-        run: |
-          # پیدا کردن پوشه پروژه‌ای که pubspec.yaml در آن است
-          PUB_PATH=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
-          if [ -z "$PUB_PATH" ]; then
-            echo "Error: pubspec.yaml not found anywhere in the repository!"
-            exit 1
-          fi
-          PROJ_DIR=$(dirname "$PUB_PATH")
-          echo "Found project root at: $PROJ_DIR"
-          
-          cd "$PROJ_DIR"
-          
-          # اصلاح خودکار خطای CardThemeData در lib/main.dart
-          MAIN_FILE="lib/main.dart"
-          if [ -f "$MAIN_FILE" ]; then
-            echo "Fixing CardThemeData in $MAIN_FILE..."
-            sed -i 's/CardThemeData/CardTheme/g' "$MAIN_FILE"
-          fi
-          
-          # اصلاح ایمن فایل build.gradle برای جلوگیری از خطای versionCode
-          BUILD_GRADLE="android/app/build.gradle"
-          if [ -f "$BUILD_GRADLE" ]; then
-            sed -i 's/versionCode flutter.versionCode/versionCode 1/g' "$BUILD_GRADLE"
-            sed -i 's/versionName flutter.versionName/versionName "1.0.0"/g' "$BUILD_GRADLE"
-          fi
-          
-          # رفع خطای عدم وجود آیکون mipmap در AndroidManifest.xml
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_FILE" ]; then
-            sed -i 's/android:icon="@mipmap\/ic_launcher"//g' "$MANIFEST_FILE"
-          fi
-          
-          # ساخت و تنظیم گرادل 8.4
-          mkdir -p android/gradle/wrapper
-          PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
-          echo "distributionBase=GRADLE_USER_HOME" > "$PROP_FILE"
-          echo "distributionPath=wrapper/dists" >> "$PROP_FILE"
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip" >> "$PROP_FILE"
-          echo "zipStoreBase=GRADLE_USER_HOME" >> "$PROP_FILE"
-          echo "zipStorePath=wrapper/dists" >> "$PROP_FILE"
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
 
-          flutter pub get
-          flutter build apk --release
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.x'
+        channel: 'stable'
+        cache: true
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: "**/build/app/outputs/flutter-apk/app-release.apk"
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Generate App Icon
+      run: flutter pub run flutter_launcher_icons
+
+    - name: Build APK
+      run: flutter build apk --release
