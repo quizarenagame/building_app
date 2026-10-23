@@ -25,6 +25,17 @@ jobs:
 
       - name: Locate project root and build
         run: |
+          # ارتقای اجباری تمام فایل‌های gradle-wrapper.properties در کل مخزن قبل از هر کاری
+          echo "Force-updating all gradle-wrapper.properties files in repository..."
+          find . -name "gradle-wrapper.properties" | while read -r WRAPPER; do
+            echo "Updating $WRAPPER to Gradle 8.4"
+            echo "distributionBase=GRADLE_USER_HOME" > "$WRAPPER"
+            echo "distributionPath=wrapper/dists" >> "$WRAPPER"
+            echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip" >> "$WRAPPER"
+            echo "zipStoreBase=GRADLE_USER_HOME" >> "$WRAPPER"
+            echo "zipStorePath=wrapper/dists" >> "$WRAPPER"
+          done
+
           # پیدا کردن خودکار رمینی که pubspec.yaml در آن قرار دارد
           PUB_PATH=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
           if [ -z "$PUB_PATH" ]; then
@@ -35,17 +46,6 @@ jobs:
           echo "Found project root at: $PROJ_DIR"
           
           cd "$PROJ_DIR"
-          
-          # پیدا کردن و اصلاح خودکار تمام فایل‌های gradle-wrapper.properties در پروژه
-          echo "Searching and updating all gradle-wrapper.properties files..."
-          find . -name "gradle-wrapper.properties" | while read -r WRAPPER; do
-            echo "Updating $WRAPPER to Gradle 8.4"
-            echo "distributionBase=GRADLE_USER_HOME" > "$WRAPPER"
-            echo "distributionPath=wrapper/dists" >> "$WRAPPER"
-            echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-all.zip" >> "$WRAPPER"
-            echo "zipStoreBase=GRADLE_USER_HOME" >> "$WRAPPER"
-            echo "zipStorePath=wrapper/dists" >> "$WRAPPER"
-          done
 
           flutter pub get
           flutter build apk --release
