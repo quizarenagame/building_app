@@ -36,6 +36,12 @@ jobs:
           
           cd "$PROJ_DIR"
           
+          # بررسی و افزودن فیلد version در صورت نبودن در pubspec.yaml برای جلوگیری از خطای versionCode
+          if ! grep -q "version:" pubspec.yaml; then
+            echo "Adding version to pubspec.yaml..."
+            echo "version: 1.0.0+1" >> pubspec.yaml
+          fi
+          
           # ساخت و تنظیم گرادل 8.4
           mkdir -p android/gradle/wrapper
           PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
@@ -46,7 +52,6 @@ jobs:
           echo "zipStoreBase=GRADLE_USER_HOME" >> "$PROP_FILE"
           echo "zipStorePath=wrapper/dists" >> "$PROP_FILE"
 
-          # اطمینان از وجود نسخه و کد نسخه معتبر در pubspec.yaml یا جایگزینی موقت برای جلوگیری از خطا
           flutter pub get
           flutter build apk --release
 
