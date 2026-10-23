@@ -22,7 +22,7 @@ class BuildingApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-        cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+        cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
       ),
       themeMode: ThemeMode.system,
       home: const Directionality(textDirection: TextDirection.rtl, child: LoginFlow()),
