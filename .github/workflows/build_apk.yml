@@ -36,10 +36,13 @@ jobs:
           
           cd "$PROJ_DIR"
           
-          # بررسی و افزودن فیلد version در صورت نبودن در pubspec.yaml برای جلوگیری از خطای versionCode
-          if ! grep -q "version:" pubspec.yaml; then
-            echo "Adding version to pubspec.yaml..."
-            echo "version: 1.0.0+1" >> pubspec.yaml
+          # اصلاح ایمن فایل build.gradle برای جلوگیری از خطای versionCode
+          BUILD_GRADLE="android/app/build.gradle"
+          if [ -f "$BUILD_GRADLE" ]; then
+            echo "Checking android/app/build.gradle for flutter version properties..."
+            # اگر مقادیر به صورت flutter.versionCode بودند، آن‌ها را با مقادیر ایمن جایگزین می‌کنیم
+            sed -i 's/versionCode flutter.versionCode/versionCode 1/g' "$BUILD_GRADLE"
+            sed -i 's/versionName flutter.versionName/versionName "1.0.0"/g' "$BUILD_GRADLE"
           fi
           
           # ساخت و تنظیم گرادل 8.4
