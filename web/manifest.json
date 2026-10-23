@@ -1,0 +1,11 @@
+{
+  "name": "سامانه مدیریت ساختمان",
+  "short_name": "مدیریت ساختمان",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f5f7f8",
+  "theme_color": "#117d70",
+  "description": "اپلیکیشن مدیریت ساختمان",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}
