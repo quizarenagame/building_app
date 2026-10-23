@@ -36,18 +36,16 @@ jobs:
           
           cd "$PROJ_DIR"
           
-          # بازنویسی کامل فایل gradle-wrapper.properties برای استفاده از نسخه 8.4
-          PROP_FILE="android/gradle/wrapper/gradle-wrapper.properties"
-          if [ -f "$PROP_FILE" ]; then
-            echo "Forcing Gradle wrapper version to 8.4..."
-            echo "distributionBase=GRADLE_USER_HOME" > "$PROP_FILE"
-            echo "distributionPath=wrapper/dists" >> "$PROP_FILE"
-            echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip" >> "$PROP_FILE"
-            echo "zipStoreBase=GRADLE_USER_HOME" >> "$PROP_FILE"
-            echo "zipStorePath=wrapper/dists" >> "$PROP_FILE"
-          else
-            echo "Warning: gradle-wrapper.properties not found at $PROP_FILE"
-          fi
+          # پیدا کردن و اصلاح خودکار تمام فایل‌های gradle-wrapper.properties در پروژه
+          echo "Searching and updating all gradle-wrapper.properties files..."
+          find . -name "gradle-wrapper.properties" | while read -r WRAPPER; do
+            echo "Updating $WRAPPER to Gradle 8.4"
+            echo "distributionBase=GRADLE_USER_HOME" > "$WRAPPER"
+            echo "distributionPath=wrapper/dists" >> "$WRAPPER"
+            echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-all.zip" >> "$WRAPPER"
+            echo "zipStoreBase=GRADLE_USER_HOME" >> "$WRAPPER"
+            echo "zipStorePath=wrapper/dists" >> "$WRAPPER"
+          done
 
           flutter pub get
           flutter build apk --release
