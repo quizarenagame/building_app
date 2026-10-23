@@ -1,0 +1,45 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Locate project root and build
+        run: |
+          # پیدا کردن خودکار رمینی که pubspec.yaml در آن قرار دارد
+          PUB_PATH=$(find . -name "pubspec.yaml" -not -path "*/.*" | head -n 1)
+          if [ -z "$PUB_PATH" ]; then
+            echo "Error: pubspec.yaml not found anywhere in the repository!"
+            exit 1
+          fi
+          PROJ_DIR=$(dirname "$PUB_PATH")
+          echo "Found project root at: $PROJ_DIR"
+          
+          cd "$PROJ_DIR"
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: "**/build/app/outputs/flutter-apk/app-release.apk"
