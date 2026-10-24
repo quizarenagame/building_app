@@ -17,7 +17,7 @@ class BuildingApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
         scaffoldBackgroundColor: const Color(0xFFF5F7F8),
         fontFamily: 'Roboto',
-        cardTheme: CardThemeData(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+        cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
