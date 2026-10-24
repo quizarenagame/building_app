@@ -6,26 +6,34 @@ void main() => runApp(const BuildingApp());
 class BuildingApp extends StatelessWidget {
   const BuildingApp({super.key});
 
+  // کنترلر سراسری برای تغییر تم در کل برنامه
+  static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
+
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xFF12A889);
-    return MaterialApp(
-      title: 'سامانه مدیریت ساختمان',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-        scaffoldBackgroundColor: const Color(0xFFF5F7F8),
-        fontFamily: 'Roboto',
-        cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-        cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
-      ),
-      themeMode: ThemeMode.system,
-      home: const Directionality(textDirection: TextDirection.rtl, child: LoginFlow()),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeMode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'سامانه مدیریت ساختمان',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
+            scaffoldBackgroundColor: const Color(0xFFF5F7F8),
+            fontFamily: 'Roboto',
+            cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
+            cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          ),
+          themeMode: mode,
+          home: const Directionality(textDirection: TextDirection.rtl, child: LoginFlow()),
+        );
+      },
     );
   }
 }
@@ -132,17 +140,32 @@ class _LoginFlowState extends State<LoginFlow> {
     _ => '',
   };
 
+  Widget _themeToggleButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return IconButton(
+      tooltip: isDark ? 'حالت روشن' : 'حالت تاریک',
+      onPressed: () {
+        BuildingApp.themeMode.value = isDark ? ThemeMode.light : ThemeMode.dark;
+      },
+      icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_step == _LoginStep.dashboard) return const DashboardPage();
     final showBar = _step == _LoginStep.phone || _step == _LoginStep.otp || _step == _LoginStep.account || _step == _LoginStep.success;
     return Scaffold(
-      appBar: showBar ? AppBar(
-        leading: IconButton(tooltip: 'بازگشت', onPressed: _goBack, icon: const Icon(Icons.arrow_forward_rounded)),
-        title: Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+      appBar: AppBar(
+        leading: showBar ? IconButton(tooltip: 'بازگشت', onPressed: _goBack, icon: const Icon(Icons.arrow_forward_rounded)) : null,
+        title: showBar ? Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)) : null,
         centerTitle: true,
         backgroundColor: Colors.transparent,
-      ) : null,
+        actions: [
+          _themeToggleButton(context),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         top: !showBar,
         child: Center(
@@ -180,13 +203,20 @@ class _LoginFlowState extends State<LoginFlow> {
       borderRadius: BorderRadius.circular(size * .31),
       boxShadow: [BoxShadow(color: const Color(0xFF11947A).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
     ),
-    child: Icon(Icons.apartment_rounded, color: Colors.white, size: size * .52),
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        // گرافیک ساختمان مشابه آیکون اپ
+        Positioned(bottom: 12, child: Container(width: size * 0.5, height: size * 0.45, decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), borderRadius: BorderRadius.circular(6)))),
+        const Icon(Icons.apartment_rounded, color: Colors.white, size: size * .52),
+      ],
+    ),
   );
 
   Widget _welcome(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SizedBox(height: 42),
+      const SizedBox(height: 20),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
       const Text('به خانه‌تان خوش آمدید', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, height: 1.5)),
@@ -298,7 +328,7 @@ class _LoginFlowState extends State<LoginFlow> {
       TextFormField(
         controller: _passwordController,
         obscureText: _hidePassword,
-        decoration: _inputDecoration(hint: 'حداقل ۶ نویسه', prefix: const Icon(Icons.lock_outline_rounded), suffix: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : 'پنهان‌کردن رمز', onPressed: () => setState(() => _hidePassword = !_hidePassword), icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
+        decoration: _inputDecoration(hint: 'حداقل ۶ نویسه', prefix: const Icon(Icons.lock_outline_rounded), suffix: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : 'مخفی کردن رمز', onPressed: () => setState(() => _hidePassword = !_hidePassword), icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
         validator: (v) => (v?.length ?? 0) >= 6 ? null : 'رمز عبور باید دست‌کم ۶ نویسه باشد.',
       ),
       const SizedBox(height: 23),
@@ -342,16 +372,26 @@ class _MiniFeatures extends StatelessWidget {
   const _MiniFeatures();
   @override
   Widget build(BuildContext context) => Row(children: const [
-    Expanded(child: _FeatureItem(icon: Icons.receipt_long_outlined, title: 'امور مالی')),
-    Expanded(child: _FeatureItem(icon: Icons.campaign_outlined, title: 'اطلاعیه‌ها')),
-    Expanded(child: _FeatureItem(icon: Icons.handyman_outlined, title: 'درخواست‌ها')),
+    Expanded(child: _FeatureItem(icon: Icons.receipt_long_rounded, title: 'امور مالی')),
+    Expanded(child: _FeatureItem(icon: Icons.campaign_rounded, title: 'اطلاعیه‌ها')),
+    Expanded(child: _FeatureItem(icon: Icons.handyman_rounded, title: 'درخواست‌ها')),
+    Expanded(child: _FeatureItem(icon: Icons.room_service_rounded, title: 'خدمات')),
   ]);
 }
+
 class _FeatureItem extends StatelessWidget {
   const _FeatureItem({required this.icon, required this.title});
   final IconData icon; final String title;
   @override
-  Widget build(BuildContext context) => Column(children: [Icon(icon, color: Theme.of(context).colorScheme.primary, size: 23), const SizedBox(height: 7), Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11))]);
+  Widget build(BuildContext context) => Column(children: [
+    Container(
+      width: 46, height: 46,
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5), borderRadius: BorderRadius.circular(14)),
+      child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
+    ),
+    const SizedBox(height: 7),
+    Text(title, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w600)),
+  ]);
 }
 
 class DashboardPage extends StatefulWidget {
@@ -362,6 +402,17 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int selectedTab = 0;
+
+  Widget _themeToggleButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return IconButton(
+      tooltip: isDark ? 'حالت روشن' : 'حالت تاریک',
+      onPressed: () {
+        BuildingApp.themeMode.value = isDark ? ThemeMode.light : ThemeMode.dark;
+      },
+      icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -379,6 +430,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(height: 6),
                     const Text('سامانه مدیریت ساختمان', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
                   ])),
+                  _themeToggleButton(context),
+                  const SizedBox(width: 8),
                   CircleAvatar(radius: 24, backgroundColor: colors.primaryContainer, child: Icon(Icons.apartment_rounded, color: colors.primary)),
                 ]),
                 const SizedBox(height: 22),
