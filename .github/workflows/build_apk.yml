@@ -26,14 +26,62 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Locate project directory
+        id: locate
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            echo "dir=." >> $GITHUB_OUTPUT
+          elif [ -f "building_app/pubspec.yaml" ]; then
+            echo "dir=building_app" >> $GITHUB_OUTPUT
+          else
+            DIR=$(find . -maxdepth 3 -name pubspec.yaml -exec dirname {} \; | head -n 1)
+            echo "dir=$DIR" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create fallback app launcher icon if missing
+        working-directory: ${{ steps.locate.outputs.dir }}
+        run: |
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+
+          # اگر عکس لوگو در ریپو وجود دارد از آن استفاده کن، در غیر این صورت یک تصویر موقت بساز
+          ICON_SRC=""
+          if [ -f "assets/icon/app_icon.png" ]; then
+            ICON_SRC="assets/icon/app_icon.png"
+          elif [ -f "app_icon.png" ]; then
+            ICON_SRC="app_icon.png"
+          elif [ -f "../app_icon.png" ]; then
+            ICON_SRC="../app_icon.png"
+          fi
+
+          if [ -n "$ICON_SRC" ] && [ -f "$ICON_SRC" ]; then
+            cp "$ICON_SRC" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            cp "$ICON_SRC" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            cp "$ICON_SRC" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            cp "$ICON_SRC" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            cp "$ICON_SRC" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          else
+            # ساخت یک آیکون موقت PNG ساده با پایتون
+            python3 -c "import base64; img=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAA8SURBVHhe7cEBDQAAAMKg909tDwcUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeDUB630AAbT4e/YAAAAASUVORK5CYII='); open('android/app/src/main/res/mipmap-hdpi/ic_launcher.png','wb').write(img)"
+            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          fi
+
       - name: Get dependencies
+        working-directory: ${{ steps.locate.outputs.dir }}
         run: flutter pub get
 
       - name: Build APK
+        working-directory: ${{ steps.locate.outputs.dir }}
         run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: ${{ steps.locate.outputs.dir }}/build/app/outputs/flutter-apk/app-release.apk
