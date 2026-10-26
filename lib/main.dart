@@ -161,7 +161,6 @@ class _LoginFlowState extends State<LoginFlow> {
         title: showBar ? Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)) : null,
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        // انتقال دکمه تم به بالا سمت راست
         actions: [
           _themeToggleButton(context),
           const SizedBox(width: 8),
@@ -197,7 +196,7 @@ class _LoginFlowState extends State<LoginFlow> {
     }
   }
 
-  // استفاده مستقیم از عکس آیکون اپ در صفحه اول
+  // استفاده از تصویر جدید کاربر برای لوگوی وسط صفحه خوش‌آمدگویی
   Widget _brandMark({double size = 96}) => Container(
     width: size, height: size,
     decoration: BoxDecoration(
@@ -208,14 +207,20 @@ class _LoginFlowState extends State<LoginFlow> {
     child: Center(
       child: ClipOval(
         child: Image.asset(
-          'assets/app_icon.png',
+          'assets/app_icon-(2).webp',
           width: size * 0.85,
           height: size * 0.85,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Icon(
-            Icons.apartment_rounded,
-            color: Theme.of(context).colorScheme.primary,
-            size: size * 0.5,
+          errorBuilder: (context, error, stackTrace) => Image.asset(
+            'assets/app_icon.png',
+            width: size * 0.85,
+            height: size * 0.85,
+            fit: BoxFit.cover,
+            errorBuilder: (c, e, s) => Icon(
+              Icons.apartment_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: size * 0.5,
+            ),
           ),
         ),
       ),
@@ -226,7 +231,7 @@ class _LoginFlowState extends State<LoginFlow> {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const SizedBox(height: 10),
-      // قرار دادن دکمه تغییر تم در بالا سمت راست در صفحه خوش‌آمدگویی (چون فاقد AppBar است)
+      // فقط یک دکمه‌ی تغییر تم در بالا سمت راست در صفحه خوش‌آمدگویی
       Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
