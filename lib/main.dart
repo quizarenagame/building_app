@@ -22,7 +22,6 @@ class BuildingApp extends StatelessWidget {
             useMaterial3: true,
             colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
             scaffoldBackgroundColor: const Color(0xFFF5F7F8),
-            fontFamily: 'Roboto',
             cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
           ),
           darkTheme: ThemeData(
@@ -105,7 +104,6 @@ class _LoginFlowState extends State<LoginFlow> {
       case _LoginStep.account: setState(() => _step = _LoginStep.otp); break;
       case _LoginStep.success: setState(() => _step = _LoginStep.account); break;
       case _LoginStep.welcome:
-      case _LoginTestStep:
       case _LoginStep.dashboard: break;
     }
   }
@@ -197,9 +195,10 @@ class _LoginFlowState extends State<LoginFlow> {
     }
   }
 
-  // نمایش تصویر جدید برای لوگوی وسط صفحه
+  // لوگوی دایره‌ای وسط صفحه با تصویر جدید
   Widget _brandMark({double size = 96}) => Container(
-    width: size, height: size,
+    width: size,
+    height: size,
     decoration: BoxDecoration(
       color: Colors.white,
       shape: BoxShape.circle,
@@ -345,7 +344,7 @@ class _LoginFlowState extends State<LoginFlow> {
       TextFormField(
         controller: _passwordController,
         obscureText: _hidePassword,
-        decoration: _inputDecoration(hint: 'حداقل ۶ نویسه', prefix: const Icon(Icons.lock_outline_rounded), suffix: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : 'مخفی‌سازی رمز', onPressed: () => setState(() => _hidePassword = !_hidePassword), icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
+        decoration: _inputDecoration(hint: 'حداقل ۶ نویسه', prefix: const Icon(Icons.lock_outline_rounded), suffix: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : 'پنهان کردن رمز', onPressed: () => setState(() => _hidePassword = !_hidePassword), icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
         validator: (v) => (v?.length ?? 0) >= 6 ? null : 'رمز عبور باید دست‌کم ۶ نویسه باشد.',
       ),
       const SizedBox(height: 23),
@@ -388,7 +387,7 @@ class _LoginFlowState extends State<LoginFlow> {
 class _MiniFeatures extends StatelessWidget {
   const _MiniFeatures();
   @override
-  Widget build(BuildContext context) => Row(children: const [
+  Widget build(BuildContext context) => const Row(children: [
     Expanded(child: _FeatureItem(icon: Icons.account_balance_wallet_rounded, title: 'امور مالی')),
     Expanded(child: _FeatureItem(icon: Icons.notifications_rounded, title: 'اطلاعیه‌ها')),
     Expanded(child: _FeatureItem(icon: Icons.assignment_rounded, title: 'درخواست‌ها')),
@@ -459,7 +458,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Text('امروز، ۲۵ خرداد', style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
                 ]),
                 const SizedBox(height: 14),
-                Row(children: const [
+                const Row(children: [
                   Expanded(child: _MetricCard(icon: Icons.account_balance_wallet_outlined, label: 'شارژ ماهانه', value: 'پرداخت شده', tint: Color(0xFF12A889), chip: 'تسویه')),
                   SizedBox(width: 12),
                   Expanded(child: _MetricCard(icon: Icons.build_outlined, label: 'درخواست‌های باز', value: '۲ مورد', tint: Color(0xFFE99A32), chip: 'در انتظار')),
@@ -520,7 +519,7 @@ class _BuildingCard extends StatelessWidget {
       const SizedBox(height: 20),
       Divider(color: Colors.white.withOpacity(.25), height: 1),
       const SizedBox(height: 14),
-      Row(children: const [
+      const Row(children: [
         Icon(Icons.door_front_door_outlined, color: Colors.white70, size: 18),
         SizedBox(width: 7), Text('واحد ۱۲ • طبقه ۴', style: TextStyle(color: Colors.white, fontSize: 13)),
         Spacer(), Icon(Icons.people_alt_outlined, color: Colors.white70, size: 18),
@@ -578,7 +577,7 @@ class _NoticeCard extends StatelessWidget {
   final ColorScheme colors;
   @override
   Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(15), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Container(width: 42, height: 42, decoration: BoxDecoration(color: colors.tertiatorContainer, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.water_drop_outlined, color: colors.tertiary)),
+    Container(width: 42, height: 42, decoration: BoxDecoration(color: colors.tertiaryContainer, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.water_drop_outlined, color: colors.tertiary)),
     const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [const Expanded(child: Text('سرویس دوره‌ای مخزن آب', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))), Text('۱۰:۳۰', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11))]),
       const SizedBox(height: 6), Text('سرویس مخزن روز پنجشنبه انجام می‌شود. لطفاً در مصرف آب صرفه‌جویی فرمایید.', style: TextStyle(color: colors.onSurfaceVariant, height: 1.5, fontSize: 12)),
