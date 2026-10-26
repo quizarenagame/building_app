@@ -6,7 +6,6 @@ void main() => runApp(const BuildingApp());
 class BuildingApp extends StatelessWidget {
   const BuildingApp({super.key});
 
-  // کنترلر سراسری برای تغییر تم در کل برنامه
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
 
   @override
@@ -195,7 +194,7 @@ class _LoginFlowState extends State<LoginFlow> {
     }
   }
 
-  // لوگوی دایره‌ای وسط صفحه با تصویر جدید
+  // لوگوی دایره‌ای وسط صفحه با قابلیت بارگذاری تصویر
   Widget _brandMark({double size = 96}) => Container(
     width: size,
     height: size,
@@ -224,15 +223,15 @@ class _LoginFlowState extends State<LoginFlow> {
   Widget _welcome(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SizedBox(height: 10),
-      // دکمه تغییر تم در بالا سمت راست صفحه خوش‌آمدگویی
+      const SizedBox(height: 5),
+      // دکمه تغییر تم دقیقاً در بالا سمت راست صفحه خوش‌آمدگویی (بدون دکمه اضافی در سمت چپ)
       Row(
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           _themeToggleButton(context),
         ],
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 5),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
       const Text('به خانه‌تان خوش آمدید', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, height: 1.5)),
@@ -344,7 +343,7 @@ class _LoginFlowState extends State<LoginFlow> {
       TextFormField(
         controller: _passwordController,
         obscureText: _hidePassword,
-        decoration: _inputDecoration(hint: 'حداقل ۶ نویسه', prefix: const Icon(Icons.lock_outline_rounded), suffix: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : 'پنهان کردن رمز', onPressed: () => setState(() => _hidePassword = !_hidePassword), icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
+        decoration: _inputDecoration(hint: 'حداقل ۶ نویسه', prefix: const Icon(Icons.lock_outline_rounded), suffix: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : '*******', onPressed: () => setState(() => _hidePassword = !_hidePassword), icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
         validator: (v) => (v?.length ?? 0) >= 6 ? null : 'رمز عبور باید دست‌کم ۶ نویسه باشد.',
       ),
       const SizedBox(height: 23),
