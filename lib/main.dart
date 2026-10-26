@@ -205,7 +205,6 @@ class _LoginFlowState extends State<LoginFlow> {
     }
   }
 
-  /// لوگوی برنامه با fallback: اگر تصویر در assets نبود، آیکن ساختمان نمایش داده می‌شود.
   Widget _brandMark({double size = 86}) => Container(
     width: size, height: size,
     decoration: BoxDecoration(
@@ -213,35 +212,13 @@ class _LoginFlowState extends State<LoginFlow> {
       borderRadius: BorderRadius.circular(size * .31),
       boxShadow: [BoxShadow(color: const Color(0xFF11947A).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
     ),
-    clipBehavior: Clip.antiAlias,
-    child: Image.asset(
-      'assets/icon/app_icon.png',
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => Icon(
-        Icons.apartment_rounded,
-        color: Colors.white,
-        size: size * .52,
-      ),
-    ),
+    child: Icon(Icons.apartment_rounded, color: Colors.white, size: size * .52),
   );
 
   Widget _welcome(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: ValueListenableBuilder<ThemeMode>(
-          valueListenable: BuildingApp.themeMode,
-          builder: (context, mode, _) => IconButton(
-            tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
-            icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
-          ),
-        ),
-      ),
-      const SizedBox(height: 22),
+      const SizedBox(height: 42),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
       const Text('به خانه‌تان خوش آمدید', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, height: 1.5)),
@@ -254,7 +231,7 @@ class _LoginFlowState extends State<LoginFlow> {
         child: Row(children: [
           Icon(Icons.verified_user_outlined, color: colors.primary, size: 25),
           const SizedBox(width: 12),
-          const Expanded(child: Text('با شماره همراه خود وارد شوید یا حساب کاربری‌تان را بسازید.', style: TextStyle(fontSize: 13, height: 1.7))),
+          const Expanded(child: Text('با شماره همراه وارد شده یا حساب کاربری بسازید', style: TextStyle(fontSize: 13, height: 1.7))),
         ]),
       ),
       const SizedBox(height: 26),
@@ -633,16 +610,15 @@ class _DashboardPageState extends State<DashboardPage> {
           Text('سلام، ${widget.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           Text(_isManager ? 'نقش شما: مدیر ساختمان' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
         ]),
-        actions: [
-          // دکمه تغییر تم: دقیقاً یک‌بار، اولین دکمه در سمت راست نوار بالا (AppBar)
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: BuildingApp.themeMode,
-            builder: (context, mode, _) => IconButton(
-              tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
-              icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-              onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
-            ),
+        leading: ValueListenableBuilder<ThemeMode>(
+          valueListenable: BuildingApp.themeMode,
+          builder: (context, mode, _) => IconButton(
+            tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
+            icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+            onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
           ),
+        ),
+        actions: [
           if (!_isManager && _joinedBuilding != null)
             IconButton(
               tooltip: 'خروج از ساختمان',
@@ -658,10 +634,10 @@ class _DashboardPageState extends State<DashboardPage> {
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() => selectedTab = index),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.miscellaneous_services_outlined), selectedIcon: Icon(Icons.miscellaneous_services_rounded), label: 'خدمات'),
-          NavigationDestination(icon: Icon(Icons.assignment_outlined), selectedIcon: Icon(Icons.assignment_rounded), label: 'درخواست‌ها'),
-          NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
-          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'امور مالی'),
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'خدمات'),
+          NavigationDestination(icon: Icon(Icons.handyman_outlined), label: 'درخواست‌ها'),
+          NavigationDestination(icon: Icon(Icons.campaign_outlined), label: 'اطلاعیه‌ها'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'امور مالی'),
         ],
       ),
     );
@@ -964,7 +940,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
           child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ داده‌ها فقط در حافظهٔ همین اجرای برنامه نگه داشته می‌شوند و نمایش اعضای سایر دستگاه‌ها نیازمند اتصال به سرور است.', style: TextStyle(fontSize: 12, height: 1.7)),
         ),
       ],
@@ -1074,7 +1050,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
           child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ نمایش اعضای سایر دستگاه‌ها فقط در حافظهٔ همین اجرای برنامه است و برای همگام‌سازی واقعی نیازمند سرور می‌باشد.', style: TextStyle(fontSize: 12, height: 1.7)),
         ),
       ]);
@@ -1143,7 +1119,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
       const SizedBox(height: 24),
       Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
         child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ اطلاعات فقط در حافظهٔ همین اجرای برنامه ذخیره می‌شود و برای همگام‌سازی بین کاربران واقعی نیازمند اتصال به سرور است.', style: TextStyle(fontSize: 12, height: 1.7)),
       ),
     ]);
@@ -1350,7 +1326,7 @@ class _UnitTile extends StatelessWidget {
     final occupied = member != null;
     final tileColor = isManagerUnit
         ? const Color(0xFFFFC107).withOpacity(.28)
-        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceVariant.withOpacity(.6));
+        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceContainerHighest.withOpacity(.6));
     final tileBorder = isManagerUnit
         ? const Color(0xFFFFB300).withOpacity(.85)
         : (occupied ? colors.primary.withOpacity(.4) : colors.outlineVariant);
@@ -1595,7 +1571,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         const SizedBox(height: 20),
         Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: colors.surfaceVariant, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: colors.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
           child: const Text('توجه: داده‌ها فقط در حافظهٔ همین اجرای برنامه نگه داشته می‌شوند.', style: TextStyle(fontSize: 12, height: 1.7)),
         ),
       ]),
@@ -1633,7 +1609,7 @@ class _PlaceholderTab extends StatelessWidget {
   final int index;
   @override
   Widget build(BuildContext context) {
-    final labels = ['خدمات به‌زودی در نسخهٔ کامل فعال می‌شود.', 'درخواست‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.'];
+    final labels = ['درخواست‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.'];
     return Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.hourglass_empty_rounded, size: 46, color: Theme.of(context).colorScheme.onSurfaceVariant),
       const SizedBox(height: 12),
@@ -1641,159 +1617,5 @@ class _PlaceholderTab extends StatelessWidget {
       const SizedBox(height: 6),
       const Text('این نسخه یک نمونهٔ محلی است و بدون سرور کار می‌کند.', style: TextStyle(fontSize: 12)),
     ])));
-  }
-}
-
-
-/// ---------------------- ویجت‌های کمکی داشبورد ----------------------
-
-/// یک اقدام سریع در داشبورد.
-class _Action {
-  const _Action({required this.label, required this.icon, required this.onTap});
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-}
-
-/// کارت اطلاعات ساختمان در داشبورد.
-class _BuildingCard extends StatelessWidget {
-  const _BuildingCard({required this.colors, this.name, this.floorCount, this.unitCount, this.onTap});
-  final ColorScheme colors;
-  final String? name;
-  final int? floorCount;
-  final int? unitCount;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(children: [
-            Container(
-              width: 46, height: 46,
-              decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(14)),
-              child: Icon(Icons.apartment_rounded, color: colors.primary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(name ?? 'بدون ساختمان', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text(
-                  '${(floorCount ?? 0).toPersianDigits()} طبقه — ${(unitCount ?? 0).toPersianDigits()} واحد',
-                  style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-                ),
-              ]),
-            ),
-            Icon(Icons.chevron_left_rounded, color: colors.onSurfaceVariant),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-/// کارت نمایش یک سنجه (متریک) در داشبورد.
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value, required this.icon, required this.colors});
-  final String label;
-  final String value;
-  final IconData icon;
-  final ColorScheme colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 22, color: colors.primary),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
-        ]),
-      ),
-    );
-  }
-}
-
-/// نشان وضعیت رنگی.
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withOpacity(.15), borderRadius: BorderRadius.circular(20)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
-      ]),
-    );
-  }
-}
-
-/// نوار اقدامات سریع داشبورد.
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.actions});
-  final List<_Action> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      for (var i = 0; i < actions.length; i++) ...[
-        if (i > 0) const SizedBox(width: 10),
-        Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: actions[i].onTap,
-            icon: Icon(actions[i].icon, size: 18),
-            label: Text(actions[i].label, overflow: TextOverflow.ellipsis),
-          ),
-        ),
-      ],
-    ]);
-  }
-}
-
-/// کارت نمایش اطلاعیه.
-class _NoticeCard extends StatelessWidget {
-  const _NoticeCard({required this.title, required this.body, this.date, this.onTap});
-  final String title;
-  final String body;
-  final String? date;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(Icons.campaign_rounded, size: 20, color: colors.primary),
-              const SizedBox(width: 8),
-              Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-              if (date != null)
-                Text(date!, style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
-            ]),
-            const SizedBox(height: 8),
-            Text(body, style: TextStyle(fontSize: 13, height: 1.7, color: colors.onSurfaceVariant)),
-          ]),
-        ),
-      ),
-    );
   }
 }
