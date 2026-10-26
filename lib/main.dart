@@ -105,6 +105,7 @@ class _LoginFlowState extends State<LoginFlow> {
       case _LoginStep.account: setState(() => _step = _LoginStep.otp); break;
       case _LoginStep.success: setState(() => _step = _LoginStep.account); break;
       case _LoginStep.welcome:
+      case _LoginTestStep:
       case _LoginStep.dashboard: break;
     }
   }
@@ -196,7 +197,7 @@ class _LoginFlowState extends State<LoginFlow> {
     }
   }
 
-  // استفاده از تصویر جدید کاربر برای لوگوی وسط صفحه خوش‌آمدگویی
+  // نمایش تصویر جدید برای لوگوی وسط صفحه
   Widget _brandMark({double size = 96}) => Container(
     width: size, height: size,
     decoration: BoxDecoration(
@@ -207,20 +208,14 @@ class _LoginFlowState extends State<LoginFlow> {
     child: Center(
       child: ClipOval(
         child: Image.asset(
-          'assets/app_icon-(2).webp',
-          width: size * 0.85,
-          height: size * 0.85,
+          'assets/app_icon.png',
+          width: size * 0.95,
+          height: size * 0.95,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Image.asset(
-            'assets/app_icon.png',
-            width: size * 0.85,
-            height: size * 0.85,
-            fit: BoxFit.cover,
-            errorBuilder: (c, e, s) => Icon(
-              Icons.apartment_rounded,
-              color: Theme.of(context).colorScheme.primary,
-              size: size * 0.5,
-            ),
+          errorBuilder: (context, error, stackTrace) => Icon(
+            Icons.apartment_rounded,
+            color: Theme.of(context).colorScheme.primary,
+            size: size * 0.5,
           ),
         ),
       ),
@@ -231,9 +226,9 @@ class _LoginFlowState extends State<LoginFlow> {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const SizedBox(height: 10),
-      // فقط یک دکمه‌ی تغییر تم در بالا سمت راست در صفحه خوش‌آمدگویی
+      // دکمه تغییر تم در بالا سمت راست صفحه خوش‌آمدگویی
       Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           _themeToggleButton(context),
         ],
@@ -583,7 +578,7 @@ class _NoticeCard extends StatelessWidget {
   final ColorScheme colors;
   @override
   Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(15), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Container(width: 42, height: 42, decoration: BoxDecoration(color: colors.tertiaryContainer, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.water_drop_outlined, color: colors.tertiary)),
+    Container(width: 42, height: 42, decoration: BoxDecoration(color: colors.tertiatorContainer, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.water_drop_outlined, color: colors.tertiary)),
     const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [const Expanded(child: Text('سرویس دوره‌ای مخزن آب', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))), Text('۱۰:۳۰', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11))]),
       const SizedBox(height: 6), Text('سرویس مخزن روز پنجشنبه انجام می‌شود. لطفاً در مصرف آب صرفه‌جویی فرمایید.', style: TextStyle(color: colors.onSurfaceVariant, height: 1.5, fontSize: 12)),
