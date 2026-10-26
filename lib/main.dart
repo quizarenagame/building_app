@@ -230,7 +230,18 @@ class _LoginFlowState extends State<LoginFlow> {
   Widget _welcome(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SizedBox(height: 42),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: ValueListenableBuilder<ThemeMode>(
+          valueListenable: BuildingApp.themeMode,
+          builder: (context, mode, _) => IconButton(
+            tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
+            icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+            onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+          ),
+        ),
+      ),
+      const SizedBox(height: 22),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
       const Text('به خانه‌تان خوش آمدید', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, height: 1.5)),
@@ -647,10 +658,10 @@ class _DashboardPageState extends State<DashboardPage> {
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() => selectedTab = index),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'خانه'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'مالی'),
-          NavigationDestination(icon: Icon(Icons.campaign_outlined), label: 'اطلاعیه‌ها'),
-          NavigationDestination(icon: Icon(Icons.person_outline_rounded), label: 'پروفایل'),
+          NavigationDestination(icon: Icon(Icons.miscellaneous_services_outlined), selectedIcon: Icon(Icons.miscellaneous_services_rounded), label: 'خدمات'),
+          NavigationDestination(icon: Icon(Icons.assignment_outlined), selectedIcon: Icon(Icons.assignment_rounded), label: 'درخواست‌ها'),
+          NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
+          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'امور مالی'),
         ],
       ),
     );
@@ -1622,7 +1633,7 @@ class _PlaceholderTab extends StatelessWidget {
   final int index;
   @override
   Widget build(BuildContext context) {
-    final labels = ['امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.', 'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'پروفایل شما در نسخهٔ نمایشی فعلاً ساده است.'];
+    final labels = ['خدمات به‌زودی در نسخهٔ کامل فعال می‌شود.', 'درخواست‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.'];
     return Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.hourglass_empty_rounded, size: 46, color: Theme.of(context).colorScheme.onSurfaceVariant),
       const SizedBox(height: 12),
