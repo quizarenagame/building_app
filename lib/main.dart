@@ -234,10 +234,7 @@ class _LoginFlowState extends State<LoginFlow> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-
-        // در چیدمان راست‌به‌چپ، leading سمت راست قرار می‌گیرد.
         leading: _themeToggleButton(context),
-
         title: showBar
             ? Text(
                 _stepTitle,
@@ -247,10 +244,8 @@ class _LoginFlowState extends State<LoginFlow> {
                 ),
               )
             : null,
-
         centerTitle: true,
         backgroundColor: Colors.transparent,
-
         actions: [
           if (showBar)
             IconButton(
@@ -646,8 +641,7 @@ class _LoginFlowState extends State<LoginFlow> {
               hint: 'حداقل ۶ نویسه',
               prefix: const Icon(Icons.lock_outline_rounded),
               suffix: IconButton(
-                tooltip:
-                    _hidePassword ? 'نمایش رمز' : '*******',
+                tooltip: _hidePassword ? 'نمایش رمز' : 'پنهان کردن رمز',
                 onPressed: () {
                   setState(() => _hidePassword = !_hidePassword);
                 },
@@ -953,7 +947,6 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   Row(
                     children: [
-                      // اولین عضو ردیف در RTL، سمت راست است.
                       _themeToggleButton(context),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1010,4 +1003,3 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ),
                     ],
-                  ),
