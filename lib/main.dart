@@ -21,12 +21,12 @@ class BuildingApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
           scaffoldBackgroundColor: const Color(0xFFF5F7F8),
           fontFamily: 'Roboto',
-          cardTheme: CardThemeData(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-          cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         themeMode: mode,
         home: const Directionality(textDirection: TextDirection.rtl, child: LoginFlow()),
@@ -953,7 +953,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
           child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ داده‌ها فقط در حافظهٔ همین اجرای برنامه نگه داشته می‌شوند و نمایش اعضای سایر دستگاه‌ها نیازمند اتصال به سرور است.', style: TextStyle(fontSize: 12, height: 1.7)),
         ),
       ],
@@ -1063,7 +1063,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
           child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ نمایش اعضای سایر دستگاه‌ها فقط در حافظهٔ همین اجرای برنامه است و برای همگام‌سازی واقعی نیازمند سرور می‌باشد.', style: TextStyle(fontSize: 12, height: 1.7)),
         ),
       ]);
@@ -1132,7 +1132,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
       const SizedBox(height: 24),
       Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
         child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ اطلاعات فقط در حافظهٔ همین اجرای برنامه ذخیره می‌شود و برای همگام‌سازی بین کاربران واقعی نیازمند اتصال به سرور است.', style: TextStyle(fontSize: 12, height: 1.7)),
       ),
     ]);
@@ -1339,7 +1339,7 @@ class _UnitTile extends StatelessWidget {
     final occupied = member != null;
     final tileColor = isManagerUnit
         ? const Color(0xFFFFC107).withOpacity(.28)
-        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceContainerHighest.withOpacity(.6));
+        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceVariant.withOpacity(.6));
     final tileBorder = isManagerUnit
         ? const Color(0xFFFFB300).withOpacity(.85)
         : (occupied ? colors.primary.withOpacity(.4) : colors.outlineVariant);
@@ -1584,7 +1584,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         const SizedBox(height: 20),
         Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: colors.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: colors.surfaceVariant, borderRadius: BorderRadius.circular(16)),
           child: const Text('توجه: داده‌ها فقط در حافظهٔ همین اجرای برنامه نگه داشته می‌شوند.', style: TextStyle(fontSize: 12, height: 1.7)),
         ),
       ]),
