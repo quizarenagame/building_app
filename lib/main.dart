@@ -226,7 +226,14 @@ class _LoginFlowState extends State<LoginFlow> {
       borderRadius: BorderRadius.circular(size * .31),
       boxShadow: [BoxShadow(color: const Color(0xFF11947A).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
     ),
-    child: Icon(Icons.apartment_rounded, color: Colors.white, size: size * .52),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * .31),
+      child: Image.asset(
+        'assets/icon/app_icon.png',
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+      ),
+    ),
   );
 
   Widget _welcome(BuildContext context) {
