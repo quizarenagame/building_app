@@ -82,10 +82,10 @@ String _latinDigitsToPersian(String value) {
   return result;
 }
 
-enum _LoginStep { welcome, phone, otp, account, success, dashboard }
+enum _LoginStep { welcome, phone, otp, account, success, managerChoice, dashboard }
 
 const List<MapEntry<String, List<String>>> _iranProvinceCities = [
-  MapEntry('آذربایجان شرقی', ['تبریز', 'مراغه', 'مرند', 'اهر', 'جلفا']),
+  MapEntry('آذربایجان شرقی', ['تبریز', 'آبش احمد', 'آذرشهر', 'اسکو', 'اهر', 'ایلخچی', 'باسمنج', 'بستان آباد', 'بناب', 'ترکمانچای', 'تسوج', 'تیکمه داش', 'جلفا', 'چاراویماق', 'چهاردانگه', 'خاروانا', 'خداآفرین', 'خسروشاه', 'خواجه', 'سراب', 'سراجو', 'سهند', 'سیه رود', 'شادیان', 'شبستر', 'صوفیان', 'عجب شیر', 'فندقلو', 'قلعه چای', 'کاغذکنان', 'کشکسرای', 'کلیبر', 'کندوان', 'گرمادوز', 'گوگان', 'لیلان', 'مراغه', 'مرند', 'ملکان', 'ممقان', 'منجوان', 'مهربان', 'میانه', 'نظرکهریزی', 'هریس', 'هشترود', 'هوراند', 'ورزقان', 'یامچی']),
   MapEntry('آذربایجان غربی', ['ارومیه', 'خوی', 'میاندوآب', 'مهاباد', 'بوکان', 'سلماس']),
   MapEntry('اردبیل', ['اردبیل', 'پارس‌آباد', 'مشگین‌شهر', 'خلخال', 'گرمی']),
   MapEntry('اصفهان', ['اصفهان', 'کاشان', 'خمینی‌شهر', 'نجف‌آباد', 'شهرضا', 'شاهین‌شهر']),
@@ -156,6 +156,7 @@ class _LoginFlowState extends State<LoginFlow> {
   final _unitController = TextEditingController();
   String? _ownership;
   String? _role;
+  bool _showMyBuildings = false;
   Timer? _timer;
   int _secondsLeft = 0;
   bool _hidePassword = true;
@@ -199,7 +200,8 @@ class _LoginFlowState extends State<LoginFlow> {
         break;
       case _LoginStep.account: setState(() => _step = _LoginStep.otp); break;
       case _LoginStep.success: setState(() => _step = _LoginStep.account); break;
-      case _LoginStep.dashboard: setState(() => _step = _LoginStep.account); break;
+      case _LoginStep.managerChoice: setState(() => _step = _LoginStep.account); break;
+      case _LoginStep.dashboard: setState(() => _step = _role == 'مدیر' ? _LoginStep.managerChoice : _LoginStep.account); break;
       case _LoginStep.welcome: break; // هیچ‌وقت از برنامه خارج نمی‌شود
     }
   }
@@ -232,6 +234,7 @@ class _LoginFlowState extends State<LoginFlow> {
     _LoginStep.phone => 'شماره همراه',
     _LoginStep.otp => 'تأیید شماره',
     _LoginStep.account => 'ساخت حساب کاربری',
+    _LoginStep.managerChoice => 'انتخاب نقش مدیر',
     _ => '',
   };
 
@@ -249,7 +252,7 @@ class _LoginFlowState extends State<LoginFlow> {
         ),
       );
     }
-    final showBar = _step == _LoginStep.phone || _step == _LoginStep.otp || _step == _LoginStep.account || _step == _LoginStep.success;
+    final showBar = _step == _LoginStep.phone || _step == _LoginStep.otp || _step == _LoginStep.account || _step == _LoginStep.success || _step == _LoginStep.managerChoice;
     // در همهٔ مراحل (حتی welcome) canPop=false تا سیستم/دکمهٔ برگشت گوشی هرگز از برنامه خارج نشود
     return PopScope(
       canPop: false,
@@ -295,6 +298,7 @@ class _LoginFlowState extends State<LoginFlow> {
       case _LoginStep.otp: return _otpForm(context);
       case _LoginStep.account: return _accountForm(context);
       case _LoginStep.success: return _success(context);
+      case _LoginStep.managerChoice: return _managerChoice(context);
       case _LoginStep.dashboard: return const SizedBox.shrink();
     }
   }
@@ -511,7 +515,37 @@ class _LoginFlowState extends State<LoginFlow> {
   }
 
   void _selectRole(String role) {
-    setState(() { _role = role; _step = _LoginStep.dashboard; });
+    setState(() {
+      _role = role;
+      _showMyBuildings = false;
+      _step = role == 'مدیر' ? _LoginStep.managerChoice : _LoginStep.dashboard;
+    });
+  }
+
+  Widget _managerChoice(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const SizedBox(height: 32),
+      _stepIcon(Icons.manage_accounts_outlined),
+      const SizedBox(height: 20),
+      const Text('مدیریت ساختمان', textAlign: TextAlign.center, style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 8),
+      Text('سلام ${_nameController.text.trim()}! یک گزینه را انتخاب کنید.', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, height: 1.8)),
+      const SizedBox(height: 26),
+      FilledButton.icon(
+        onPressed: () => setState(() { _showMyBuildings = false; _step = _LoginStep.dashboard; }),
+        icon: const Icon(Icons.add_home_work_outlined),
+        label: const Text('ایجاد ساختمان جدید'),
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: () => setState(() { _showMyBuildings = true; _step = _LoginStep.dashboard; }),
+        icon: const Icon(Icons.apartment_rounded),
+        label: const Text('ساختمان تحت مدیریت من'),
+      ),
+      const SizedBox(height: 18),
+      Text('نسخهٔ نمایشی است؛ اطلاعات به سرور ارسال یا ذخیره نمی‌شود.', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12, height: 1.7)),
+    ]);
   }
 
   Widget _stepIcon(IconData icon) => Center(child: Container(width: 66, height: 66, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer.withOpacity(.65), borderRadius: BorderRadius.circular(22)), child: Icon(icon, size: 31, color: Theme.of(context).colorScheme.primary)));
