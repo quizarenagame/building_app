@@ -97,6 +97,11 @@ class _LoginFlowState extends State<LoginFlow> {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
   final _nameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _provinceController = TextEditingController();
+  final _cityController = TextEditingController();
   final _buildingController = TextEditingController();
   final _floorController = TextEditingController();
   final _unitController = TextEditingController();
@@ -104,7 +109,7 @@ class _LoginFlowState extends State<LoginFlow> {
   String? _role;
   Timer? _timer;
   int _secondsLeft = 0;
-  bool _hidePassword = true;
+  bool _hidePassword = true;  bool _hideConfirmPassword = true;
 
   @override
   void dispose() {
@@ -113,6 +118,11 @@ class _LoginFlowState extends State<LoginFlow> {
     _otpController.dispose();
     _nameController.dispose();
     _buildingController.dispose();
+    _lastNameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _provinceController.dispose();
+    _cityController.dispose();
     _floorController.dispose();
     _unitController.dispose();
     super.dispose();
@@ -250,7 +260,18 @@ class _LoginFlowState extends State<LoginFlow> {
   Widget _welcome(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SizedBox(height: 42),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: ValueListenableBuilder<ThemeMode>(
+          valueListenable: BuildingApp.themeMode,
+          builder: (context, mode, _) => IconButton(
+            tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
+            icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+            onPressed: () => BuildingApp.toggleTheme(context),
+          ),
+        ),
+      ),
+      const SizedBox(height: 30),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
       const Text('به خانه‌تان خوش آمدید', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, height: 1.5)),
@@ -348,14 +369,65 @@ class _LoginFlowState extends State<LoginFlow> {
       const SizedBox(height: 8),
       _stepIcon(Icons.person_add_alt_1_rounded),
       const SizedBox(height: 17),
-      const Text('نام و نام خانوادگی', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+      const Text('ساخت حساب کاربری', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 8),
-      Text('برای ادامه، نام و نام خانوادگی خود را وارد کنید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
+      Text('برای ادامه، اطلاعات زیر را وارد کنید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
       const SizedBox(height: 22),
-      _fieldLabel('نام و نام خانوادگی'), const SizedBox(height: 7),
+      _fieldLabel('نام'), const SizedBox(height: 7),
       TextFormField(controller: _nameController, textCapitalization: TextCapitalization.words,
-        decoration: _inputDecoration(hint: 'مثلاً سارا احمدی', prefix: const Icon(Icons.badge_outlined)),
-        validator: (v) => (v?.trim().length ?? 0) >= 3 ? null : 'نام و نام خانوادگی را وارد کنید.'),
+        decoration: _inputDecoration(hint: 'مثلاً سارا', prefix: const Icon(Icons.badge_outlined)),
+        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام را وارد کنید.'),
+      const SizedBox(height: 18),
+      _fieldLabel('نام خانوادگی'), const SizedBox(height: 7),
+      TextFormField(controller: _lastNameController, textCapitalization: TextCapitalization.words,
+        decoration: _inputDecoration(hint: 'مثلاً احمدی', prefix: const Icon(Icons.badge_outlined)),
+        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام خانوادگی را وارد کنید.'),
+      const SizedBox(height: 18),
+      _fieldLabel('رمز عبور (فقط عدد)'), const SizedBox(height: 7),
+      TextFormField(controller: _passwordController,
+        keyboardType: TextInputType.number,
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.left,
+        obscureText: _hidePassword,
+        maxLength: 8,
+        decoration: _inputDecoration(hint: 'مثلاً 1234', prefix: const Icon(Icons.lock_outline_rounded), counterText: '',
+          suffixIcon: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : 'پنهان کردن رمز',
+            icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+            onPressed: () => setState(() => _hidePassword = !_hidePassword))),
+        validator: (v) {
+          final pass = _latinDigits(v ?? '').replaceAll(' ', '');
+          if (pass.length < 4) return 'رمز عبور حداقل ۴ رقم باشد.';
+          if (!RegExp(r'^\d+$').hasMatch(pass)) return 'رمز عبور فقط باید عدد باشد.';
+          return null;
+        }),
+      const SizedBox(height: 18),
+      _fieldLabel('تکرار رمز عبور'), const SizedBox(height: 7),
+      TextFormField(controller: _confirmPasswordController,
+        keyboardType: TextInputType.number,
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.left,
+        obscureText: _hideConfirmPassword,
+        maxLength: 8,
+        decoration: _inputDecoration(hint: 'تکرار رمز عبور', prefix: const Icon(Icons.lock_outline_rounded), counterText: '',
+          suffixIcon: IconButton(tooltip: _hideConfirmPassword ? 'نمایش رمز' : 'پنهان کردن رمز',
+            icon: Icon(_hideConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+            onPressed: () => setState(() => _hideConfirmPassword = !_hideConfirmPassword))),
+        validator: (v) {
+          final confirm = _latinDigits(v ?? '').replaceAll(' ', '');
+          if (confirm.isEmpty) return 'تکرار رمز عبور را وارد کنید.';
+          if (confirm != _passwordController.text.trim()) return 'تکرار رمز عبور با رمز عبور یکسان نیست.';
+          return null;
+        }),
+      const SizedBox(height: 18),
+      _fieldLabel('استان'), const SizedBox(height: 7),
+      TextFormField(controller: _provinceController, textCapitalization: TextCapitalization.words,
+        decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.map_outlined)),
+        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'استان را وارد کنید.'),
+      const SizedBox(height: 18),
+      _fieldLabel('شهر'), const SizedBox(height: 7),
+      TextFormField(controller: _cityController, textCapitalization: TextCapitalization.words,
+        decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.location_city_outlined)),
+        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'شهر را وارد کنید.'),
       const SizedBox(height: 22),
       _primaryButton(label: 'ادامه', onPressed: _submitAccount),
       const SizedBox(height: 12),
