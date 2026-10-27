@@ -177,19 +177,33 @@ class _LoginFlowState extends State<LoginFlow> {
       ) : null,
       body: SafeArea(
         top: !showBar,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
-              child: SingleChildScrollView(
-                key: ValueKey(_step),
-                padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-                child: _buildStep(context),
+        child: Stack(children: [
+          Positioned(
+            top: 8,
+            left: 8,
+            child: ValueListenableBuilder<ThemeMode>(
+              valueListenable: BuildingApp.themeMode,
+              builder: (context, mode, _) => IconButton(
+                tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
+                icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+                onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
               ),
             ),
           ),
-        ),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                child: SingleChildScrollView(
+                  key: ValueKey(_step),
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+                  child: _buildStep(context),
+                ),
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }
@@ -371,9 +385,10 @@ class _MiniFeatures extends StatelessWidget {
   const _MiniFeatures();
   @override
   Widget build(BuildContext context) => Row(children: const [
-    Expanded(child: _FeatureItem(icon: Icons.receipt_long_outlined, title: 'امور مالی')),
-    Expanded(child: _FeatureItem(icon: Icons.campaign_outlined, title: 'اطلاعیه‌ها')),
+    Expanded(child: _FeatureItem(icon: Icons.miscellaneous_services_outlined, title: 'خدمات')),
     Expanded(child: _FeatureItem(icon: Icons.handyman_outlined, title: 'درخواست‌ها')),
+    Expanded(child: _FeatureItem(icon: Icons.campaign_outlined, title: 'اطلاعیه‌ها')),
+    Expanded(child: _FeatureItem(icon: Icons.receipt_long_outlined, title: 'امور مالی')),
   ]);
 }
 class _FeatureItem extends StatelessWidget {
