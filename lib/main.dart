@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';\nimport 'package:flutter/services.dart';
 
 void main() => runApp(BuildingApp());
 
@@ -7,19 +7,6 @@ class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
-
-  /// بررسی روشن/تاریک مؤثر (ThemeMode.system را هم در نظر می‌گیرد)
-  static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
-    if (mode == ThemeMode.system) {
-      return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
-    }
-    return mode == ThemeMode.dark;
-  }
-
-  /// تغییر فوری تم با اولین کلیک (حالت system هم به‌درستی هندل می‌شود)
-  static void toggleTheme(BuildContext context) {
-    themeMode.value = isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +21,12 @@ class BuildingApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
           scaffoldBackgroundColor: const Color(0xFFF5F7F8),
           fontFamily: 'Roboto',
-          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          cardTheme: CardThemeData(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         themeMode: mode,
         home: const Directionality(textDirection: TextDirection.rtl, child: LoginFlow()),
@@ -97,19 +84,22 @@ class _LoginFlowState extends State<LoginFlow> {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
   final _nameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _provinceController = TextEditingController();
-  final _cityController = TextEditingController();
   final _buildingController = TextEditingController();
   final _floorController = TextEditingController();
   final _unitController = TextEditingController();
+  final _lastNameController = TextEditingController();\n  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _provinceController = TextEditingController();
+  final _cityController = TextEditingController();
   String? _ownership;
   String? _role;
+  bool _hidePassword = true;
+  bool _hideConfirmPassword = true;
+  String? _selectedProvince;
+  String? _selectedCity;
   Timer? _timer;
   int _secondsLeft = 0;
-  bool _hidePassword = true;  bool _hideConfirmPassword = true;
+  bool _hidePassword = true;
 
   @override
   void dispose() {
@@ -118,13 +108,12 @@ class _LoginFlowState extends State<LoginFlow> {
     _otpController.dispose();
     _nameController.dispose();
     _buildingController.dispose();
-    _lastNameController.dispose();
-    _passwordController.dispose();
+    _floorController.dispose();
+    _unitController.dispose();
+    _lastNameController.dispose();\n    _passwordController.dispose();
     _confirmPasswordController.dispose();
     _provinceController.dispose();
     _cityController.dispose();
-    _floorController.dispose();
-    _unitController.dispose();
     super.dispose();
   }
 
@@ -174,8 +163,40 @@ class _LoginFlowState extends State<LoginFlow> {
     setState(() => _step = _LoginStep.account);
   }
 
+  static const List<String> _iranProvinces = [
+    'آذربایجان شرقی','آذربایجان غربی','اردبیل','اصفهان','البرز','ایلام','بوشهر','تهران',
+    'چهارمحال و بختیاری','خراسان جنوبی','خراسان رضوی','خراسان شمالی','خوزستان','زنجان',
+    'سمنان','سیستان و بلوچستان','فارس','قزوین','قم','کردستان','کرمان','کرمانشاه',
+    'کهگیلویه و بویراحمد','گلستان','گیلان','لرستان','مازندران','مرکزی','هرمزگان','همدان','یزد',
+  ];
+
+  List<String> get _citiesForProvince {
+    switch (_selectedProvince) {
+      case 'تهران': return const ['تهران','کرج','شهریار','اسلامشهر','قدس','ملارد','ورامین','پاکدشت','پرند','رباط‌کریم'];
+      case 'اصفهان': return const ['اصفهان','کاشان','خمینی‌شهر','نجف‌آباد','شاهین‌شهر','فولادشهر','زرین‌شهر'];
+      case 'فارس': return const ['شیراز','مرودشت','کازرون','جهرم','لار','فسا','داراب'];
+      case 'خراسان رضوی': return const ['مشهد','نیشابور','سبزوار','تربت حیدریه','قوچان','کاشمر'];
+      case 'آذربایجان شرقی': return const ['تبریز','مراغه','مرند','اهر','میانه','بناب'];
+      case 'البرز': return const ['کرج','هشتگرد','نظرآباد','فردیس','ماهدشت','کمال‌شهر'];
+      case 'مازندران': return const ['ساری','آمل','بابل','قائم‌شهر','نوشهر','چالوس','تنکابن'];
+      case 'گیلان': return const ['رشت','بندر انزلی','لاهیجان','آستارا','تالش','رودسر'];
+      case 'خوزستان': return const ['اهواز','آبادان','خرمشهر','دزفول','اندیمشک','ماهشهر'];
+      case 'کرمان': return const ['کرمان','راور','رفسنجان','سیرجان','جیرفت','بم'];
+      case 'هرمزگان': return const ['بندرعباس','میناب','قشم','کیش','بندر لنگه'];
+      case 'قم': return const ['قم'];
+      case 'یزد': return const ['یزد','میبد','اردکان','مهریز','بافق'];
+      default: return const [];
+    }
+  }
+
   void _submitAccount() {
     if (!(_accountKey.currentState?.validate() ?? false)) return;
+    if (_selectedProvince == null || _selectedCity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('استان و شهر را انتخاب کنید.')));
+      return;
+    }
+    _provinceController.text = _selectedProvince!;
+    _cityController.text = _selectedCity!;
     FocusScope.of(context).unfocus();
     setState(() => _step = _LoginStep.success);
   }
@@ -197,34 +218,22 @@ class _LoginFlowState extends State<LoginFlow> {
         title: Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        actions: [
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: BuildingApp.themeMode,
-            builder: (context, mode, _) => IconButton(
-              tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
-              icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-              onPressed: () => BuildingApp.toggleTheme(context),
-            ),
-          ),
-        ],
       ) : null,
       body: SafeArea(
         top: !showBar,
-        child: Stack(children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 260),
-                child: SingleChildScrollView(
-                  key: ValueKey(_step),
-                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-                  child: _buildStep(context),
-                ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              child: SingleChildScrollView(
+                key: ValueKey(_step),
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+                child: _buildStep(context),
               ),
             ),
           ),
-        ]),
+        ),
       ),
     );
   }
@@ -247,31 +256,13 @@ class _LoginFlowState extends State<LoginFlow> {
       borderRadius: BorderRadius.circular(size * .31),
       boxShadow: [BoxShadow(color: const Color(0xFF11947A).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
     ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(size * .31),
-      child: Image.asset(
-        'assets/icon/app_icon.png',
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-      ),
-    ),
+    child: Icon(Icons.apartment_rounded, color: Colors.white, size: size * .52),
   );
 
   Widget _welcome(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: ValueListenableBuilder<ThemeMode>(
-          valueListenable: BuildingApp.themeMode,
-          builder: (context, mode, _) => IconButton(
-            tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
-            icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            onPressed: () => BuildingApp.toggleTheme(context),
-          ),
-        ),
-      ),
-      const SizedBox(height: 30),
+      const SizedBox(height: 42),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
       const Text('به خانه‌تان خوش آمدید', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, height: 1.5)),
@@ -284,7 +275,7 @@ class _LoginFlowState extends State<LoginFlow> {
         child: Row(children: [
           Icon(Icons.verified_user_outlined, color: colors.primary, size: 25),
           const SizedBox(width: 12),
-          const Expanded(child: Text('با شماره همراه وارد شده یا حساب کاربری بسازید', style: TextStyle(fontSize: 13, height: 1.7))),
+          const Expanded(child: Text('با شماره همراه خود وارد شوید یا حساب کاربری‌تان را بسازید.', style: TextStyle(fontSize: 13, height: 1.7))),
         ]),
       ),
       const SizedBox(height: 26),
@@ -363,77 +354,123 @@ class _LoginFlowState extends State<LoginFlow> {
     ]),
   );
 
-  Widget _accountForm(BuildContext context) => Form(
-    key: _accountKey,
-    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SizedBox(height: 8),
-      _stepIcon(Icons.person_add_alt_1_rounded),
-      const SizedBox(height: 17),
-      const Text('ساخت حساب کاربری', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 8),
-      Text('برای ادامه، اطلاعات زیر را وارد کنید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
-      const SizedBox(height: 22),
-      _fieldLabel('نام'), const SizedBox(height: 7),
-      TextFormField(controller: _nameController, textCapitalization: TextCapitalization.words,
-        decoration: _inputDecoration(hint: 'مثلاً سارا', prefix: const Icon(Icons.badge_outlined)),
-        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام را وارد کنید.'),
-      const SizedBox(height: 18),
-      _fieldLabel('نام خانوادگی'), const SizedBox(height: 7),
-      TextFormField(controller: _lastNameController, textCapitalization: TextCapitalization.words,
-        decoration: _inputDecoration(hint: 'مثلاً احمدی', prefix: const Icon(Icons.badge_outlined)),
-        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام خانوادگی را وارد کنید.'),
-      const SizedBox(height: 18),
-      _fieldLabel('رمز عبور (فقط عدد)'), const SizedBox(height: 7),
-      TextFormField(controller: _passwordController,
-        keyboardType: TextInputType.number,
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.left,
-        obscureText: _hidePassword,
-        maxLength: 8,
-        decoration: _inputDecoration(hint: 'مثلاً 1234', prefix: const Icon(Icons.lock_outline_rounded), counterText: '',
-          suffixIcon: IconButton(tooltip: _hidePassword ? 'نمایش رمز' : 'پنهان کردن رمز',
-            icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-            onPressed: () => setState(() => _hidePassword = !_hidePassword))),
-        validator: (v) {
-          final pass = _latinDigits(v ?? '').replaceAll(' ', '');
-          if (pass.length < 4) return 'رمز عبور حداقل ۴ رقم باشد.';
-          if (!RegExp(r'^\d+$').hasMatch(pass)) return 'رمز عبور فقط باید عدد باشد.';
-          return null;
-        }),
-      const SizedBox(height: 18),
-      _fieldLabel('تکرار رمز عبور'), const SizedBox(height: 7),
-      TextFormField(controller: _confirmPasswordController,
-        keyboardType: TextInputType.number,
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.left,
-        obscureText: _hideConfirmPassword,
-        maxLength: 8,
-        decoration: _inputDecoration(hint: 'تکرار رمز عبور', prefix: const Icon(Icons.lock_outline_rounded), counterText: '',
-          suffixIcon: IconButton(tooltip: _hideConfirmPassword ? 'نمایش رمز' : 'پنهان کردن رمز',
-            icon: Icon(_hideConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-            onPressed: () => setState(() => _hideConfirmPassword = !_hideConfirmPassword))),
-        validator: (v) {
-          final confirm = _latinDigits(v ?? '').replaceAll(' ', '');
-          if (confirm.isEmpty) return 'تکرار رمز عبور را وارد کنید.';
-          if (confirm != _passwordController.text.trim()) return 'تکرار رمز عبور با رمز عبور یکسان نیست.';
-          return null;
-        }),
-      const SizedBox(height: 18),
-      _fieldLabel('استان'), const SizedBox(height: 7),
-      TextFormField(controller: _provinceController, textCapitalization: TextCapitalization.words,
-        decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.map_outlined)),
-        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'استان را وارد کنید.'),
-      const SizedBox(height: 18),
-      _fieldLabel('شهر'), const SizedBox(height: 7),
-      TextFormField(controller: _cityController, textCapitalization: TextCapitalization.words,
-        decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.location_city_outlined)),
-        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'شهر را وارد کنید.'),
-      const SizedBox(height: 22),
-      _primaryButton(label: 'ادامه', onPressed: _submitAccount),
-      const SizedBox(height: 12),
-      Text('شماره همراه تأییدشده: ${_phoneController.text}', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
-    ]),
-  );
+  Widget _accountForm(BuildContext context) {
+    final cities = _citiesForProvince;
+    Widget passwordEye() => IconButton(
+      tooltip: _hidePassword ? 'نمایش رمز' : 'پنهان‌کردن رمز',
+      icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 21),
+      onPressed: () => setState(() => _hidePassword = !_hidePassword),
+    );
+    Widget confirmEye() => IconButton(
+      tooltip: _hideConfirmPassword ? 'نمایش رمز' : 'پنهان‌کردن رمز',
+      icon: Icon(_hideConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 21),
+      onPressed: () => setState(() => _hideConfirmPassword = !_hideConfirmPassword),
+    );
+    return Form(
+      key: _accountKey,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const SizedBox(height: 8),
+        _stepIcon(Icons.person_add_alt_1_rounded),
+        const SizedBox(height: 17),
+        const Text('ساخت حساب کاربری', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Text('همهٔ فیلدهای زیر را تکمیل کنید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
+
+        // 1) نام
+        _fieldLabel('نام'), const SizedBox(height: 7),
+        TextFormField(
+          controller: _nameController,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          decoration: _inputDecoration(hint: 'مثلاً سارا', prefix: const Icon(Icons.badge_outlined)),
+          validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام را وارد کنید.',
+        ),
+        const SizedBox(height: 16),
+
+        // 2) نام خانوادگی
+        _fieldLabel('نام خانوادگی'), const SizedBox(height: 7),
+        TextFormField(
+          controller: _lastNameController,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          decoration: _inputDecoration(hint: 'مثلاً احمدی', prefix: const Icon(Icons.badge_outlined)),
+          validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام خانوادگی را وارد کنید.',
+        ),
+        const SizedBox(height: 16),
+
+        // 3) رمز عبور (عددی)
+        _fieldLabel('رمز عبور (فقط عدد)'), const SizedBox(height: 7),
+        TextFormField(
+          controller: _passwordController,
+          keyboardType: TextInputType.number,
+          obscureText: _hidePassword,
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.left,
+          maxLength: 8,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          textInputAction: TextInputAction.next,
+          decoration: _inputDecoration(hint: 'مثلاً ۱۲۳۴۵۶', counterText: '', suffix: passwordEye()),
+          validator: (value) {
+            final pass = _latinDigits(value ?? '').trim();
+            if (pass.length < 4) return 'رمز عبور باید حداقل ۴ رقم باشد.';
+            if (!RegExp(r'^\d+$').hasMatch(pass)) return 'رمز عبور باید فقط شامل عدد باشد.';
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // 4) تکرار رمز عبور
+        _fieldLabel('تکرار رمز عبور'), const SizedBox(height: 7),
+        TextFormField(
+          controller: _confirmPasswordController,
+          keyboardType: TextInputType.number,
+          obscureText: _hideConfirmPassword,
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.left,
+          maxLength: 8,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          textInputAction: TextInputAction.next,
+          decoration: _inputDecoration(hint: 'تکرار رمز عبور', counterText: '', suffix: confirmEye()),
+          validator: (value) {
+            final pass = _latinDigits(value ?? '').trim();
+            if (pass.isEmpty) return 'تکرار رمز عبور را وارد کنید.';
+            if (pass != _latinDigits(_passwordController.text).trim()) return 'رمز عبور و تکرار آن یکسان نیستند.';
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // 5) استان
+        _fieldLabel('استان'), const SizedBox(height: 7),
+        DropdownButtonFormField<String>(
+          value: _selectedProvince,
+          isExpanded: true,
+          hint: const Text('انتخاب استان'),
+          items: _iranProvinces.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, overflow: TextOverflow.ellipsis))).toList(),
+          decoration: _inputDecoration(hint: 'انتخاب استان', prefix: const Icon(Icons.map_outlined)),
+          onChanged: (value) => setState(() { _selectedProvince = value; _selectedCity = null; }),
+          validator: (v) => v == null ? 'استان را انتخاب کنید.' : null,
+        ),
+        const SizedBox(height: 16),
+
+        // 6) شهر
+        _fieldLabel('شهر'), const SizedBox(height: 7),
+        DropdownButtonFormField<String>(
+          value: _selectedCity,
+          isExpanded: true,
+          hint: Text(_selectedProvince == null ? 'ابتدا استان را انتخاب کنید' : 'انتخاب شهر'),
+          items: cities.map((c) => DropdownMenuItem<String>(value: c, child: Text(c, overflow: TextOverflow.ellipsis))).toList(),
+          decoration: _inputDecoration(hint: 'انتخاب شهر', prefix: const Icon(Icons.location_city_outlined)),
+          onChanged: _selectedProvince == null ? null : (value) => setState(() => _selectedCity = value),
+          validator: (v) => v == null ? 'شهر را انتخاب کنید.' : null,
+        ),
+        const SizedBox(height: 24),
+        _primaryButton(label: 'ادامه', onPressed: _submitAccount),
+        const SizedBox(height: 12),
+        Text('شماره همراه تأییدشده: ${_phoneController.text}', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+      ]),
+    );
+  }
 
   Widget _success(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -475,10 +512,9 @@ class _MiniFeatures extends StatelessWidget {
   const _MiniFeatures();
   @override
   Widget build(BuildContext context) => Row(children: const [
-    Expanded(child: _FeatureItem(icon: Icons.miscellaneous_services_outlined, title: 'خدمات')),
-    Expanded(child: _FeatureItem(icon: Icons.handyman_outlined, title: 'درخواست‌ها')),
-    Expanded(child: _FeatureItem(icon: Icons.campaign_outlined, title: 'اطلاعیه‌ها')),
     Expanded(child: _FeatureItem(icon: Icons.receipt_long_outlined, title: 'امور مالی')),
+    Expanded(child: _FeatureItem(icon: Icons.campaign_outlined, title: 'اطلاعیه‌ها')),
+    Expanded(child: _FeatureItem(icon: Icons.handyman_outlined, title: 'درخواست‌ها')),
   ]);
 }
 class _FeatureItem extends StatelessWidget {
@@ -715,15 +751,15 @@ class _DashboardPageState extends State<DashboardPage> {
           Text('سلام، ${widget.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           Text(_isManager ? 'نقش شما: مدیر ساختمان' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
         ]),
-        leading: ValueListenableBuilder<ThemeMode>(
-          valueListenable: BuildingApp.themeMode,
-          builder: (context, mode, _) => IconButton(
-            tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
-            icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            onPressed: () => BuildingApp.toggleTheme(context),
-          ),
-        ),
         actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: BuildingApp.themeMode,
+            builder: (context, mode, _) => IconButton(
+              tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
+              icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+              onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+            ),
+          ),
           if (!_isManager && _joinedBuilding != null)
             IconButton(
               tooltip: 'خروج از ساختمان',
@@ -739,10 +775,10 @@ class _DashboardPageState extends State<DashboardPage> {
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() => selectedTab = index),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'خدمات'),
-          NavigationDestination(icon: Icon(Icons.handyman_outlined), label: 'درخواست‌ها'),
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'خانه'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'مالی'),
           NavigationDestination(icon: Icon(Icons.campaign_outlined), label: 'اطلاعیه‌ها'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'امور مالی'),
+          NavigationDestination(icon: Icon(Icons.person_outline_rounded), label: 'پروفایل'),
         ],
       ),
     );
@@ -1714,7 +1750,7 @@ class _PlaceholderTab extends StatelessWidget {
   final int index;
   @override
   Widget build(BuildContext context) {
-    final labels = ['درخواست‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.'];
+    final labels = ['امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.', 'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'پروفایل شما در نسخهٔ نمایشی فعلاً ساده است.'];
     return Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.hourglass_empty_rounded, size: 46, color: Theme.of(context).colorScheme.onSurfaceVariant),
       const SizedBox(height: 12),
