@@ -1755,3 +1755,5 @@ class _PlaceholderTab extends StatelessWidget {
         ),
       ),
     );
+  }
+}
