@@ -239,7 +239,12 @@ class _LoginFlowState extends State<LoginFlow> {
   Widget build(BuildContext context) {
     if (_step == _LoginStep.dashboard) return DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', onSwitch: () => setState(() => _step = _LoginStep.account));
     final showBar = _step == _LoginStep.phone || _step == _LoginStep.otp || _step == _LoginStep.account || _step == _LoginStep.success;
-    return Scaffold(
+    return PopScope(
+      canPop: _step == _LoginStep.welcome,
+      onPopInvoked: (didPop) {
+        if (!didPop && _step != _LoginStep.welcome) _goBack();
+      },
+      child: Scaffold(
       appBar: showBar ? AppBar(
         leading: IconButton(tooltip: 'بازگشت', onPressed: _goBack, icon: const Icon(Icons.arrow_forward_rounded)),
         title: Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
@@ -268,6 +273,7 @@ class _LoginFlowState extends State<LoginFlow> {
             ),
           ),
         ]),
+      ),
       ),
     );
   }
