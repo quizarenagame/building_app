@@ -22,6 +22,12 @@ class BuildingApp extends StatelessWidget {
     themeMode.value = isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
   }
 
+  /// مدیریت یکسان دکمهٔ برگشت سیستم/گوشی در همهٔ مراحل: هرگز خارج نمی‌شود، فقط برمی‌گردد
+  void _handlePop(bool didPop, Object? result) {
+    if (didPop) return;
+    _goBack();
+  }
+
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xFF12A889);
@@ -199,8 +205,8 @@ class _LoginFlowState extends State<LoginFlow> {
         break;
       case _LoginStep.account: setState(() => _step = _LoginStep.otp); break;
       case _LoginStep.success: setState(() => _step = _LoginStep.account); break;
-      case _LoginStep.welcome:
-      case _LoginStep.dashboard: break;
+      case _LoginStep.dashboard: setState(() => _step = _LoginStep.account); break;
+      case _LoginStep.welcome: break; // هیچ‌وقت از برنامه خارج نمی‌شود
     }
   }
 
@@ -237,13 +243,23 @@ class _LoginFlowState extends State<LoginFlow> {
 
   @override
   Widget build(BuildContext context) {
-    if (_step == _LoginStep.dashboard) return DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', onSwitch: () => setState(() => _step = _LoginStep.account));
+    if (_step == _LoginStep.dashboard) {
+      // داشبورد هم داخل PopScope است تا دکمهٔ برگشت گوشی به جای خروج، به مرحلهٔ حساب برگردد
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: _handlePop,
+        child: Scaffold(
+          body: SafeArea(
+            child: DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', onSwitch: () => setState(() => _step = _LoginStep.account)),
+          ),
+        ),
+      );
+    }
     final showBar = _step == _LoginStep.phone || _step == _LoginStep.otp || _step == _LoginStep.account || _step == _LoginStep.success;
+    // در همهٔ مراحل (حتی welcome) canPop=false تا سیستم/دکمهٔ برگشت گوشی هرگز از برنامه خارج نشود
     return PopScope(
-      canPop: _step == _LoginStep.welcome,
-      onPopInvoked: (didPop) {
-        if (!didPop && _step != _LoginStep.welcome) _goBack();
-      },
+      canPop: false,
+      onPopInvokedWithResult: _handlePop,
       child: Scaffold(
       appBar: showBar ? AppBar(
         leading: IconButton(tooltip: 'بازگشت', onPressed: _goBack, icon: const Icon(Icons.arrow_forward_rounded)),
@@ -254,11 +270,6 @@ class _LoginFlowState extends State<LoginFlow> {
       body: SafeArea(
         top: !showBar,
         child: Stack(children: [
-          PositionedDirectional(
-            top: 8,
-            end: 12,
-            child: _ThemeToggle(),
-          ),
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
@@ -271,6 +282,11 @@ class _LoginFlowState extends State<LoginFlow> {
                 ),
               ),
             ),
+          ),
+          PositionedDirectional(
+            top: 8,
+            end: 12,
+            child: _ThemeToggle(),
           ),
         ]),
       ),
