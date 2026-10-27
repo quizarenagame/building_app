@@ -84,6 +84,41 @@ String _latinDigitsToPersian(String value) {
 
 enum _LoginStep { welcome, phone, otp, account, success, dashboard }
 
+const List<MapEntry<String, List<String>>> _iranProvinceCities = [
+  MapEntry('آذربایجان شرقی', ['تبریز', 'مراغه', 'مرند', 'اهر', 'جلفا']),
+  MapEntry('آذربایجان غربی', ['ارومیه', 'خوی', 'میاندوآب', 'مهاباد', 'بوکان', 'سلماس']),
+  MapEntry('اردبیل', ['اردبیل', 'پارس‌آباد', 'مشگین‌شهر', 'خلخال', 'گرمی']),
+  MapEntry('اصفهان', ['اصفهان', 'کاشان', 'خمینی‌شهر', 'نجف‌آباد', 'شهرضا', 'شاهین‌شهر']),
+  MapEntry('البرز', ['کرج', 'فردیس', 'نظرآباد', 'هشتگرد', 'محمدشهر']),
+  MapEntry('ایلام', ['ایلام', 'دهلران', 'ایوان', 'آبدانان', 'مهران']),
+  MapEntry('بوشهر', ['بوشهر', 'برازجان', 'گناوه', 'کنگان', 'عسلویه', 'خورموج']),
+  MapEntry('تهران', ['تهران', 'ری', 'شمیرانات', 'اسلام‌شهر', 'شهریار', 'ورامین', 'پاکدشت']),
+  MapEntry('چهارمحال و بختیاری', ['شهرکرد', 'بروجن', 'فارسان', 'لردگان', 'فرخ‌شهر']),
+  MapEntry('خراسان جنوبی', ['بیرجند', 'قائن', 'طبس', 'فردوس', 'نهبندان']),
+  MapEntry('خراسان رضوی', ['مشهد', 'نیشابور', 'سبزوار', 'تربت حیدریه', 'کاشمر', 'قوچان']),
+  MapEntry('خراسان شمالی', ['بجنورد', 'شیروان', 'اسفراین', 'جاجرم', 'آشخانه']),
+  MapEntry('خوزستان', ['اهواز', 'آبادان', 'خرمشهر', 'دزفول', 'ماهشهر', 'بهبهان']),
+  MapEntry('زنجان', ['زنجان', 'ابهر', 'خرمدره', 'قیدار', 'سلطانیه']),
+  MapEntry('سمنان', ['سمنان', 'شاهرود', 'دامغان', 'گرمسار', 'مهدی‌شهر']),
+  MapEntry('سیستان و بلوچستان', ['زاهدان', 'چابهار', 'زابل', 'ایرانشهر', 'سراوان', 'خاش']),
+  MapEntry('فارس', ['شیراز', 'مرودشت', 'جهرم', 'فسا', 'کازرون', 'لارستان']),
+  MapEntry('قزوین', ['قزوین', 'تاکستان', 'الوند', 'آبیک', 'بوئین‌زهرا']),
+  MapEntry('قم', ['قم']),
+  MapEntry('کردستان', ['سنندج', 'سقز', 'مریوان', 'بانه', 'قروه', 'کامیاران']),
+  MapEntry('کرمان', ['کرمان', 'سیرجان', 'رفسنجان', 'جیرفت', 'بم', 'زرند']),
+  MapEntry('کرمانشاه', ['کرمانشاه', 'اسلام‌آباد غرب', 'هرسین', 'کنگاور', 'پاوه', 'جوانرود']),
+  MapEntry('کهگیلویه و بویراحمد', ['یاسوج', 'دهدشت', 'گچساران', 'لیکک']),
+  MapEntry('گلستان', ['گرگان', 'گنبدکاووس', 'علی‌آباد کتول', 'بندرترکمن', 'آق‌قلا']),
+  MapEntry('گیلان', ['رشت', 'بندر انزلی', 'لاهیجان', 'لنگرود', 'تالش', 'رودسر']),
+  MapEntry('لرستان', ['خرم‌آباد', 'بروجرد', 'دورود', 'الیگودرز', 'کوهدشت']),
+  MapEntry('مازندران', ['ساری', 'بابل', 'آمل', 'قائم‌شهر', 'چالوس', 'تنکابن']),
+  MapEntry('مرکزی', ['اراک', 'ساوه', 'خمین', 'محلات', 'دلیجان', 'شازند']),
+  MapEntry('هرمزگان', ['بندرعباس', 'قشم', 'کیش', 'میناب', 'بندرلنگه']),
+  MapEntry('همدان', ['همدان', 'ملایر', 'نهاوند', 'تویسرکان', 'اسدآباد']),
+  MapEntry('یزد', ['یزد', 'میبد', 'اردکان', 'بافق', 'مهریز', 'تفت']),
+];
+
+
 class LoginFlow extends StatefulWidget {
   const LoginFlow({super.key});
   @override
@@ -213,7 +248,7 @@ class _LoginFlowState extends State<LoginFlow> {
       body: SafeArea(
         top: !showBar,
         child: Stack(children: [
-          PositionedDirectional(
+          if (_step == _LoginStep.welcome) PositionedDirectional(
             top: 8,
             end: 12,
             child: ValueListenableBuilder<ThemeMode>(
@@ -425,14 +460,21 @@ class _LoginFlowState extends State<LoginFlow> {
       ),
       const SizedBox(height: 16),
       _fieldLabel('استان'), const SizedBox(height: 7),
-      TextFormField(controller: _provinceController, textCapitalization: TextCapitalization.words,
+      DropdownButtonFormField<String>(
+        value: _iranProvinceCities.any((entry) => entry.key == _provinceController.text) ? _provinceController.text : null,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.map_outlined)),
-        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'استان را وارد کنید.'),
+        items: _iranProvinceCities.map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.key))).toList(),
+        onChanged: (value) => setState(() => [_provinceController.text = value ?? '', _cityController.clear()]),
+        validator: (v) => v != null ? null : 'استان را وارد کنید.'),
       const SizedBox(height: 16),
       _fieldLabel('شهر'), const SizedBox(height: 7),
-      TextFormField(controller: _cityController, textCapitalization: TextCapitalization.words,
+      DropdownButtonFormField<String>(
+        key: ValueKey(_provinceController.text),
+        value: _iranProvinceCities.where((entry) => entry.key == _provinceController.text).expand((entry) => entry.value).contains(_cityController.text) ? _cityController.text : null,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.location_city_outlined)),
-        validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'شهر را وارد کنید.'),
+        items: _iranProvinceCities.where((entry) => entry.key == _provinceController.text).expand((entry) => entry.value).map((city) => DropdownMenuItem<String>(value: city, child: Text(city))).toList(),
+        onChanged: _provinceController.text.isEmpty ? null : (value) => setState(() => _cityController.text = value ?? ''),
+        validator: (v) => v != null ? null : 'شهر را وارد کنید.'),
       const SizedBox(height: 22),
       _primaryButton(label: 'ادامه', onPressed: _submitAccount),
       const SizedBox(height: 12),
