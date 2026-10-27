@@ -22,12 +22,6 @@ class BuildingApp extends StatelessWidget {
     themeMode.value = isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
   }
 
-  /// مدیریت یکسان دکمهٔ برگشت سیستم/گوشی در همهٔ مراحل: هرگز خارج نمی‌شود، فقط برمی‌گردد
-  void _handlePop(bool didPop, Object? result) {
-    if (didPop) return;
-    _goBack();
-  }
-
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xFF12A889);
@@ -247,7 +241,7 @@ class _LoginFlowState extends State<LoginFlow> {
       // داشبورد هم داخل PopScope است تا دکمهٔ برگشت گوشی به جای خروج، به مرحلهٔ حساب برگردد
       return PopScope(
         canPop: false,
-        onPopInvokedWithResult: _handlePop,
+        onPopInvoked: (didPop) { if (!didPop) _goBack(); },
         child: Scaffold(
           body: SafeArea(
             child: DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', onSwitch: () => setState(() => _step = _LoginStep.account)),
@@ -259,7 +253,7 @@ class _LoginFlowState extends State<LoginFlow> {
     // در همهٔ مراحل (حتی welcome) canPop=false تا سیستم/دکمهٔ برگشت گوشی هرگز از برنامه خارج نشود
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: _handlePop,
+      onPopInvoked: (didPop) { if (!didPop) _goBack(); },
       child: Scaffold(
       appBar: showBar ? AppBar(
         leading: IconButton(tooltip: 'بازگشت', onPressed: _goBack, icon: const Icon(Icons.arrow_forward_rounded)),
