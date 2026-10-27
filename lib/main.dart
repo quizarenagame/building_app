@@ -1717,10 +1717,43 @@ extension _PersianDigits on int {
 class _PlaceholderTab extends StatelessWidget {
   const _PlaceholderTab({required this.index});
   final int index;
+
   @override
   Widget build(BuildContext context) {
-    final labels = ['درخواست‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.', 'امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.'];
-    return Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.hourglass_empty_rounded, size: 46, color: Theme.of(context).colorScheme.onSurfaceVariant),
-      const SizedBox(height: 12),
-      Text(labels[index - 1], textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
+    final labels = [
+      'درخواست‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.',
+      'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.',
+      'امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.',
+    ];
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.hourglass_empty_rounded,
+              size: 46,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              labels[index - 1],
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.7,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'این نسخه یک نمونهٔ محلی است و بدون سرور کار می‌کند.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
