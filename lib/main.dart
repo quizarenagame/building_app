@@ -119,6 +119,19 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
 ];
 
 
+/// کلید شناور واحد برای تغییر تم در تمام مراحل برنامه.
+class _ThemeToggle extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
+    valueListenable: BuildingApp.themeMode,
+    builder: (context, mode, _) => IconButton.filledTonal(
+      tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
+      icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+      onPressed: () => BuildingApp.toggleTheme(context),
+    ),
+  );
+}
+
 class LoginFlow extends StatefulWidget {
   const LoginFlow({super.key});
   @override
@@ -136,8 +149,8 @@ class _LoginFlowState extends State<LoginFlow> {
   final _lastNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _provinceController = TextEditingController();
-  final _cityController = TextEditingController();
+  String? _selectedProvince;
+  String? _selectedCity;
   final _buildingController = TextEditingController();
   final _floorController = TextEditingController();
   final _unitController = TextEditingController();
@@ -157,8 +170,6 @@ class _LoginFlowState extends State<LoginFlow> {
     _lastNameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _provinceController.dispose();
-    _cityController.dispose();
     _buildingController.dispose();
     _floorController.dispose();
     _unitController.dispose();
@@ -234,31 +245,14 @@ class _LoginFlowState extends State<LoginFlow> {
         title: Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        actions: [
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: BuildingApp.themeMode,
-            builder: (context, mode, _) => IconButton(
-              tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
-              icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-              onPressed: () => BuildingApp.toggleTheme(context),
-            ),
-          ),
-        ],
       ) : null,
       body: SafeArea(
         top: !showBar,
         child: Stack(children: [
-          if (_step == _LoginStep.welcome) PositionedDirectional(
+          PositionedDirectional(
             top: 8,
             end: 12,
-            child: ValueListenableBuilder<ThemeMode>(
-              valueListenable: BuildingApp.themeMode,
-              builder: (context, mode, _) => IconButton.filledTonal(
-                tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
-                icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-                onPressed: () => BuildingApp.toggleTheme(context),
-              ),
-            ),
+            child: _ThemeToggle(),
           ),
           Center(
             child: ConstrainedBox(
@@ -461,19 +455,19 @@ class _LoginFlowState extends State<LoginFlow> {
       const SizedBox(height: 16),
       _fieldLabel('استان'), const SizedBox(height: 7),
       DropdownButtonFormField<String>(
-        value: _iranProvinceCities.any((entry) => entry.key == _provinceController.text) ? _provinceController.text : null,
+        value: _selectedProvince,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.map_outlined)),
         items: _iranProvinceCities.map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.key))).toList(),
-        onChanged: (value) => setState(() => [_provinceController.text = value ?? '', _cityController.clear()]),
+        onChanged: (value) => setState(() { _selectedProvince = value; _selectedCity = null; }),
         validator: (v) => v != null ? null : 'استان را وارد کنید.'),
       const SizedBox(height: 16),
       _fieldLabel('شهر'), const SizedBox(height: 7),
       DropdownButtonFormField<String>(
-        key: ValueKey(_provinceController.text),
-        value: _iranProvinceCities.where((entry) => entry.key == _provinceController.text).expand((entry) => entry.value).contains(_cityController.text) ? _cityController.text : null,
+        key: ValueKey(_selectedProvince),
+        value: _selectedCity,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.location_city_outlined)),
-        items: _iranProvinceCities.where((entry) => entry.key == _provinceController.text).expand((entry) => entry.value).map((city) => DropdownMenuItem<String>(value: city, child: Text(city))).toList(),
-        onChanged: _provinceController.text.isEmpty ? null : (value) => setState(() => _cityController.text = value ?? ''),
+        items: _iranProvinceCities.where((entry) => entry.key == _selectedProvince).expand((entry) => entry.value).map((city) => DropdownMenuItem<String>(value: city, child: Text(city))).toList(),
+        onChanged: _selectedProvince == null ? null : (value) => setState(() => _selectedCity = value),
         validator: (v) => v != null ? null : 'شهر را وارد کنید.'),
       const SizedBox(height: 22),
       _primaryButton(label: 'ادامه', onPressed: _submitAccount),
@@ -762,14 +756,6 @@ class _DashboardPageState extends State<DashboardPage> {
           Text('سلام، ${widget.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           Text(_isManager ? 'نقش شما: مدیر ساختمان' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
         ]),
-        leading: ValueListenableBuilder<ThemeMode>(
-          valueListenable: BuildingApp.themeMode,
-          builder: (context, mode, _) => IconButton(
-            tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
-            icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            onPressed: () => BuildingApp.toggleTheme(context),
-          ),
-        ),
         actions: [
           if (!_isManager && _joinedBuilding != null)
             IconButton(
@@ -782,6 +768,8 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
       body: SafeArea(child: body),
+      floatingActionButton: _ThemeToggle(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() => selectedTab = index),
