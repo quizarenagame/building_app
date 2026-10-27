@@ -8,6 +8,19 @@ class BuildingApp extends StatelessWidget {
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
 
+  /// بررسی روشن/تاریک مؤثر (ThemeMode.system را هم در نظر می‌گیرد)
+  static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
+    if (mode == ThemeMode.system) {
+      return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    }
+    return mode == ThemeMode.dark;
+  }
+
+  /// تغییر فوری تم با اولین کلیک (حالت system هم به‌درستی هندل می‌شود)
+  static void toggleTheme(BuildContext context) {
+    themeMode.value = isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
+  }
+
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xFF12A889);
@@ -174,22 +187,20 @@ class _LoginFlowState extends State<LoginFlow> {
         title: Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
+        actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: BuildingApp.themeMode,
+            builder: (context, mode, _) => IconButton(
+              tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
+              icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+              onPressed: () => BuildingApp.toggleTheme(context),
+            ),
+          ),
+        ],
       ) : null,
       body: SafeArea(
         top: !showBar,
         child: Stack(children: [
-          Positioned(
-            top: 8,
-            left: 8,
-            child: ValueListenableBuilder<ThemeMode>(
-              valueListenable: BuildingApp.themeMode,
-              builder: (context, mode, _) => IconButton(
-                tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
-                icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-                onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
-              ),
-            ),
-          ),
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
@@ -635,9 +646,9 @@ class _DashboardPageState extends State<DashboardPage> {
         leading: ValueListenableBuilder<ThemeMode>(
           valueListenable: BuildingApp.themeMode,
           builder: (context, mode, _) => IconButton(
-            tooltip: mode == ThemeMode.dark ? 'تم روشن' : 'تم تاریک',
-            icon: Icon(mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            onPressed: () => BuildingApp.themeMode.value = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+            tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
+            icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+            onPressed: () => BuildingApp.toggleTheme(context),
           ),
         ),
         actions: [
