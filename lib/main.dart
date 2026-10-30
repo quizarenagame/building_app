@@ -674,8 +674,6 @@ class _Building {
   final Map<int, List<int>> floorUnits = {};
   /// واحد اشغال‌شده: "طبقه/واحد" -> عضو
   final Map<String, _Member> occupants = {};
-  /// بدهی ثبت‌شده برای هر واحد، به تومان. واحدهای جدید به‌صورت پیش‌فرض بدهی صفر دارند.
-  final Map<String, int> debtsByUnit = {};
   _ChargeSettingTopic? chargeSettingTopic;
   int? get monthlyCharge => chargeSettingTopic?.approvedAmount;
   String unitId(int floor, int unit) => '$floor/$unit';
@@ -1540,8 +1538,6 @@ class _UnitTile extends StatelessWidget {
           ]),
           const SizedBox(height: 6),
           const SizedBox(height: 5),
-          Text('بدهی: ${formatTomanAmount(building.debtsByUnit[building.unitId(floor, unit)] ?? 0)}',
-              style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant, fontWeight: FontWeight.w600)),
           if (occupied)
             Row(children: [
               CircleAvatar(
@@ -1574,7 +1570,7 @@ class _UnitTile extends StatelessWidget {
             Text('خالی — برای انتخاب بزنید', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
           if (building.monthlyCharge != null) ...[
             const SizedBox(height: 7),
-            Text('شارژ ماهانه: ${formatTomanAmount(building.monthlyCharge!)}', style: TextStyle(fontSize: 10, color: colors.primary, fontWeight: FontWeight.bold)),
+            Text('شارژ مصوب: ${formatTomanAmount(building.monthlyCharge!)}', style: TextStyle(fontSize: 10, color: colors.primary, fontWeight: FontWeight.bold)),
           ],
         ]),
       ),
@@ -1623,7 +1619,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, 'no'), child: const Text('خیر')),
           if (member == null) TextButton(onPressed: () => Navigator.pop(dialogContext, 'register'), child: const Text('ثبت ساکن')),
-          TextButton(onPressed: () => Navigator.pop(dialogContext, 'debt'), child: const Text('ویرایش بدهی')),
           if (member != null) ...[
             TextButton(onPressed: () => Navigator.pop(dialogContext, 'delete'), child: const Text('حذف عضو')),
             TextButton(onPressed: () => Navigator.pop(dialogContext, 'move'), child: const Text('تغییر واحد')),
@@ -1645,8 +1640,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر');
       });
       _toast('شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
-    } else if (action == 'debt') {
-      await _editUnitDebt(key, floor, unit);
     } else if (action == 'register') {
       await _editOrAddMember(key, null);
     } else if (member != null && action == 'edit') {
@@ -1666,46 +1659,41 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     }
   }
 
-  Future<void> _editUnitDebt(String key, int floor, int unit) async {
-    final controller = TextEditingController(text: (b.debtsByUnit[key] ?? 0).toString());
-    final result = await showDialog<int>(context: context, builder: (dialogContext) => AlertDialog(
-      title: Text('بدهی واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
-      content: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'مبلغ بدهی به تومان', suffixText: 'تومان'),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
-        FilledButton(onPressed: () {
-          final amount = int.tryParse(_latinDigits(controller.text.trim()).replaceAll(',', '').replaceAll('٬', ''));
-          if (amount != null && amount >= 0) Navigator.pop(dialogContext, amount);
-        }, child: const Text('ذخیره')),
-      ],
-    ));
-    controller.dispose();
-    if (result == null || !mounted) return;
-    setState(() => b.debtsByUnit[key] = result);
-    _toast('بدهی این واحد به‌روزرسانی شد.');
-  }
-
   Future<void> _editOrAddMember(String key, _Member? existing) async {
     final nameController = TextEditingController(text: existing?.name ?? '');
-    final roleController = TextEditingController(text: existing?.role ?? 'ساکن');
-    final ownershipController = TextEditingController(text: existing?.ownership ?? 'مالک');
-    final result = await showDialog<_Member>(context: context, builder: (dialogContext) => AlertDialog(
-      title: Text(existing == null ? 'ثبت ساکن' : 'ویرایش عضو'),
-      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'نام عضو')),
-        TextField(controller: roleController, decoration: const InputDecoration(labelText: 'نقش')),
-        TextField(controller: ownershipController, decoration: const InputDecoration(labelText: 'نوع سکونت / مالکیت')),
-      ])),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
-        final name = nameController.text.trim();
-        if (name.isNotEmpty) Navigator.pop(dialogContext, _Member(name, roleController.text.trim().isEmpty ? 'ساکن' : roleController.text.trim(), ownershipController.text.trim().isEmpty ? 'مالک' : ownershipController.text.trim()));
-      }, child: const Text('ذخیره'))],
+    var selectedRole = existing?.role == 'مدیر' ? 'مدیر' : 'ساکن';
+    var selectedOwnership = existing?.ownership == 'مستأجر' ? 'مستأجر' : 'مالک';
+    final result = await showDialog<_Member>(context: context, builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(existing == null ? 'ثبت ساکن' : 'ویرایش عضو'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'نام عضو')),
+          DropdownButtonFormField<String>(
+            value: selectedRole,
+            decoration: const InputDecoration(labelText: 'نقش'),
+            items: const [
+              DropdownMenuItem(value: 'ساکن', child: Text('ساکن')),
+              DropdownMenuItem(value: 'مدیر', child: Text('مدیر')),
+            ],
+            onChanged: (value) { if (value != null) setDialogState(() => selectedRole = value); },
+          ),
+          DropdownButtonFormField<String>(
+            value: selectedOwnership,
+            decoration: const InputDecoration(labelText: 'نوع سکونت / مالکیت'),
+            items: const [
+              DropdownMenuItem(value: 'مالک', child: Text('مالک')),
+              DropdownMenuItem(value: 'مستأجر', child: Text('مستأجر')),
+            ],
+            onChanged: (value) { if (value != null) setDialogState(() => selectedOwnership = value); },
+          ),
+        ])),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
+          final name = nameController.text.trim();
+          if (name.isNotEmpty) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership));
+        }, child: const Text('ذخیره'))],
+      ),
     ));
-    nameController.dispose(); roleController.dispose(); ownershipController.dispose();
+    nameController.dispose();
     if (result == null || !mounted) return;
     setState(() => b.occupants[key] = result);
     _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
