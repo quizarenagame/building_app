@@ -1228,8 +1228,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
     if (member == null) {
       final join = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
         title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
-        content: const Text('وضعیت واحد: خالی
-برای سکونت در این واحد ثبت‌نام می‌کنید؟'),
+        content: const Text('وضعیت واحد: خالی\nبرای سکونت در این واحد ثبت‌نام می‌کنید؟'),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('بستن')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('انتخاب این واحد'))],
       ));
       if (join == true && mounted) _joinUnit(building, floor, unit);
