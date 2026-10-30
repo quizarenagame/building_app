@@ -82,6 +82,10 @@ String _latinDigitsToPersian(String value) {
   return result;
 }
 
+extension StringPersianDigits on String {
+  String toPersianDigits() => _latinDigitsToPersian(this);
+}
+
 enum _LoginStep { welcome, phone, otp, account, success, managerChoice, dashboard }
 
 const List<MapEntry<String, List<String>>> _iranProvinceCities = [
