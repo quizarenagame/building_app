@@ -85,7 +85,7 @@ String _latinDigitsToPersian(String value) {
 enum _LoginStep { welcome, phone, otp, account, success, managerChoice, dashboard }
 
 const List<MapEntry<String, List<String>>> _iranProvinceCities = [
-  MapEntry('آذربایجان شرقی', ['تبریز', 'آبش احمد', 'آذرشهر', 'اسکو', 'اهر', 'ایلخچی', 'باسمنج', 'بستان آباد', 'بناب', 'ترکمانچای', 'تسوج', 'تیکمه داش', 'جلفا', 'چاراویماق', 'چهاردانگه', 'خاروانا', 'خداآفرین', 'خسروشاه', 'خواجه', 'سراب', 'سراجو', 'سهند', 'سیه رود', 'شادیان', 'شبستر', 'صوفیان', 'عجب شیر', 'فندقلو', 'قلعه چای', 'کاغذکنان', 'کشکسرای', 'کلیبر', 'کندوان', 'گرمادوز', 'گوگان', 'لیلان', 'مراغه', 'مرند', 'ملکان', 'ممقان', 'منجوان', 'مهربان', 'میانه', 'نظرکهریزی', 'هریس', 'هشترود', 'هوراند', 'ورزقان', 'یامچی']),
+  MapEntry('آذربایجان شرقی', ['تبریز', 'مراغه', 'مرند', 'اهر', 'جلفا']),
   MapEntry('آذربایجان غربی', ['ارومیه', 'خوی', 'میاندوآب', 'مهاباد', 'بوکان', 'سلماس']),
   MapEntry('اردبیل', ['اردبیل', 'پارس‌آباد', 'مشگین‌شهر', 'خلخال', 'گرمی']),
   MapEntry('اصفهان', ['اصفهان', 'کاشان', 'خمینی‌شهر', 'نجف‌آباد', 'شهرضا', 'شاهین‌شهر']),
@@ -247,7 +247,7 @@ class _LoginFlowState extends State<LoginFlow> {
         onPopInvoked: (didPop) { if (!didPop) _goBack(); },
         child: Scaffold(
           body: SafeArea(
-            child: DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', onSwitch: () => setState(() => _step = _LoginStep.account)),
+            child: DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', showMyBuildings: _showMyBuildings, onSwitch: () => setState(() => _step = _LoginStep.account)),
           ),
         ),
       );
@@ -751,12 +751,14 @@ class DashboardPage extends StatefulWidget {
     required this.role,
     required this.buildingName,
     required this.ownership,
+    this.showMyBuildings = false,
     this.onSwitch,
   });
   final String name;
   final String role;
   final String buildingName;
   final String ownership;
+  final bool showMyBuildings;
   final VoidCallback? onSwitch;
 
   @override
@@ -790,7 +792,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final body = switch (selectedTab) {
-      0 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
+      0 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
           building: _joinedBuilding,
           name: widget.name,
           myFloor: _myFloor,
@@ -836,9 +838,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
 /// ------------------------------- مدیر -------------------------------
 class _ManagerHome extends StatefulWidget {
-  const _ManagerHome({required this.building, required this.managerName, required this.onBuildingChanged});
+  const _ManagerHome({required this.building, required this.managerName, required this.showMyBuildings, required this.onBuildingChanged});
   final _Building? building;
   final String managerName;
+  final bool showMyBuildings;
   final ValueChanged<_Building> onBuildingChanged;
   @override
   State<_ManagerHome> createState() => _ManagerHomeState();
@@ -991,8 +994,54 @@ class _ManagerHomeState extends State<_ManagerHome> {
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.8)),
   );
 
+  Widget _myBuildingsList(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final buildings = AppSharedState.instance.buildings.values
+        .where((b) => b.occupants.values.any((m) => m.name == widget.managerName && m.role == 'مدیر'))
+        .toList();
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text('ساختمان تحت مدیریت من', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        ),
+        if (buildings.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('ساختمانی تحت مدیریت شما ثبت نشده است.', textAlign: TextAlign.center,
+                  style: TextStyle(color: colors.onSurfaceVariant)),
+            ),
+          )
+        else
+          ...buildings.map((b) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Card(
+              child: InkWell(
+                onTap: () => _openBuildingDetail(b),
+                borderRadius: BorderRadius.circular(22),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(children: [
+                    Container(width: 46, height: 46,
+                      decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(14)),
+                      child: Icon(Icons.apartment_rounded, color: colors.primary)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                    Icon(Icons.chevron_left_rounded, color: colors.onSurfaceVariant),
+                  ]),
+                ),
+              ),
+            ),
+          )),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.showMyBuildings) return _myBuildingsList(context);
     final b = _building;
     return ListView(
       padding: const EdgeInsets.all(16),
