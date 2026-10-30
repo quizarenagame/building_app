@@ -620,14 +620,22 @@ class _Member {
 }
 
 class _BuildingPoll {
-  _BuildingPoll({required this.title, required this.description, required this.deadline})
+  _BuildingPoll({required this.title, required this.description, required this.deadline, this.financialAmount = 0})
       : createdAt = DateTime.now();
   final String title;
   final String description;
   final DateTime createdAt;
   final DateTime deadline;
+  final int financialAmount;
+  bool financialDistributionApplied = false;
   final Map<String, String> votesByUnitId = {};
   bool get isActive => DateTime.now().isBefore(deadline);
+  int get agreeCount => votesByUnitId.values.where((v) => v == 'موافقم').length;
+  int get disagreeCount => votesByUnitId.values.where((v) => v == 'مخالفم').length;
+  int get abstainCount => votesByUnitId.values.where((v) => v == 'ممتنع').length;
+  int get totalVotes => votesByUnitId.length;
+  bool get passed => totalVotes > 0 && agreeCount > totalVotes / 2;
+  double percentage(int count) => totalVotes == 0 ? 0 : count * 100 / totalVotes;
 }
 
 String _formatPersianDateTime(DateTime value) {
@@ -696,6 +704,25 @@ class _Building {
   final Map<String, _Member> occupants = {};
   _ChargeSettingTopic? chargeSettingTopic;
   final List<_BuildingPoll> polls = [];
+  final Map<String, int> financialDebtByUnitId = {};
+  int get totalUnitCount => floors.values.fold<int>(0, (sum, count) => sum + count);
+  int financialDebtFor(String unitId) => financialDebtByUnitId[unitId] ?? 0;
+  void settlePolls() {
+    for (final poll in polls) {
+      if (!poll.isActive && !poll.financialDistributionApplied) {
+        poll.financialDistributionApplied = true;
+        if (poll.financialAmount > 0 && poll.passed && totalUnitCount > 0) {
+          final perUnit = poll.financialAmount ~/ totalUnitCount;
+          for (final floorEntry in floorUnits.entries) {
+            for (final unit in floorEntry.value) {
+              final id = unitId(floorEntry.key, unit);
+              financialDebtByUnitId[id] = (financialDebtByUnitId[id] ?? 0) + perUnit;
+            }
+          }
+        }
+      }
+    }
+  }
   int? get monthlyCharge => chargeSettingTopic?.approvedAmount;
   String unitId(int floor, int unit) => '$floor/$unit';
 
@@ -1236,7 +1263,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
     }
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: Text('اطلاعات واحد ${unit.toPersianDigits()}'),
-      content: _MemberInfoContent(building: building, member: member),
+      content: _MemberInfoContent(building: building, member: member, unitId: building.unitId(floor, unit)),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))],
     ));
   }
@@ -1275,6 +1302,8 @@ class _ResidentHomeState extends State<_ResidentHome> {
         _BuildingLayout(building: b, highlightMemberName: widget.name),
         const SizedBox(height: 12),
         _ResidentChargeCard(building: b, unitId: b.unitId(widget.myFloor!, widget.myUnit!), onChanged: () { if (mounted) setState(() {}); }),
+        const SizedBox(height: 12),
+        _ResidentPollsCard(building: b, unitId: b.unitId(widget.myFloor!, widget.myUnit!), onChanged: () { if (mounted) setState(() {}); }),
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(14),
@@ -1340,9 +1369,11 @@ class _ResidentHomeState extends State<_ResidentHome> {
         const SizedBox(height: 10),
         _BuildingLayout(
           building: found,
-          onUnitTap: (floor, unit) => _joinUnit(found, floor, unit),
+          onUnitTap: (floor, unit) => _showResidentUnit(found, floor, unit),
           highlightMemberName: widget.name,
         ),
+        const SizedBox(height: 12),
+        _ResidentPollsCard(building: found, unitId: null, onChanged: () { if (mounted) setState(() {}); }),
       ],
       const SizedBox(height: 24),
       Container(
@@ -1465,15 +1496,17 @@ class _ResidentChargeCardState extends State<_ResidentChargeCard> {
 }
 
 class _MemberInfoContent extends StatelessWidget {
-  const _MemberInfoContent({required this.building, required this.member});
+  const _MemberInfoContent({required this.building, required this.member, this.unitId});
   final _Building building;
   final _Member member;
+  final String? unitId;
   @override Widget build(BuildContext context) {
     final charge = building.monthlyCharge;
     Widget row(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 112, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600))), Expanded(child: Text(value))]));
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       row('نام', member.name), row('شماره تماس', member.phone.isEmpty ? 'ثبت نشده' : member.phone),
       row('بدهی شارژ', charge == null ? 'شارژ مصوب نشده' : formatTomanAmount(charge)),
+      if (unitId != null && building.financialDebtFor(unitId!) > 0) row('سهم بدهی مالی', formatTomanAmount(building.financialDebtFor(unitId!))),
       row('بدهی آب', formatTomanAmount(member.waterDebt)), row('نوع مالکیت', member.ownership),
       row('تاریخ و ساعت سکونت', _formatPersianDateTime(member.movedInAt)),
     ]);
@@ -1482,38 +1515,74 @@ class _MemberInfoContent extends StatelessWidget {
 
 class _ResidentPollsCard extends StatefulWidget {
   const _ResidentPollsCard({required this.building, required this.unitId, required this.onChanged});
-  final _Building building; final String unitId; final VoidCallback onChanged;
+  final _Building building; final String? unitId; final VoidCallback onChanged;
   @override State<_ResidentPollsCard> createState() => _ResidentPollsCardState();
 }
 class _ResidentPollsCardState extends State<_ResidentPollsCard> {
   Future<void> _participate(_BuildingPoll poll) async {
-    final previous = poll.votesByUnitId[widget.unitId];
+    final unitId = widget.unitId;
+    if (unitId == null) return;
+    widget.building.settlePolls();
+    final previous = poll.votesByUnitId[unitId];
     final choice = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
       title: Text(poll.title),
-      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(poll.description.isEmpty ? 'توضیحی ثبت نشده است.' : poll.description), const SizedBox(height: 12),
+        Text('ایجاد: ${_formatPersianDateTime(poll.createdAt)}'),
         Text('مهلت تا ${_formatPersianDateTime(poll.deadline)}'),
-        if (previous != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('رأی شما: $previous')),
-      ]),
+        if (poll.financialAmount > 0) Text('بار مالی: ${formatTomanAmount(poll.financialAmount)}'),
+        if (previous != null) const Padding(padding: EdgeInsets.only(top: 8), child: Text('رأی شما ثبت شده است؛ آرای افراد به‌صورت ناشناس نگهداری می‌شوند.')),
+        if (!poll.isActive) ...[
+          const Divider(),
+          Text('نتیجه: ${poll.passed ? 'تصویب شد' : 'تصویب نشد'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text('موافق: ${poll.agreeCount.toPersianDigits()} (${poll.percentage(poll.agreeCount).toStringAsFixed(1).toPersianDigits()}٪)'),
+          Text('مخالف: ${poll.disagreeCount.toPersianDigits()} (${poll.percentage(poll.disagreeCount).toStringAsFixed(1).toPersianDigits()}٪)'),
+          Text('ممتنع: ${poll.abstainCount.toPersianDigits()} (${poll.percentage(poll.abstainCount).toStringAsFixed(1).toPersianDigits()}٪)'),
+          if (poll.passed && poll.financialAmount > 0) Text('سهم هر واحد: ${formatTomanAmount(widget.building.totalUnitCount == 0 ? 0 : poll.financialAmount ~/ widget.building.totalUnitCount)}'),
+        ],
+      ])),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن')),
         if (previous == null && poll.isActive) ...[
           OutlinedButton(onPressed: () => Navigator.pop(ctx, 'موافقم'), child: const Text('موافقم')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, 'مخالفم'), child: const Text('مخالفم')),
+          OutlinedButton(onPressed: () => Navigator.pop(ctx, 'مخالفم'), child: const Text('مخالفم')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'ممتنع'), child: const Text('ممتنع')),
         ],
       ],
     ));
     if (choice != null && poll.isActive && previous == null) {
-      setState(() => poll.votesByUnitId[widget.unitId] = choice);
+      setState(() => poll.votesByUnitId[unitId] = choice);
+      widget.building.settlePolls();
       widget.onChanged();
     }
   }
   @override Widget build(BuildContext context) {
-    final polls = widget.building.polls.where((p) => p.isActive).toList();
-    if (polls.isEmpty) return const SizedBox.shrink();
+    widget.building.settlePolls();
+    final active = widget.building.polls.where((p) => p.isActive).toList();
+    final history = widget.building.polls.where((p) => !p.isActive).toList();
+    if (active.isEmpty && history.isEmpty) return const SizedBox.shrink();
+    Widget pollTile(_BuildingPoll poll) {
+      final mine = widget.unitId != null && poll.votesByUnitId.containsKey(widget.unitId);
+      final resultText = poll.isActive
+          ? 'مهلت: ${_formatPersianDateTime(poll.deadline)}${mine ? ' • رأی شما ثبت شد' : ''}'
+          : 'نتیجه: ${poll.passed ? 'تصویب شد' : 'تصویب نشد'} • ${poll.agreeCount.toPersianDigits()} موافق (${poll.percentage(poll.agreeCount).toStringAsFixed(1).toPersianDigits()}٪) • ${poll.disagreeCount.toPersianDigits()} مخالف (${poll.percentage(poll.disagreeCount).toStringAsFixed(1).toPersianDigits()}٪)';
+      return ListTile(contentPadding: EdgeInsets.zero, leading: Icon(poll.isActive ? Icons.poll_outlined : Icons.task_alt_outlined), title: Text(poll.title), subtitle: Text(resultText), trailing: const Icon(Icons.chevron_left), onTap: () => _participate(poll));
+    }
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Text('نظرسنجی‌های فعال', style: TextStyle(fontWeight: FontWeight.bold))]),
-      for (final poll in polls) ListTile(contentPadding: EdgeInsets.zero, title: Text(poll.title), subtitle: Text('مهلت: ${_formatPersianDateTime(poll.deadline)}${poll.votesByUnitId.containsKey(widget.unitId) ? ' • رأی شما ثبت شد' : ''}'), trailing: const Icon(Icons.chevron_left), onTap: () => _participate(poll)),
+      if (active.isNotEmpty) ...[
+        Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Text('نظرسنجی‌های فعال', style: TextStyle(fontWeight: FontWeight.bold))]),
+        for (final poll in active) pollTile(poll),
+      ],
+      if (history.isNotEmpty) ...[
+        const Divider(),
+        const Text('سوابق نظرسنجی‌ها', style: TextStyle(fontWeight: FontWeight.bold)),
+        for (final poll in history) ...[
+          Padding(padding: const EdgeInsets.only(top: 8), child: Text('ایجاد: ${_formatPersianDateTime(poll.createdAt)}', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant))),
+          pollTile(poll),
+        ],
+      ],
+      if (widget.unitId == null && active.isNotEmpty) Text('برای رأی‌دادن، ابتدا واحد خود را انتخاب کنید.', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      const Text('آرا ناشناس هستند؛ نتایج فقط به‌صورت تعداد و درصد نمایش داده می‌شوند.', style: TextStyle(fontSize: 11)),
     ])));
   }
 }
@@ -1661,6 +1730,10 @@ class _UnitTile extends StatelessWidget {
           ]
           else
             Text('خالی — برای انتخاب بزنید', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+          if (building.financialDebtFor(building.unitId(floor, unit)) > 0) ...[
+            const SizedBox(height: 5),
+            Text('سهم بدهی مالی: ${formatTomanAmount(building.financialDebtFor(building.unitId(floor, unit)))}', style: TextStyle(fontSize: 10, color: colors.error, fontWeight: FontWeight.bold)),
+          ],
           if (building.monthlyCharge != null) ...[
             const SizedBox(height: 7),
             Text('شارژ مصوب: ${formatTomanAmount(building.monthlyCharge!)}', style: TextStyle(fontSize: 10, color: colors.primary, fontWeight: FontWeight.bold)),
@@ -1704,7 +1777,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
         content: member == null
             ? const Text('این واحد خالی است. آیا می‌خواهید در این واحد مستقر شوید یا ساکن ثبت کنید؟')
-            : SingleChildScrollView(child: _MemberInfoContent(building: b, member: member)),
+            : SingleChildScrollView(child: _MemberInfoContent(building: b, member: member, unitId: key)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, 'no'), child: const Text('بستن')),
           if (member == null) TextButton(onPressed: () => Navigator.pop(dialogContext, 'register'), child: const Text('ثبت ساکن')),
@@ -1747,6 +1820,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final nameController = TextEditingController(text: existing?.name ?? '');
     final phoneController = TextEditingController(text: existing?.phone ?? '');
     final waterDebtController = TextEditingController(text: '${existing?.waterDebt ?? 0}');
+    var phoneError;
     var selectedRole = existing?.role == 'مدیر' ? 'مدیر' : 'ساکن';
     var selectedOwnership = existing?.ownership == 'مستأجر' ? 'مستأجر' : 'مالک';
     final result = await showDialog<_Member>(context: context, builder: (dialogContext) => StatefulBuilder(
@@ -1754,7 +1828,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         title: Text(existing == null ? 'ثبت ساکن' : 'ویرایش عضو'),
         content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'نام عضو')),
-          TextField(controller: phoneController, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'شماره تماس')),
+          TextField(controller: phoneController, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, decoration: InputDecoration(labelText: 'شماره تماس', errorText: phoneError), onChanged: (_) { if (phoneError != null) setDialogState(() => phoneError = null); }),
           TextField(controller: waterDebtController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'بدهی آب (تومان)')),
           DropdownButtonFormField<String>(
             value: selectedRole,
@@ -1777,8 +1851,10 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         ])),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
           final name = nameController.text.trim();
+          final phone = _latinDigits(phoneController.text.trim());
+          if (!RegExp(r'^09\d{9}$').hasMatch(phone)) { setDialogState(() => phoneError = 'شماره همراه باید ۱۱ رقم و با 09 شروع شود.'); return; }
           final waterDebt = int.tryParse(_latinDigits(waterDebtController.text.trim())) ?? -1;
-          if (name.isNotEmpty && waterDebt >= 0) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership, phone: phoneController.text.trim(), waterDebt: waterDebt, movedInAt: existing?.movedInAt ?? DateTime.now()));
+          if (name.isNotEmpty && waterDebt >= 0) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership, phone: phone, waterDebt: waterDebt, movedInAt: existing?.movedInAt ?? DateTime.now()));
         }, child: const Text('ذخیره'))],
       ),
     ));
@@ -1815,6 +1891,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final daysController = TextEditingController(text: '3');
+    final financialController = TextEditingController();
     String? error;
     final result = await showDialog<_BuildingPoll>(context: context, builder: (dialogContext) => StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
@@ -1823,6 +1900,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           TextField(controller: titleController, autofocus: true, decoration: const InputDecoration(labelText: 'موضوع')),
           TextField(controller: descriptionController, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'توضیح')),
           TextField(controller: daysController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'مهلت شرکت در نظرسنجی (روز)')),
+          TextField(controller: financialController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'بار مالی به تومان (اختیاری)', hintText: 'مثلاً ۳۰٬۰۰۰٬۰۰۰')),
           if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
         ])),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
@@ -1833,7 +1911,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         }, child: const Text('ایجاد نظرسنجی'))],
       ),
     ));
-    titleController.dispose(); descriptionController.dispose(); daysController.dispose();
+    titleController.dispose(); descriptionController.dispose(); daysController.dispose(); financialController.dispose();
     if (result != null && mounted) { setState(() => b.polls.insert(0, result)); _toast('نظرسنجی ایجاد شد و برای ساکنان نمایش داده می‌شود.'); }
   }
 
@@ -1964,6 +2042,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    b.settlePolls();
     final totalUnits = b.floors.values.fold<int>(0, (sum, n) => sum + n);
     return Scaffold(
       appBar: AppBar(
@@ -2009,7 +2088,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           Text('نظرسنجی‌های فعال: ${b.polls.where((p) => p.isActive).length.toPersianDigits()}', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
           const SizedBox(height: 10),
           FilledButton.icon(onPressed: _createPoll, icon: const Icon(Icons.add_circle_outline), label: const Text('ایجاد نظرسنجی')),
-          for (final poll in b.polls) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(poll.isActive ? Icons.poll_outlined : Icons.task_alt_outlined), title: Text(poll.title), subtitle: Text(poll.isActive ? 'مهلت تا ${_formatPersianDateTime(poll.deadline)}' : 'مهلت نظرسنجی پایان یافته')),
+          for (final poll in b.polls) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(poll.isActive ? Icons.poll_outlined : Icons.task_alt_outlined), title: Text(poll.title), subtitle: Text(poll.isActive ? 'ایجاد: ${_formatPersianDateTime(poll.createdAt)} • مهلت تا ${_formatPersianDateTime(poll.deadline)} • رأی‌دهنده: ${poll.totalVotes.toPersianDigits()}' : 'نتیجه: ${poll.passed ? 'تصویب شد' : 'تصویب نشد'} • موافق ${poll.agreeCount.toPersianDigits()} (${poll.percentage(poll.agreeCount).toStringAsFixed(1).toPersianDigits()}٪) • مخالف ${poll.disagreeCount.toPersianDigits()} (${poll.percentage(poll.disagreeCount).toStringAsFixed(1).toPersianDigits()}٪)')),
         ]))),
         const SizedBox(height: 14),
         OutlinedButton.icon(onPressed: _addFloor, icon: const Icon(Icons.add_rounded), label: const Text('افزودن طبقه جدید')),
