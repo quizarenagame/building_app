@@ -609,10 +609,30 @@ class AppSharedState {
 }
 
 class _Member {
-  _Member(this.name, this.role, this.ownership);
+  _Member(this.name, this.role, this.ownership, {this.phone = '', this.waterDebt = 0, DateTime? movedInAt})
+      : movedInAt = movedInAt ?? DateTime.now();
   final String name;
   final String role;
   final String ownership;
+  final String phone;
+  final int waterDebt;
+  final DateTime movedInAt;
+}
+
+class _BuildingPoll {
+  _BuildingPoll({required this.title, required this.description, required this.deadline})
+      : createdAt = DateTime.now();
+  final String title;
+  final String description;
+  final DateTime createdAt;
+  final DateTime deadline;
+  final Map<String, String> votesByUnitId = {};
+  bool get isActive => DateTime.now().isBefore(deadline);
+}
+
+String _formatPersianDateTime(DateTime value) {
+  final raw = '${value.year.toString().padLeft(4, '0')}/${value.month.toString().padLeft(2, '0')}/${value.day.toString().padLeft(2, '0')}  ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  return _latinDigitsToPersian(raw);
 }
 
 class _ChargeProposal {
@@ -675,6 +695,7 @@ class _Building {
   /// واحد اشغال‌شده: "طبقه/واحد" -> عضو
   final Map<String, _Member> occupants = {};
   _ChargeSettingTopic? chargeSettingTopic;
+  final List<_BuildingPoll> polls = [];
   int? get monthlyCharge => chargeSettingTopic?.approvedAmount;
   String unitId(int floor, int unit) => '$floor/$unit';
 
@@ -1202,6 +1223,25 @@ class _ResidentHomeState extends State<_ResidentHome> {
     _toast('خوش آمدید! شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} «${b.name}» قرار گرفتید.');
   }
 
+  Future<void> _showResidentUnit(_Building building, int floor, int unit) async {
+    final member = building.occupantOf(floor, unit);
+    if (member == null) {
+      final join = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+        title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+        content: const Text('وضعیت واحد: خالی
+برای سکونت در این واحد ثبت‌نام می‌کنید؟'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('بستن')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('انتخاب این واحد'))],
+      ));
+      if (join == true && mounted) _joinUnit(building, floor, unit);
+      return;
+    }
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text('اطلاعات واحد ${unit.toPersianDigits()}'),
+      content: _MemberInfoContent(building: building, member: member),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.building != null && widget.myFloor != null) {
@@ -1425,6 +1465,60 @@ class _ResidentChargeCardState extends State<_ResidentChargeCard> {
   }
 }
 
+class _MemberInfoContent extends StatelessWidget {
+  const _MemberInfoContent({required this.building, required this.member});
+  final _Building building;
+  final _Member member;
+  @override Widget build(BuildContext context) {
+    final charge = building.monthlyCharge;
+    Widget row(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 112, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600))), Expanded(child: Text(value))]));
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      row('نام', member.name), row('شماره تماس', member.phone.isEmpty ? 'ثبت نشده' : member.phone),
+      row('بدهی شارژ', charge == null ? 'شارژ مصوب نشده' : formatTomanAmount(charge)),
+      row('بدهی آب', formatTomanAmount(member.waterDebt)), row('نوع مالکیت', member.ownership),
+      row('تاریخ و ساعت سکونت', _formatPersianDateTime(member.movedInAt)),
+    ]);
+  }
+}
+
+class _ResidentPollsCard extends StatefulWidget {
+  const _ResidentPollsCard({required this.building, required this.unitId, required this.onChanged});
+  final _Building building; final String unitId; final VoidCallback onChanged;
+  @override State<_ResidentPollsCard> createState() => _ResidentPollsCardState();
+}
+class _ResidentPollsCardState extends State<_ResidentPollsCard> {
+  Future<void> _participate(_BuildingPoll poll) async {
+    final previous = poll.votesByUnitId[widget.unitId];
+    final choice = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(poll.title),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(poll.description.isEmpty ? 'توضیحی ثبت نشده است.' : poll.description), const SizedBox(height: 12),
+        Text('مهلت تا ${_formatPersianDateTime(poll.deadline)}'),
+        if (previous != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('رأی شما: $previous')),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن')),
+        if (previous == null && poll.isActive) ...[
+          OutlinedButton(onPressed: () => Navigator.pop(ctx, 'موافقم'), child: const Text('موافقم')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'مخالفم'), child: const Text('مخالفم')),
+        ],
+      ],
+    ));
+    if (choice != null && poll.isActive && previous == null) {
+      setState(() => poll.votesByUnitId[widget.unitId] = choice);
+      widget.onChanged();
+    }
+  }
+  @override Widget build(BuildContext context) {
+    final polls = widget.building.polls.where((p) => p.isActive).toList();
+    if (polls.isEmpty) return const SizedBox.shrink();
+    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Text('نظرسنجی‌های فعال', style: TextStyle(fontWeight: FontWeight.bold))]),
+      for (final poll in polls) ListTile(contentPadding: EdgeInsets.zero, title: Text(poll.title), subtitle: Text('مهلت: ${_formatPersianDateTime(poll.deadline)}${poll.votesByUnitId.containsKey(widget.unitId) ? ' • رأی شما ثبت شد' : ''}'), trailing: const Icon(Icons.chevron_left), onTap: () => _participate(poll)),
+    ])));
+  }
+}
+
 class _BuildingLayout extends StatelessWidget {
   const _BuildingLayout({required this.building, this.onUnitTap, this.highlightMemberName, this.onFloorActions});
   final _Building building;
@@ -1609,33 +1703,28 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('آیا میخواهید در این واحد مستقر شوید ؟'),
-          if (member != null) ...[
-            const SizedBox(height: 10),
-            Text('ساکن این واحد: ${member.name}\nنقش: ${member.role}\nنوع سکونت: ${member.ownership}'),
-          ],
-        ]),
+        content: member == null
+            ? const Text('این واحد خالی است. آیا می‌خواهید در این واحد مستقر شوید یا ساکن ثبت کنید؟')
+            : SingleChildScrollView(child: _MemberInfoContent(building: b, member: member)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, 'no'), child: const Text('خیر')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, 'no'), child: const Text('بستن')),
           if (member == null) TextButton(onPressed: () => Navigator.pop(dialogContext, 'register'), child: const Text('ثبت ساکن')),
           if (member != null) ...[
             TextButton(onPressed: () => Navigator.pop(dialogContext, 'delete'), child: const Text('حذف عضو')),
             TextButton(onPressed: () => Navigator.pop(dialogContext, 'move'), child: const Text('تغییر واحد')),
             TextButton(onPressed: () => Navigator.pop(dialogContext, 'edit'), child: const Text('ویرایش عضو')),
           ],
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, 'self'), child: const Text('بلی')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, 'self'), child: const Text('استقرار من')),
         ],
       ),
     );
-    if (!mounted || action == null) return;
+    if (!mounted || action == null || action == 'no') return;
     if (action == 'self') {
       if (member != null && !(member.name == widget.managerName && member.role == 'مدیر')) {
         _toast('این واحد در اختیار ${member.name} است؛ برای تغییر جایگاه او از «تغییر واحد» یا «ویرایش عضو» استفاده کنید.', error: true);
         return;
       }
       setState(() {
-        // مدیر فقط در یک واحد مستقر می‌ماند؛ در صورت جابه‌جایی، واحد قبلی آزاد می‌شود.
         b.occupants.removeWhere((_, occupant) => occupant.name == widget.managerName && occupant.role == 'مدیر');
         b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر');
       });
@@ -1648,19 +1737,17 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       await _moveMember(key, member);
     } else if (member != null && action == 'delete') {
       final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-        title: const Text('حذف عضو'),
-        content: Text('عضو «${member.name}» از این واحد حذف شود؟'),
+        title: const Text('حذف عضو'), content: Text('عضو «${member.name}» از این واحد حذف شود؟'),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف عضو'))],
       ));
-      if (confirmed == true && mounted) {
-        setState(() => b.occupants.remove(key));
-        _toast('عضو از واحد تخلیه شد.');
-      }
+      if (confirmed == true && mounted) { setState(() => b.occupants.remove(key)); _toast('عضو از واحد تخلیه شد.'); }
     }
   }
 
   Future<void> _editOrAddMember(String key, _Member? existing) async {
     final nameController = TextEditingController(text: existing?.name ?? '');
+    final phoneController = TextEditingController(text: existing?.phone ?? '');
+    final waterDebtController = TextEditingController(text: '${existing?.waterDebt ?? 0}');
     var selectedRole = existing?.role == 'مدیر' ? 'مدیر' : 'ساکن';
     var selectedOwnership = existing?.ownership == 'مستأجر' ? 'مستأجر' : 'مالک';
     final result = await showDialog<_Member>(context: context, builder: (dialogContext) => StatefulBuilder(
@@ -1668,6 +1755,8 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         title: Text(existing == null ? 'ثبت ساکن' : 'ویرایش عضو'),
         content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'نام عضو')),
+          TextField(controller: phoneController, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'شماره تماس')),
+          TextField(controller: waterDebtController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'بدهی آب (تومان)')),
           DropdownButtonFormField<String>(
             value: selectedRole,
             decoration: const InputDecoration(labelText: 'نقش'),
@@ -1689,11 +1778,14 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         ])),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
           final name = nameController.text.trim();
-          if (name.isNotEmpty) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership));
+          final waterDebt = int.tryParse(_latinDigits(waterDebtController.text.trim())) ?? -1;
+          if (name.isNotEmpty && waterDebt >= 0) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership, phone: phoneController.text.trim(), waterDebt: waterDebt, movedInAt: existing?.movedInAt ?? DateTime.now()));
         }, child: const Text('ذخیره'))],
       ),
     ));
     nameController.dispose();
+    phoneController.dispose();
+    waterDebtController.dispose();
     if (result == null || !mounted) return;
     setState(() => b.occupants[key] = result);
     _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
@@ -1718,6 +1810,32 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     if (destination == null || !mounted) return;
     setState(() { b.occupants.remove(fromKey); b.occupants[destination] = member; });
     _toast('عضو به واحد ${int.parse(destination.split('/')[1]).toPersianDigits()} طبقه ${int.parse(destination.split('/')[0]).toPersianDigits()} منتقل شد.');
+  }
+
+  Future<void> _createPoll() async {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final daysController = TextEditingController(text: '3');
+    String? error;
+    final result = await showDialog<_BuildingPoll>(context: context, builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: const Text('ایجاد نظرسنجی'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: titleController, autofocus: true, decoration: const InputDecoration(labelText: 'موضوع')),
+          TextField(controller: descriptionController, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'توضیح')),
+          TextField(controller: daysController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'مهلت شرکت در نظرسنجی (روز)')),
+          if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+        ])),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
+          final days = int.tryParse(_latinDigits(daysController.text.trim()));
+          if (titleController.text.trim().isEmpty) { setDialogState(() => error = 'موضوع را وارد کنید.'); return; }
+          if (days == null || days < 3) { setDialogState(() => error = 'مهلت نظرسنجی باید حداقل ۳ روز باشد.'); return; }
+          Navigator.pop(dialogContext, _BuildingPoll(title: titleController.text.trim(), description: descriptionController.text.trim(), deadline: DateTime.now().add(Duration(days: days))));
+        }, child: const Text('ایجاد نظرسنجی'))],
+      ),
+    ));
+    titleController.dispose(); descriptionController.dispose(); daysController.dispose();
+    if (result != null && mounted) { setState(() => b.polls.insert(0, result)); _toast('نظرسنجی ایجاد شد و برای ساکنان نمایش داده می‌شود.'); }
   }
 
   Future<void> _createChargeTopic() async {
@@ -1884,6 +2002,15 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           const SizedBox(height: 10),
           FilledButton.icon(onPressed: _createChargeTopic, icon: const Icon(Icons.add_circle_outline), label: Text(b.chargeSettingTopic == null ? 'ایجاد موضوع شارژ' : 'ایجاد موضوع جدید')),
           if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _openChargeTopic(b, isManager: true), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
+        ]))),
+        const SizedBox(height: 14),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [Icon(Icons.how_to_vote_outlined, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('نظرسنجی', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
+          const SizedBox(height: 8),
+          Text('نظرسنجی‌های فعال: ${b.polls.where((p) => p.isActive).length.toPersianDigits()}', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          const SizedBox(height: 10),
+          FilledButton.icon(onPressed: _createPoll, icon: const Icon(Icons.add_circle_outline), label: const Text('ایجاد نظرسنجی')),
+          for (final poll in b.polls) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(poll.isActive ? Icons.poll_outlined : Icons.task_alt_outlined), title: Text(poll.title), subtitle: Text(poll.isActive ? 'مهلت تا ${_formatPersianDateTime(poll.deadline)}' : 'مهلت نظرسنجی پایان یافته')),
         ]))),
         const SizedBox(height: 14),
         OutlinedButton.icon(onPressed: _addFloor, icon: const Icon(Icons.add_rounded), label: const Text('افزودن طبقه جدید')),
