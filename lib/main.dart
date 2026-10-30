@@ -664,8 +664,10 @@ class _ChargeSettingTopic {
 }
 
 class _Building {
-  _Building(this.name);
+  _Building(this.name, {this.createdBy});
   String name;
+  /// حساب مدیری که ساختمان را ایجاد کرده؛ مستقل از انتخاب/اشغال هر واحد.
+  String? createdBy;
   /// هر طبقه: شماره طبقه -> تعداد واحدها
   final Map<int, int> floors = {};
   /// شماره واحدهای واقعی هر طبقه؛ امکان شماره‌گذاری پیوسته بین طبقات.
@@ -882,6 +884,9 @@ class _ManagerHomeState extends State<_ManagerHome> {
     final unitsPerFloor = int.parse(_latinDigits(_unitsController.text.trim()));
     final isNew = !AppSharedState.instance.exists(name);
     final b = AppSharedState.instance.buildingByName(name);
+    // مالکیت مدیریتی با ایجاد ساختمان ثبت می‌شود؛ مدیر به هیچ واحدی خودکار
+    // منتسب نمی‌شود و در صورت تمایل می‌تواند بعداً در یک واحد مستقر شود.
+    if (isNew || b.createdBy == null) b.createdBy = widget.managerName;
     _nameController.text = b.name;
     widget.onBuildingChanged(b);
     if (b.floors.isNotEmpty && !isNew) {
@@ -970,7 +975,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
   Widget _myBuildingsList(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final buildings = AppSharedState.instance.buildings.values
-        .where((b) => b.occupants.values.any((m) => m.name == widget.managerName && m.role == 'مدیر'))
+        .where((b) => b.createdBy == widget.managerName ||
+            b.occupants.values.any((m) => m.name == widget.managerName))
         .toList();
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1744,7 +1750,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     if (mounted) setState(() {});
   }
 
-  bool get _isManagerOfBuilding => b.occupants.values.any((m) => m.name == widget.managerName && m.role == 'مدیر') || true;
+  bool get _isManagerOfBuilding => b.createdBy == widget.managerName || b.occupants.values.any((m) => m.name == widget.managerName && m.role == 'مدیر');
 
   Future<void> _rename() async {
     final controller = TextEditingController(text: b.name);
