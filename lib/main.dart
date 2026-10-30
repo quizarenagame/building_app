@@ -891,15 +891,6 @@ class _ManagerHomeState extends State<_ManagerHome> {
       if (!b.addFloor(floorNumber, unitsPerFloor, continueNumbering: _continueUnitNumbers)) break;
     }
     widget.onBuildingChanged(b);
-    // واحد مدیر: در اولین واحد پایین‌ترین طبقه قرار می‌گیرد و با بج طلایی برای همه نمایش داده می‌شود.
-    if (b.floors.isNotEmpty) {
-      final firstFloor = b.floors.keys.reduce((a, c) => a < c ? a : c);
-      final firstUnit = (b.floorUnits[firstFloor] ?? const <int>[]).first;
-      if (!b.isOccupied(firstFloor, firstUnit)) {
-        b.assign(firstFloor, firstUnit, _Member(widget.managerName, 'مدیر', 'مدیر'));
-      }
-    }
-    widget.onBuildingChanged(b);
     _toast('ساختمان «${b.name}» با ${floorCount.toPersianDigits()} طبقه ساخته شد. با کلیک روی نام آن وارد نمای ساختمان شوید.');
   }
 
@@ -1602,6 +1593,102 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     ));
   }
 
+  String _unitKey(int floor, int unit) => b.unitId(floor, unit);
+
+  Future<void> _onManagerUnitTap(int floor, int unit) async {
+    final key = _unitKey(floor, unit);
+    final member = b.occupants[key];
+    final action = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+        content: member == null
+            ? const Text('آیا میخواهید در این واحد مستقر شوید؟')
+            : Text('ساکن این واحد: ${member.name}\nنقش: ${member.role}\nنوع سکونت: ${member.ownership}'),
+        actions: member == null
+            ? [
+                TextButton(onPressed: () => Navigator.pop(dialogContext, 'no'), child: const Text('خیر')),
+                TextButton(onPressed: () => Navigator.pop(dialogContext, 'register'), child: const Text('ثبت ساکن')),
+                FilledButton(onPressed: () => Navigator.pop(dialogContext, 'self'), child: const Text('بلی')),
+              ]
+            : [
+                TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('بستن')),
+                TextButton(onPressed: () => Navigator.pop(dialogContext, 'delete'), child: const Text('حذف عضو')),
+                TextButton(onPressed: () => Navigator.pop(dialogContext, 'move'), child: const Text('تغییر واحد')),
+                FilledButton(onPressed: () => Navigator.pop(dialogContext, 'edit'), child: const Text('ویرایش عضو')),
+              ],
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'self') {
+      setState(() {
+        // مدیر فقط در یک واحد مستقر می‌ماند؛ در صورت جابه‌جایی، واحد قبلی آزاد می‌شود.
+        b.occupants.removeWhere((_, occupant) => occupant.name == widget.managerName && occupant.role == 'مدیر');
+        b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر');
+      });
+      _toast('شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
+    } else if (action == 'register') {
+      await _editOrAddMember(key, null);
+    } else if (member != null && action == 'edit') {
+      await _editOrAddMember(key, member);
+    } else if (member != null && action == 'move') {
+      await _moveMember(key, member);
+    } else if (member != null && action == 'delete') {
+      final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف عضو'),
+        content: Text('عضو «${member.name}» از این واحد حذف شود؟'),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف عضو'))],
+      ));
+      if (confirmed == true && mounted) {
+        setState(() => b.occupants.remove(key));
+        _toast('عضو از واحد تخلیه شد.');
+      }
+    }
+  }
+
+  Future<void> _editOrAddMember(String key, _Member? existing) async {
+    final nameController = TextEditingController(text: existing?.name ?? '');
+    final roleController = TextEditingController(text: existing?.role ?? 'ساکن');
+    final ownershipController = TextEditingController(text: existing?.ownership ?? 'مالک');
+    final result = await showDialog<_Member>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text(existing == null ? 'ثبت ساکن' : 'ویرایش عضو'),
+      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'نام عضو')),
+        TextField(controller: roleController, decoration: const InputDecoration(labelText: 'نقش')),
+        TextField(controller: ownershipController, decoration: const InputDecoration(labelText: 'نوع سکونت / مالکیت')),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
+        final name = nameController.text.trim();
+        if (name.isNotEmpty) Navigator.pop(dialogContext, _Member(name, roleController.text.trim().isEmpty ? 'ساکن' : roleController.text.trim(), ownershipController.text.trim().isEmpty ? 'مالک' : ownershipController.text.trim()));
+      }, child: const Text('ذخیره'))],
+    ));
+    nameController.dispose(); roleController.dispose(); ownershipController.dispose();
+    if (result == null || !mounted) return;
+    setState(() => b.occupants[key] = result);
+    _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
+  }
+
+  Future<void> _moveMember(String fromKey, _Member member) async {
+    final available = <String>[];
+    for (final entry in b.floorUnits.entries) {
+      for (final unit in entry.value) {
+        final key = b.unitId(entry.key, unit);
+        if (key != fromKey && !b.occupants.containsKey(key)) available.add(key);
+      }
+    }
+    if (available.isEmpty) { _toast('واحد خالی دیگری برای انتقال وجود ندارد.', error: true); return; }
+    final destination = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text('انتقال ${member.name}'),
+      content: SizedBox(width: double.maxFinite, child: ListView(shrinkWrap: true, children: [
+        for (final key in available) ListTile(leading: const Icon(Icons.meeting_room_outlined), title: Text('طبقه ${key.split('/')[0].toPersianDigits()} — واحد ${key.split('/')[1].toPersianDigits()}'), onTap: () => Navigator.pop(dialogContext, key)),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف'))],
+    ));
+    if (destination == null || !mounted) return;
+    setState(() { b.occupants.remove(fromKey); b.occupants[destination] = member; });
+    _toast('عضو به واحد ${destination.split('/')[1].toPersianDigits()} طبقه ${destination.split('/')[0].toPersianDigits()} منتقل شد.');
+  }
+
   Future<void> _createChargeTopic() async {
     final controller = TextEditingController(text: 'تعیین شارژ');
     final title = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
@@ -1780,6 +1867,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           _BuildingLayout(
             building: b,
             highlightMemberName: widget.managerName,
+            onUnitTap: _onManagerUnitTap,
             onFloorActions: (floor) => showModalBottomSheet<void>(
               context: context,
               builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
