@@ -672,6 +672,8 @@ class _Building {
   final Map<int, List<int>> floorUnits = {};
   /// واحد اشغال‌شده: "طبقه/واحد" -> عضو
   final Map<String, _Member> occupants = {};
+  /// بدهی ثبت‌شده برای هر واحد، به تومان. واحدهای جدید به‌صورت پیش‌فرض بدهی صفر دارند.
+  final Map<String, int> debtsByUnit = {};
   _ChargeSettingTopic? chargeSettingTopic;
   int? get monthlyCharge => chargeSettingTopic?.approvedAmount;
   String unitId(int floor, int unit) => '$floor/$unit';
@@ -1531,6 +1533,9 @@ class _UnitTile extends StatelessWidget {
             Expanded(child: Text('واحد ${unit.toPersianDigits()}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
           ]),
           const SizedBox(height: 6),
+          const SizedBox(height: 5),
+          Text('بدهی: ${formatTomanAmount(building.debtsByUnit[building.unitId(floor, unit)] ?? 0)}',
+              style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant, fontWeight: FontWeight.w600)),
           if (occupied)
             Row(children: [
               CircleAvatar(
@@ -1602,31 +1607,40 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
-        content: member == null
-            ? const Text('آیا میخواهید در این واحد مستقر شوید؟')
-            : Text('ساکن این واحد: ${member.name}\nنقش: ${member.role}\nنوع سکونت: ${member.ownership}'),
-        actions: member == null
-            ? [
-                TextButton(onPressed: () => Navigator.pop(dialogContext, 'no'), child: const Text('خیر')),
-                TextButton(onPressed: () => Navigator.pop(dialogContext, 'register'), child: const Text('ثبت ساکن')),
-                FilledButton(onPressed: () => Navigator.pop(dialogContext, 'self'), child: const Text('بلی')),
-              ]
-            : [
-                TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('بستن')),
-                TextButton(onPressed: () => Navigator.pop(dialogContext, 'delete'), child: const Text('حذف عضو')),
-                TextButton(onPressed: () => Navigator.pop(dialogContext, 'move'), child: const Text('تغییر واحد')),
-                FilledButton(onPressed: () => Navigator.pop(dialogContext, 'edit'), child: const Text('ویرایش عضو')),
-              ],
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('آیا میخواهید در این واحد مستقر شوید ؟'),
+          if (member != null) ...[
+            const SizedBox(height: 10),
+            Text('ساکن این واحد: ${member.name}\nنقش: ${member.role}\nنوع سکونت: ${member.ownership}'),
+          ],
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, 'no'), child: const Text('خیر')),
+          if (member == null) TextButton(onPressed: () => Navigator.pop(dialogContext, 'register'), child: const Text('ثبت ساکن')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, 'debt'), child: const Text('ویرایش بدهی')),
+          if (member != null) ...[
+            TextButton(onPressed: () => Navigator.pop(dialogContext, 'delete'), child: const Text('حذف عضو')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, 'move'), child: const Text('تغییر واحد')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, 'edit'), child: const Text('ویرایش عضو')),
+          ],
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, 'self'), child: const Text('بلی')),
+        ],
       ),
     );
     if (!mounted || action == null) return;
     if (action == 'self') {
+      if (member != null && !(member.name == widget.managerName && member.role == 'مدیر')) {
+        _toast('این واحد در اختیار ${member.name} است؛ برای تغییر جایگاه او از «تغییر واحد» یا «ویرایش عضو» استفاده کنید.', error: true);
+        return;
+      }
       setState(() {
         // مدیر فقط در یک واحد مستقر می‌ماند؛ در صورت جابه‌جایی، واحد قبلی آزاد می‌شود.
         b.occupants.removeWhere((_, occupant) => occupant.name == widget.managerName && occupant.role == 'مدیر');
         b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر');
       });
       _toast('شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
+    } else if (action == 'debt') {
+      await _editUnitDebt(key, floor, unit);
     } else if (action == 'register') {
       await _editOrAddMember(key, null);
     } else if (member != null && action == 'edit') {
@@ -1644,6 +1658,29 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         _toast('عضو از واحد تخلیه شد.');
       }
     }
+  }
+
+  Future<void> _editUnitDebt(String key, int floor, int unit) async {
+    final controller = TextEditingController(text: (b.debtsByUnit[key] ?? 0).toString());
+    final result = await showDialog<int>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text('بدهی واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+      content: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'مبلغ بدهی به تومان', suffixText: 'تومان'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+        FilledButton(onPressed: () {
+          final amount = int.tryParse(_latinDigits(controller.text.trim()).replaceAll(',', '').replaceAll('٬', ''));
+          if (amount != null && amount >= 0) Navigator.pop(dialogContext, amount);
+        }, child: const Text('ذخیره')),
+      ],
+    ));
+    controller.dispose();
+    if (result == null || !mounted) return;
+    setState(() => b.debtsByUnit[key] = result);
+    _toast('بدهی این واحد به‌روزرسانی شد.');
   }
 
   Future<void> _editOrAddMember(String key, _Member? existing) async {
