@@ -1680,13 +1680,13 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final destination = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
       title: Text('انتقال ${member.name}'),
       content: SizedBox(width: double.maxFinite, child: ListView(shrinkWrap: true, children: [
-        for (final key in available) ListTile(leading: const Icon(Icons.meeting_room_outlined), title: Text('طبقه ${key.split('/')[0].toPersianDigits()} — واحد ${key.split('/')[1].toPersianDigits()}'), onTap: () => Navigator.pop(dialogContext, key)),
+        for (final key in available) ListTile(leading: const Icon(Icons.meeting_room_outlined), title: Text('طبقه ${int.parse(key.split('/')[0]).toPersianDigits()} — واحد ${int.parse(key.split('/')[1]).toPersianDigits()}'), onTap: () => Navigator.pop(dialogContext, key)),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف'))],
     ));
     if (destination == null || !mounted) return;
     setState(() { b.occupants.remove(fromKey); b.occupants[destination] = member; });
-    _toast('عضو به واحد ${destination.split('/')[1].toPersianDigits()} طبقه ${destination.split('/')[0].toPersianDigits()} منتقل شد.');
+    _toast('عضو به واحد ${int.parse(destination.split('/')[1]).toPersianDigits()} طبقه ${int.parse(destination.split('/')[0]).toPersianDigits()} منتقل شد.');
   }
 
   Future<void> _createChargeTopic() async {
