@@ -966,26 +966,6 @@ class _ManagerHomeState extends State<_ManagerHome> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _createChargeTopic() async {
-    final b = _building;
-    if (b == null) return;
-    final controller = TextEditingController(text: 'تعیین شارژ');
-    final title = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
-      title: const Text('ایجاد موضوع شارژ'),
-      content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'عنوان موضوع')),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () { final value = controller.text.trim(); if (value.isNotEmpty) Navigator.pop(dialogContext, value); }, child: const Text('ایجاد و بازکردن'))],
-    ));
-    controller.dispose();
-    if (title == null || title.trim().isEmpty) return;
-    setState(() => b.chargeSettingTopic = _ChargeSettingTopic(title.trim()));
-    await _openChargeTopic(b, isManager: true);
-  }
-
-  Future<void> _openChargeTopic(_Building b, {required bool isManager}) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _ChargeTopicPage(building: b, isManager: isManager)));
-    if (mounted) setState(() {});
-  }
-
   InputDecoration _deco(BuildContext context, String hint, IconData icon) => InputDecoration(
     hintText: hint, prefixIcon: Icon(icon),
     filled: true, fillColor: Theme.of(context).colorScheme.surface,
@@ -1113,34 +1093,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
           ),
         ),
         const SizedBox(height: 16),
-        if (b != null) ...[
-          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            InkWell(
-              onTap: () => _openBuildingDetail(b),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(children: [
-                  Icon(Icons.apartment_rounded, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17))),
-                  Icon(Icons.chevron_left_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 4),
-                  Text('نمای ساختمان', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(children: [Icon(Icons.payments_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Expanded(child: Text('تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
-            const SizedBox(height: 8),
-            Text(b.chargeSettingTopic == null ? 'برای ساختمان «${b.name}» موضوع تعیین شارژ بسازید.' : 'موضوع فعال: ${b.chargeSettingTopic!.title}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
-            if (b.monthlyCharge != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('شارژ ماهانهٔ هر واحد: ${formatTomanAmount(b.monthlyCharge!)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            const SizedBox(height: 10),
-            FilledButton.icon(onPressed: _createChargeTopic, icon: const Icon(Icons.add_circle_outline), label: Text(b.chargeSettingTopic == null ? 'ایجاد موضوع شارژ' : 'ایجاد موضوع جدید')),
-            if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _openChargeTopic(b, isManager: true), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
-          ]))),
-          const SizedBox(height: 16),
-        ],
+        const SizedBox(height: 16),
         if (b == null)
           Card(
             child: Padding(
@@ -1649,6 +1602,24 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     ));
   }
 
+  Future<void> _createChargeTopic() async {
+    final controller = TextEditingController(text: 'تعیین شارژ');
+    final title = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('ایجاد موضوع شارژ'),
+      content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'عنوان موضوع')),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () { final value = controller.text.trim(); if (value.isNotEmpty) Navigator.pop(dialogContext, value); }, child: const Text('ایجاد و بازکردن'))],
+    ));
+    controller.dispose();
+    if (title == null || title.trim().isEmpty) return;
+    setState(() => b.chargeSettingTopic = _ChargeSettingTopic(title.trim()));
+    await _openChargeTopic(b, isManager: true);
+  }
+
+  Future<void> _openChargeTopic(_Building building, {required bool isManager}) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _ChargeTopicPage(building: building, isManager: isManager)));
+    if (mounted) setState(() {});
+  }
+
   bool get _isManagerOfBuilding => b.occupants.values.any((m) => m.name == widget.managerName && m.role == 'مدیر') || true;
 
   Future<void> _rename() async {
@@ -1785,6 +1756,16 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
             _statChip(context, Icons.people_outline, '${b.occupants.length.toPersianDigits()} عضو'),
           ]),
           if (b.monthlyCharge != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text('شارژ ماهانهٔ تصویب‌شده: ${formatTomanAmount(b.monthlyCharge!)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+        ]))),
+        const SizedBox(height: 14),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [Icon(Icons.payments_outlined, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
+          const SizedBox(height: 8),
+          Text(b.chargeSettingTopic == null ? 'برای ساختمان «${b.name}» موضوع تعیین شارژ بسازید.' : 'موضوع فعال: ${b.chargeSettingTopic!.title}', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          if (b.monthlyCharge != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('شارژ ماهانهٔ هر واحد: ${formatTomanAmount(b.monthlyCharge!)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+          const SizedBox(height: 10),
+          FilledButton.icon(onPressed: _createChargeTopic, icon: const Icon(Icons.add_circle_outline), label: Text(b.chargeSettingTopic == null ? 'ایجاد موضوع شارژ' : 'ایجاد موضوع جدید')),
+          if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _openChargeTopic(b, isManager: true), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
         ]))),
         const SizedBox(height: 14),
         OutlinedButton.icon(onPressed: _addFloor, icon: const Icon(Icons.add_rounded), label: const Text('افزودن طبقه جدید')),
