@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pocketbase/pocketbase.dart';
+
+final pb = PocketBase('https://api.pgem.ir');
 
 void main() => runApp(BuildingApp());
 
@@ -163,6 +166,8 @@ class _LoginFlowState extends State<LoginFlow> {
   bool _showMyBuildings = false;
   Timer? _timer;
   int _secondsLeft = 0;
+  bool _isSendingOtp = false;
+  bool _isVerifyingOtp = false;
   bool _hidePassword = true;
   bool _hideConfirmPassword = true;
 
@@ -210,22 +215,56 @@ class _LoginFlowState extends State<LoginFlow> {
     }
   }
 
-  void _submitPhone() {
-    if (!(_phoneKey.currentState?.validate() ?? false)) return;
-    _phoneController.text = _latinDigits(_phoneController.text).trim();
-    _otpController.clear();
-    setState(() => _step = _LoginStep.otp);
-    _startCountdown();
+  Future<void> _submitPhone() async {
+    if (_isSendingOtp || !(_phoneKey.currentState?.validate() ?? false)) return;
+    _phoneController.text = _latinDigits(_phoneController.text).replaceAll(' ', '').trim();
+    setState(() => _isSendingOtp = true);
+    try {
+      final response = await pb.send<Map<String, dynamic>>(
+        '/api/send-otp',
+        method: 'POST',
+        body: {'phone': _phoneController.text},
+      );
+      if (!mounted) return;
+      if (response['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ارسال کد تأیید ناموفق بود. لطفاً دوباره تلاش کنید.')));
+        return;
+      }
+      _otpController.clear();
+      setState(() => _step = _LoginStep.otp);
+      _startCountdown();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ارسال پیامک انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.')));
+    } finally {
+      if (mounted) setState(() => _isSendingOtp = false);
+    }
   }
 
-  void _verifyOtp() {
-    if (!(_otpKey.currentState?.validate() ?? false)) return;
-    if (_latinDigits(_otpController.text.trim()) != '123456') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد واردشده صحیح نیست. کد آزمایشی: 123456')));
-      return;
+  Future<void> _verifyOtp() async {
+    if (_isVerifyingOtp || !(_otpKey.currentState?.validate() ?? false)) return;
+    final phone = _phoneController.text.trim();
+    final code = _latinDigits(_otpController.text.trim());
+    setState(() => _isVerifyingOtp = true);
+    try {
+      final response = await pb.send<Map<String, dynamic>>(
+        '/api/verify-otp',
+        method: 'POST',
+        body: {'phone': phone, 'code': code},
+      );
+      if (!mounted) return;
+      if (response['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد تأیید صحیح نیست یا منقضی شده است.')));
+        return;
+      }
+      _timer?.cancel();
+      setState(() => _step = _LoginStep.account);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('بررسی کد تأیید انجام نشد. لطفاً دوباره تلاش کنید.')));
+    } finally {
+      if (mounted) setState(() => _isVerifyingOtp = false);
     }
-    _timer?.cancel();
-    setState(() => _step = _LoginStep.account);
   }
 
   void _submitAccount() {
@@ -380,7 +419,7 @@ class _LoginFlowState extends State<LoginFlow> {
       const SizedBox(height: 20),
       _primaryButton(label: 'دریافت کد تأیید', onPressed: _submitPhone),
       const SizedBox(height: 15),
-      Text('کد تأیید در این نسخه به‌صورت آزمایشی نمایش داده می‌شود؛ پیامک واقعی ارسال نمی‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.8)),
+      Text('پس از ارسال، کد تأیید از طریق پیامک برای شما فرستاده می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.8)),
     ]),
   );
 
@@ -392,28 +431,28 @@ class _LoginFlowState extends State<LoginFlow> {
       const SizedBox(height: 20),
       const Text('کد تأیید را وارد کنید', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 9),
-      Text('کد شش‌رقمی برای شماره ${_phoneController.text} (نمایشی) ارسال شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
+      Text('کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
       const SizedBox(height: 15),
-      Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('حالت آزمایشی: پیامک واقعی ارسال نمی‌شود. کد ثابت ورود: ۱۲۳۴۵۶', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
+      Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی از طریق پیامک برای شمارهٔ شما ارسال می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
       const SizedBox(height: 25),
       TextFormField(
         controller: _otpController,
         keyboardType: TextInputType.number,
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
-        maxLength: 6,
+        maxLength: 4,
         style: const TextStyle(fontSize: 27, fontWeight: FontWeight.bold, letterSpacing: 12),
-        decoration: _inputDecoration(hint: '••••••', counterText: ''),
-        validator: (value) => _latinDigits(value ?? '').length == 6 ? null : 'کد تأیید باید ۶ رقم باشد.',
+        decoration: _inputDecoration(hint: '••••', counterText: ''),
+        validator: (value) => _latinDigits(value ?? '').length == 4 ? null : 'کد تأیید باید ۴ رقم باشد.',
         onFieldSubmitted: (_) => _verifyOtp(),
       ),
       const SizedBox(height: 18),
       _primaryButton(label: 'تأیید و ادامه', onPressed: _verifyOtp),
       const SizedBox(height: 14),
       Center(child: TextButton.icon(
-        onPressed: _secondsLeft == 0 ? _startCountdown : null,
+        onPressed: _secondsLeft == 0 && !_isSendingOtp ? _submitPhone : null,
         icon: const Icon(Icons.refresh_rounded, size: 19),
-        label: Text(_secondsLeft == 0 ? 'ارسال دوباره کد آزمایشی' : 'ارسال دوباره تا ${_secondsLeft} ثانیه دیگر'),
+        label: Text(_isSendingOtp ? 'در حال ارسال پیامک...' : (_secondsLeft == 0 ? 'ارسال دوباره کد پیامکی' : 'ارسال دوباره تا ${_secondsLeft} ثانیه دیگر')),
       )),
       Center(child: TextButton(onPressed: () { _timer?.cancel(); setState(() => _step = _LoginStep.phone); }, child: const Text('ویرایش شماره همراه'))),
     ]),
