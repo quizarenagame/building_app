@@ -243,20 +243,31 @@ class _LoginFlowState extends State<LoginFlow> {
 
   Future<void> _verifyOtp() async {
     if (_isVerifyingOtp || !(_otpKey.currentState?.validate() ?? false)) return;
-    final phone = _phoneController.text.trim();
+    final phone = _latinDigits(_phoneController.text).replaceAll(' ', '').trim();
     final code = _latinDigits(_otpController.text.trim());
     setState(() => _isVerifyingOtp = true);
     try {
-      final response = await pb.send<Map<String, dynamic>>(
+      final otpReply = await pb.send<Map<String, dynamic>>(
         '/api/verify-otp',
         method: 'POST',
         body: {'phone': phone, 'code': code},
       );
       if (!mounted) return;
-      if (response['success'] != true) {
+      if (otpReply['success'] != true) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد تأیید صحیح نیست یا منقضی شده است.')));
         return;
       }
+
+      final token = otpReply['token'];
+      final recordData = otpReply['record'] ?? otpReply['user'];
+      if (token is! String || token.isEmpty || recordData is! Map) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('پاسخ سرور برای ورود معتبر نیست.')));
+        return;
+      }
+
+      // pocketbase Dart SDK accepts a RecordModel in authStore.save().
+      final record = RecordModel.fromJson(Map<String, dynamic>.from(recordData));
+      pb.authStore.save(token, record);
       _timer?.cancel();
       setState(() => _step = _LoginStep.account);
     } catch (_) {
