@@ -2,10 +2,23 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-final pb = PocketBase('https://api.pgem.ir');
+late final PocketBase pb;
 
-void main() => runApp(BuildingApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  pb = PocketBase(
+    'https://api.pgem.ir',
+    authStore: AsyncAuthStore(
+      save: (String data) async { await prefs.setString('pb_auth', data); },
+      initial: prefs.getString('pb_auth'),
+      clear: () async { await prefs.remove('pb_auth'); },
+    ),
+  );
+  runApp(BuildingApp());
+}
 
 class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
@@ -46,10 +59,27 @@ class BuildingApp extends StatelessWidget {
           cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         themeMode: mode,
-        home: const Directionality(textDirection: TextDirection.rtl, child: LoginFlow()),
+        home: Directionality(textDirection: TextDirection.rtl, child: _initialHome()),
       ),
     );
   }
+}
+
+Widget _initialHome() {
+  if (!pb.authStore.isValid) return const LoginFlow();
+  final record = pb.authStore.record;
+  final data = record?.data ?? const <String, dynamic>{};
+  final firstName = (data['name'] ?? '').toString().trim();
+  final lastName = (data['last_name'] ?? data['lastname'] ?? '').toString().trim();
+  final fullName = [firstName, lastName].where((part) => part.isNotEmpty).join(' ');
+  final roleValue = (data['role'] ?? '').toString().trim();
+  return DashboardPage(
+    name: fullName.isEmpty ? (record?.id ?? '') : fullName,
+    role: roleValue == 'مدیر' ? 'مدیر' : 'ساکن',
+    buildingName: (data['building_name'] ?? '').toString(),
+    ownership: (data['ownership'] ?? 'ساکن').toString(),
+    showMyBuildings: data['show_my_buildings'] == true,
+  );
 }
 
 String _latinDigits(String value) {
@@ -257,8 +287,29 @@ class _LoginFlowState extends State<LoginFlow> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد تأیید صحیح نیست یا منقضی شده است.')));
         return;
       }
+      final token = response['token'];
+      final rawRecord = response['record'];
+      if (token is! String || token.isEmpty || rawRecord is! Map) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('پاسخ ورود از سرور کامل نیست. لطفاً دوباره تلاش کنید.')));
+        return;
+      }
+      final recordJson = Map<String, dynamic>.from(rawRecord);
+      final record = RecordModel.fromJson(recordJson);
+      pb.authStore.save(token, record);
       _timer?.cancel();
-      setState(() => _step = _LoginStep.account);
+      final existingName = (record.data['name'] ?? '').toString().trim();
+      final existingLastName = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString().trim();
+      final existingRole = (record.data['role'] ?? '').toString().trim();
+      if (existingName.isNotEmpty || existingLastName.isNotEmpty) {
+        _nameController.text = existingName;
+        _lastNameController.text = existingLastName;
+        _role = existingRole == 'مدیر' ? 'مدیر' : 'ساکن';
+        _ownership = (record.data['ownership'] ?? 'ساکن').toString();
+        _buildingController.text = (record.data['building_name'] ?? '').toString();
+        if (mounted) setState(() => _step = _LoginStep.dashboard);
+      } else {
+        if (mounted) setState(() => _step = _LoginStep.account);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('بررسی کد تأیید انجام نشد. لطفاً دوباره تلاش کنید.')));
@@ -881,6 +932,17 @@ class _DashboardPageState extends State<DashboardPage> {
     ));
   }
 
+  Future<void> _logout() async {
+    await pb.authStore.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => const Directionality(textDirection: TextDirection.rtl, child: LoginFlow()),
+      ),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -910,6 +972,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           if (widget.onSwitch != null)
             IconButton(tooltip: 'ویرایش حساب', icon: const Icon(Icons.tune_rounded), onPressed: widget.onSwitch),
+          IconButton(tooltip: 'خروج از حساب کاربری', icon: const Icon(Icons.logout_rounded), onPressed: _logout),
         ],
       ),
       body: SafeArea(child: body),
