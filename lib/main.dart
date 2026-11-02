@@ -262,27 +262,33 @@ class _LoginFlowState extends State<LoginFlow> {
         method: 'POST',
         body: {'phone': phone, 'code': code},
       );
+      print('========== VERIFY OTP RESPONSE: $otpReply');
       if (!mounted) return;
       if (otpReply['success'] != true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد تأیید صحیح نیست یا منقضی شده است.')));
+        final errorMsg = otpReply['message'] ?? otpReply['error'] ?? 'کد تأیید صحیح نیست یا منقضی شده است.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg.toString())),
+        );
         return;
       }
-
       final token = otpReply['token'];
       final recordData = otpReply['record'] ?? otpReply['user'];
       if (token is! String || token.isEmpty || recordData is! Map) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('پاسخ سرور برای ورود معتبر نیست.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('پاسخ سرور برای ورود معتبر نیست.')),
+        );
         return;
       }
-
-      // pocketbase Dart SDK accepts a RecordModel in authStore.save().
       final record = RecordModel.fromJson(Map<String, dynamic>.from(recordData));
       pb.authStore.save(token, record);
       _timer?.cancel();
       setState(() => _step = _LoginStep.account);
-    } catch (_) {
+    } catch (e) {
+      print('========== VERIFY OTP ERROR: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('بررسی کد تأیید انجام نشد. لطفاً دوباره تلاش کنید.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطا در بررسی کد: $e')),
+      );
     } finally {
       if (mounted) setState(() => _isVerifyingOtp = false);
     }
