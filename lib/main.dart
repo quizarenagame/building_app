@@ -221,74 +221,47 @@ class _LoginFlowState extends State<LoginFlow> {
     setState(() => _isSendingOtp = true);
     try {
       final response = await pb.send<Map<String, dynamic>>(
-              '/api/send-otp',
-      method: 'POST',
-      body: {
-        'phone': _latinDigits(_phoneController.text).replaceAll(' ', '').trim(),
-      },
-    );
-    if (!mounted) return;
-    print('========== OTP SEND RESPONSE: $response');
-    if (response['success'] != true) {
-      final errorMsg = response['error'] ?? 'ارسال کد تأیید ناموفق بود.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg.toString())),
+        '/api/send-otp',
+        method: 'POST',
+        body: {'phone': _phoneController.text},
       );
-      return;
+      if (!mounted) return;
+      if (response['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ارسال کد تأیید ناموفق بود. لطفاً دوباره تلاش کنید.')));
+        return;
+      }
+      _otpController.clear();
+      setState(() => _step = _LoginStep.otp);
+      _startCountdown();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ارسال پیامک انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.')));
+    } finally {
+      if (mounted) setState(() => _isSendingOtp = false);
     }
-
-    _otpController.clear();
-    setState(() => _step = _LoginStep.otp);
-    _startCountdown();
-  } catch (e) {
-    if (!mounted) return;
-    print('========== OTP SEND ERROR: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('خطا در ارتباط: $e')),
-    );
-  } finally {
-    if (mounted) setState(() => _isSendingOtp = false);
-  }
   }
 
   Future<void> _verifyOtp() async {
     if (_isVerifyingOtp || !(_otpKey.currentState?.validate() ?? false)) return;
-    final phone = _latinDigits(_phoneController.text).replaceAll(' ', '').trim();
+    final phone = _phoneController.text.trim();
     final code = _latinDigits(_otpController.text.trim());
     setState(() => _isVerifyingOtp = true);
     try {
-      final otpReply = await pb.send<Map<String, dynamic>>(
+      final response = await pb.send<Map<String, dynamic>>(
         '/api/verify-otp',
         method: 'POST',
         body: {'phone': phone, 'code': code},
       );
-      print('========== VERIFY OTP RESPONSE: $otpReply');
       if (!mounted) return;
-      if (otpReply['success'] != true) {
-        final errorMsg = otpReply['message'] ?? otpReply['error'] ?? 'کد تأیید صحیح نیست یا منقضی شده است.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg.toString())),
-        );
+      if (response['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد تأیید صحیح نیست یا منقضی شده است.')));
         return;
       }
-      final token = otpReply['token'];
-      final recordData = otpReply['record'] ?? otpReply['user'];
-      if (token is! String || token.isEmpty || recordData is! Map) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('پاسخ سرور برای ورود معتبر نیست.')),
-        );
-        return;
-      }
-      final record = RecordModel.fromJson(Map<String, dynamic>.from(recordData));
-      pb.authStore.save(token, record);
       _timer?.cancel();
       setState(() => _step = _LoginStep.account);
-    } catch (e) {
-      print('========== VERIFY OTP ERROR: $e');
+    } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطا در بررسی کد: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('بررسی کد تأیید انجام نشد. لطفاً دوباره تلاش کنید.')));
     } finally {
       if (mounted) setState(() => _isVerifyingOtp = false);
     }
