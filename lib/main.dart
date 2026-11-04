@@ -2317,16 +2317,25 @@ class _FeaturePage extends StatefulWidget {
 }
 
 class _MeterReading {
-  _MeterReading(this.label, this.previous, this.current)
+  _MeterReading(this.label, int previous, int current)
       : previousController = TextEditingController(text: '$previous'),
         currentController = TextEditingController(text: '$current');
+
   final String label;
   final TextEditingController previousController;
   final TextEditingController currentController;
+
   int get previous => int.tryParse(previousController.text) ?? 0;
   int get current => int.tryParse(currentController.text) ?? 0;
-  int get usage { final delta = current - previous; return delta < 0 ? 0 : delta; }
-  void dispose() { previousController.dispose(); currentController.dispose(); }
+  int get usage {
+    final delta = current - previous;
+    return delta < 0 ? 0 : delta;
+  }
+
+  void dispose() {
+    previousController.dispose();
+    currentController.dispose();
+  }
 }
 
 class _FeaturePageState extends State<_FeaturePage> {
@@ -2568,7 +2577,7 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     _sectionTitle('گفت‌وگوی ساختمان', detail: 'پیام‌های گروه و اطلاعیه‌های ساکنان', icon: Icons.forum_outlined),
-    Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
+    Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
       const Center(child: Chip(avatar: Icon(Icons.lock_outline, size: 16), label: Text('گفت‌وگوی اعضای ساختمان'))),
       for (final message in _messages) _chatBubble(message),
     ])),
