@@ -955,7 +955,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ownership: widget.ownership,
           onJoined: (building, floor, unit) => setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; }),
         ),
-      _ => _PlaceholderTab(index: selectedTab),
+      _ => _FeatureHub(index: selectedTab, isManager: _isManager),
     };
     return Scaffold(
       appBar: AppBar(
@@ -2254,46 +2254,145 @@ extension _PersianDigits on int {
   }
 }
 
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({required this.index});
+class _FeatureItem {
+  const _FeatureItem(this.title, this.subtitle, this.icon, this.kind);
+  final String title, subtitle, kind;
+  final IconData icon;
+}
+
+class _FeatureHub extends StatelessWidget {
+  const _FeatureHub({required this.index, required this.isManager});
   final int index;
+  final bool isManager;
 
   @override
   Widget build(BuildContext context) {
-    final labels = [
-      'درخواست‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.',
-      'اطلاعیه‌ها به‌زودی در نسخهٔ کامل فعال می‌شود.',
-      'امور مالی به‌زودی در نسخهٔ کامل فعال می‌شود.',
-    ];
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.hourglass_empty_rounded,
-              size: 46,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              labels[index - 1],
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                height: 1.7,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'این نسخه یک نمونهٔ محلی است و بدون سرور کار می‌کند.',
-              style: TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
+    final items = index == 1
+        ? <_FeatureItem>[
+            const _FeatureItem('خدمات و نیروهای خدماتی', 'ثبت تخصص، مشاهدهٔ درخواست‌ها و ارزیابی خدمات', Icons.handyman_rounded, 'service'),
+            const _FeatureItem('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
+          ]
+        : index == 2
+            ? <_FeatureItem>[
+                const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'),
+                const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'),
+              ]
+            : <_FeatureItem>[
+                if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
+                const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
+                const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
+              ];
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+      children: [
+        Text(index == 1 ? 'درخواست‌ها و ارتباط' : index == 2 ? 'رأی‌گیری و ارزیابی' : 'امور مالی و اشتراک',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 6),
+        Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 16),
+        ...items.map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Card(child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            leading: CircleAvatar(radius: 25, child: Icon(item.icon)),
+            title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(item.subtitle)),
+            trailing: const Icon(Icons.chevron_left_rounded),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(item: item))),
+          )),
+        )),
+        Card(color: Theme.of(context).colorScheme.secondaryContainer, child: const Padding(
+          padding: EdgeInsets.all(16), child: Text('ساختمان و اعضا\nایجاد ساختمان و طبقات (مدیر) یا جست‌وجو و عضویت در ساختمان (ساکن) از تب «خدمات» در دسترس است.', style: TextStyle(height: 1.7)),
+        )),
+      ],
     );
   }
+}
+
+class _FeaturePage extends StatefulWidget {
+  const _FeaturePage({required this.item});
+  final _FeatureItem item;
+  @override
+  State<_FeaturePage> createState() => _FeaturePageState();
+}
+
+class _FeaturePageState extends State<_FeaturePage> {
+  final _formKey = GlobalKey<FormState>();
+  final Map<String, String> _values = {};
+  String? _choice;
+  bool _checked = false;
+
+  List<String> get _fields => switch (widget.item.kind) {
+    'withdraw' => ['مبلغ درخواستی (تومان)', 'شماره شبا', 'توضیحات برای مدیر سامانه'],
+    'water' => ['شماره کنتور اصلی', 'میزان مصرف/مبلغ قبض (تومان)', 'شماره قبض یا دورهٔ مصرف'],
+    'subscription' => ['نام و شماره تماس پشتیبان/مدیر (اختیاری)'],
+    'vote' => ['عنوان موضوع رأی‌گیری', 'شرح پیشنهاد', 'هزینهٔ اجرای تصمیم (تومان)', 'مدت رأی‌گیری (روز)'],
+    'evaluation' => ['توضیحات (اختیاری)'],
+    'service' => ['نوع خدمت یا تخصص', 'شرح درخواست', 'زمان پیشنهادی', 'شماره تماس'],
+    'chat' => ['پیام خود را بنویسید'],
+    _ => [],
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final kind = widget.item.kind;
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.item.title)),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
+          CircleAvatar(radius: 26, child: Icon(widget.item.icon)), const SizedBox(width: 14),
+          Expanded(child: Text(widget.item.subtitle, style: const TextStyle(height: 1.6))),
+        ]))),
+        const SizedBox(height: 12),
+        if (kind == 'subscription') _subscriptionContent(context),
+        if (kind == 'vote') _voteContent(context),
+        if (kind == 'evaluation') _evaluationContent(context),
+        if (kind == 'service') _serviceContent(context),
+        if (kind == 'water') _waterContent(context),
+        if (kind == 'withdraw') _withdrawSummary(context),
+        if (kind == 'chat') _chatHistory(context),
+        if (_fields.isNotEmpty) ...[
+          Card(child: Padding(padding: const EdgeInsets.all(18), child: Form(key: _formKey, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(kind == 'chat' ? 'ارسال پیام' : 'ثبت اطلاعات', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 14),
+            ..._fields.map((label) => Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(
+              keyboardType: label.contains('مبلغ') || label.contains('روز') || label.contains('شماره کنتور') ? TextInputType.number : TextInputType.text,
+              maxLines: label.contains('شرح') || label.contains('توضیحات') || kind == 'chat' ? 3 : 1,
+              decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))),
+              validator: (v) => (v == null || v.trim().isEmpty) && !label.contains('اختیاری') ? 'این مورد را وارد کنید' : null,
+              onSaved: (v) => _values[label] = v?.trim() ?? '',
+            ))),
+            if (kind == 'water') CheckboxListTile(value: _checked, contentPadding: EdgeInsets.zero, title: const Text('تصویر قبض را پیوست کرده‌ام'), onChanged: (v) => setState(() => _checked = v ?? false)),
+            FilledButton.icon(onPressed: _submit, icon: const Icon(Icons.check_circle_outline), label: Text(kind == 'chat' ? 'ارسال پیام' : 'ثبت درخواست')),
+          ])))),
+        ],
+        const SizedBox(height: 18),
+        Text('نمونهٔ نمایشی: برای ثبت نهایی و پرداخت آنلاین، اتصال سرویس مربوطه به سرور لازم است.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      ]),
+    );
+  }
+
+  Widget _subscriptionContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    const Text('۳ ماه اشتراک رایگان برای شروع', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+    const SizedBox(height: 8), const Text('پس از دورهٔ آزمایشی، طرح دلخواه خود را انتخاب کنید.'),
+    const SizedBox(height: 12), ...['ماهانه', 'سه‌ماهه', 'سالانه'].map((x) => RadioListTile<String>(value: x, groupValue: _choice, title: Text('طرح $x'), subtitle: Text(x == 'ماهانه' ? 'پرداخت ماهانه' : x == 'سه‌ماهه' ? 'پرداخت هر سه ماه' : 'صرفه‌جویی در طرح سالانه'), onChanged: (v) => setState(() => _choice = v))),
+  ])));
+
+  Widget _voteContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    const Text('موضوع‌های در حال رأی‌گیری', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+    const SizedBox(height: 12), _voteTile('تعمیر آسانسور', 'هزینهٔ برآوردی: ۱۲٬۰۰۰٬۰۰۰ تومان'), _voteTile('نصب دوربین ورودی', 'هزینهٔ برآوردی: ۸٬۵۰۰٬۰۰۰ تومان'),
+    const SizedBox(height: 8), const Text('رأی هر واحد به‌صورت ناشناس ثبت می‌شود.', style: TextStyle(fontSize: 12)),
+  ])));
+  Widget _voteTile(String title, String subtitle) => ListTile(contentPadding: EdgeInsets.zero, title: Text(title), subtitle: Text(subtitle), trailing: Wrap(spacing: 4, children: [IconButton(tooltip: 'موافق', onPressed: () => _message('رأی موافق به‌صورت نمایشی ثبت شد.'), icon: const Icon(Icons.thumb_up_alt_outlined)), IconButton(tooltip: 'مخالف', onPressed: () => _message('رأی مخالف به‌صورت نمایشی ثبت شد.'), icon: const Icon(Icons.thumb_down_alt_outlined))]));
+
+  Widget _evaluationContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    const Text('ارزیابی شش‌ماههٔ مدیریت', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), const SizedBox(height: 8), const Text('امتیاز کلی عملکرد مدیر'),
+    ...['شفافیت مالی', 'پاسخ‌گویی', 'رسیدگی به امور ساختمان'].map((x) => ListTile(title: Text(x), trailing: DropdownButton<int>(value: _values[x] == null ? 4 : int.tryParse(_values[x]!), items: [1,2,3,4,5].map((n) => DropdownMenuItem(value:n, child: Text('$n'))).toList(), onChanged: (v) => setState(() => _values[x] = '$v')))),
+  ])));
+  Widget _serviceContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [const Text('خدمات موجود', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 8), ...['لوله‌کش • امتیاز ۴٫۸', 'برق‌کار • امتیاز ۴٫۶', 'نظافت مشاعات • امتیاز ۴٫۹'].map((x) => ListTile(leading: const Icon(Icons.person_pin_circle_outlined), title: Text(x), trailing: TextButton(onPressed: () => _message('درخواست خدمت انتخاب شد.'), child: const Text('درخواست'))))])));
+  Widget _waterContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [const Text('تقسیم سهم واحدها', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 10), ...['واحد ۱', 'واحد ۲', 'واحد ۳'].map((x) => ListTile(leading: const Icon(Icons.water_outlined), title: Text(x), subtitle: const Text('قرائت کنتور: —'), trailing: const Text('سهم: —'))), const Text('مبلغ قبض پس از ثبت، طبق قرائت کنتور به بدهی واحدها افزوده می‌شود.', style: TextStyle(height: 1.5))])));
+  Widget _withdrawSummary(BuildContext context) => Card(child: const Padding(padding: EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('خلاصهٔ حساب ساختمان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), SizedBox(height: 10), Text('موجودی قابل درخواست: — تومان'), Text('درخواست برداشت پس از بررسی مدیر سامانه تسویه می‌شود.')])));
+  Widget _chatHistory(BuildContext context) => Card(child: const Padding(padding: EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Text('گفت‌وگوی ساکنان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), SizedBox(height: 14), Align(alignment: Alignment.centerRight, child: Chip(label: Text('به گروه ساختمان خوش آمدید'))), Align(alignment: Alignment.centerLeft, child: Chip(label: Text('اطلاعیه‌ها و پیام‌ها در اینجا نمایش داده می‌شوند')))])));
+  void _submit() { if (!(_formKey.currentState?.validate() ?? false)) return; _formKey.currentState!.save(); _message('اطلاعات به‌صورت محلی ثبت شد.'); }
+  void _message(String text) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text))); }
 }
