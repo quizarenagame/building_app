@@ -660,14 +660,14 @@ class _MiniFeatures extends StatelessWidget {
   const _MiniFeatures();
   @override
   Widget build(BuildContext context) => Row(children: const [
-    Expanded(child: _FeatureItem(icon: Icons.miscellaneous_services_outlined, title: 'خدمات')),
-    Expanded(child: _FeatureItem(icon: Icons.handyman_outlined, title: 'درخواست‌ها')),
-    Expanded(child: _FeatureItem(icon: Icons.campaign_outlined, title: 'اطلاعیه‌ها')),
-    Expanded(child: _FeatureItem(icon: Icons.receipt_long_outlined, title: 'امور مالی')),
+    Expanded(child: _MiniFeatureItem(icon: Icons.miscellaneous_services_outlined, title: 'خدمات')),
+    Expanded(child: _MiniFeatureItem(icon: Icons.handyman_outlined, title: 'درخواست‌ها')),
+    Expanded(child: _MiniFeatureItem(icon: Icons.campaign_outlined, title: 'اطلاعیه‌ها')),
+    Expanded(child: _MiniFeatureItem(icon: Icons.receipt_long_outlined, title: 'امور مالی')),
   ]);
 }
-class _FeatureItem extends StatelessWidget {
-  const _FeatureItem({required this.icon, required this.title});
+class _MiniFeatureItem extends StatelessWidget {
+  const _MiniFeatureItem({required this.icon, required this.title});
   final IconData icon; final String title;
   @override
   Widget build(BuildContext context) => Column(children: [Icon(icon, color: Theme.of(context).colorScheme.primary, size: 23), const SizedBox(height: 7), Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11))]);
@@ -2254,8 +2254,8 @@ extension _PersianDigits on int {
   }
 }
 
-class _FeatureEntry {
-  const _FeatureEntry(this.title, this.subtitle, this.icon, this.kind);
+class _FeatureItem {
+  const _FeatureItem(this.title, this.subtitle, this.icon, this.kind);
   final String title, subtitle, kind;
   final IconData icon;
 }
@@ -2268,19 +2268,19 @@ class _FeatureHub extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = index == 1
-        ? <_FeatureEntry>[
-            const _FeatureEntry('خدمات و نیروهای خدماتی', 'ثبت تخصص، مشاهدهٔ درخواست‌ها و ارزیابی خدمات', Icons.handyman_rounded, 'service'),
-            const _FeatureEntry('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
+        ? <_FeatureItem>[
+            const _FeatureItem('خدمات و نیروهای خدماتی', 'ثبت تخصص، مشاهدهٔ درخواست‌ها و ارزیابی خدمات', Icons.handyman_rounded, 'service'),
+            const _FeatureItem('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
           ]
         : index == 2
-            ? <_FeatureEntry>[
-                const _FeatureEntry('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'),
-                const _FeatureEntry('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'),
+            ? <_FeatureItem>[
+                const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'),
+                const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'),
               ]
-            : <_FeatureEntry>[
-                if (isManager) const _FeatureEntry('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
-                const _FeatureEntry('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
-                const _FeatureEntry('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
+            : <_FeatureItem>[
+                if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
+                const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
+                const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
               ];
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
@@ -2311,34 +2311,88 @@ class _FeatureHub extends StatelessWidget {
 
 class _FeaturePage extends StatefulWidget {
   const _FeaturePage({required this.item});
-  final _FeatureEntry item;
+  final _FeatureItem item;
   @override
   State<_FeaturePage> createState() => _FeaturePageState();
+}
+
+class _MeterReading {
+  _MeterReading(this.label, this.previous, this.current)
+      : previousController = TextEditingController(text: '$previous'),
+        currentController = TextEditingController(text: '$current');
+  final String label;
+  final TextEditingController previousController;
+  final TextEditingController currentController;
+  int get previous => int.tryParse(previousController.text) ?? 0;
+  int get current => int.tryParse(currentController.text) ?? 0;
+  int get usage { final delta = current - previous; return delta < 0 ? 0 : delta; }
+  void dispose() { previousController.dispose(); currentController.dispose(); }
 }
 
 class _FeaturePageState extends State<_FeaturePage> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, String> _values = {};
+  final Map<String, int> _ratings = {};
+  final Map<int, String> _votes = {};
+  final List<Map<String, String>> _messages = [
+    {'text': 'به گفت‌وگوی ساختمان خوش آمدید.', 'mine': 'false', 'name': 'مدیر'},
+    {'text': 'اطلاعیه تعمیرات مشاعات را اینجا می‌بینیم.', 'mine': 'false', 'name': 'سارا'},
+    {'text': 'ممنون، زمان‌بندی را بررسی می‌کنم.', 'mine': 'true', 'name': 'شما'},
+  ];
+  final List<String> _withdrawals = [];
+  final TextEditingController _chatController = TextEditingController();
+  final List<_MeterReading> _meters = List<_MeterReading>.generate(
+    6, (i) => _MeterReading('واحد ${i + 1}', 120 + i * 17, 135 + i * 17));
   String? _choice;
   bool _checked = false;
+  int _billAmount = 186000;
+  int _selectedService = -1;
+  final Map<int, double> _providerRatings = {0: 4.8, 1: 4.6, 2: 4.9, 3: 4.7};
+  final Set<int> _ratedProviders = {};
+  final List<String> _criteria = const [
+    'شفافیت مالی و ارائه گزارش',
+    'پاسخ‌گویی به درخواست ساکنان',
+    'رسیدگی به تعمیرات و نگهداری',
+    'مدیریت هزینه‌ها و بودجه',
+    'نظم و پیگیری امور روزمره',
+    'رفتار حرفه‌ای و منصفانه',
+  ];
+  final List<String> _providers = const [
+    'لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور',
+  ];
+  final List<String> _providerNames = const [
+    'علی رضایی', 'مهدی کریمی', 'گروه پاک‌زیست', 'فنی‌کاران ایمن',
+  ];
+  final List<String> _providerDetails = const [
+    'تعمیر نشتی، رفع گرفتگی و سرویس پمپ آب',
+    'عیب‌یابی برق، روشنایی و تابلوهای مشاع',
+    'نظافت راه‌پله، پارکینگ و فضاهای عمومی',
+    'بازدید دوره‌ای و تعمیر آسانسورهای مسکونی',
+  ];
 
   List<String> get _fields => switch (widget.item.kind) {
     'withdraw' => ['مبلغ درخواستی (تومان)', 'شماره شبا', 'توضیحات برای مدیر سامانه'],
-    'water' => ['شماره کنتور اصلی', 'میزان مصرف/مبلغ قبض (تومان)', 'شماره قبض یا دورهٔ مصرف'],
-    'subscription' => ['نام و شماره تماس پشتیبان/مدیر (اختیاری)'],
+    'water' => ['مبلغ کل قبض (تومان)', 'شماره قبض یا دورهٔ مصرف'],
+    'subscription' => [],
     'vote' => ['عنوان موضوع رأی‌گیری', 'شرح پیشنهاد', 'هزینهٔ اجرای تصمیم (تومان)', 'مدت رأی‌گیری (روز)'],
     'evaluation' => ['توضیحات (اختیاری)'],
-    'service' => ['نوع خدمت یا تخصص', 'شرح درخواست', 'زمان پیشنهادی', 'شماره تماس'],
-    'chat' => ['پیام خود را بنویسید'],
+    'service' => ['شرح درخواست', 'زمان پیشنهادی', 'شماره تماس'],
     _ => [],
   };
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    for (final meter in _meters) { meter.dispose(); }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final kind = widget.item.kind;
     return Scaffold(
       appBar: AppBar(title: Text(widget.item.title)),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
         Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
           CircleAvatar(radius: 26, child: Icon(widget.item.icon)), const SizedBox(width: 14),
           Expanded(child: Text(widget.item.subtitle, style: const TextStyle(height: 1.6))),
@@ -2350,49 +2404,210 @@ class _FeaturePageState extends State<_FeaturePage> {
         if (kind == 'service') _serviceContent(context),
         if (kind == 'water') _waterContent(context),
         if (kind == 'withdraw') _withdrawSummary(context),
-        if (kind == 'chat') _chatHistory(context),
+        if (kind == 'chat') _chatInterface(context),
         if (_fields.isNotEmpty) ...[
+          const SizedBox(height: 12),
           Card(child: Padding(padding: const EdgeInsets.all(18), child: Form(key: _formKey, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(kind == 'chat' ? 'ارسال پیام' : 'ثبت اطلاعات', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(kind == 'vote' ? 'پیشنهاد موضوع جدید' : kind == 'withdraw' ? 'ثبت درخواست برداشت' : kind == 'water' ? 'ثبت قبض آب' : kind == 'service' ? 'ثبت درخواست خدمت' : 'ثبت ارزیابی', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 14),
             ..._fields.map((label) => Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(
-              keyboardType: label.contains('مبلغ') || label.contains('روز') || label.contains('شماره کنتور') ? TextInputType.number : TextInputType.text,
-              maxLines: label.contains('شرح') || label.contains('توضیحات') || kind == 'chat' ? 3 : 1,
+              keyboardType: label.contains('مبلغ') || label.contains('هزینه') || label.contains('روز') || label.contains('شماره قبض') ? TextInputType.number : TextInputType.text,
+              maxLines: label.contains('شرح') || label.contains('توضیحات') ? 3 : 1,
               decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))),
               validator: (v) => (v == null || v.trim().isEmpty) && !label.contains('اختیاری') ? 'این مورد را وارد کنید' : null,
               onSaved: (v) => _values[label] = v?.trim() ?? '',
             ))),
             if (kind == 'water') CheckboxListTile(value: _checked, contentPadding: EdgeInsets.zero, title: const Text('تصویر قبض را پیوست کرده‌ام'), onChanged: (v) => setState(() => _checked = v ?? false)),
-            FilledButton.icon(onPressed: _submit, icon: const Icon(Icons.check_circle_outline), label: Text(kind == 'chat' ? 'ارسال پیام' : 'ثبت درخواست')),
+            FilledButton.icon(onPressed: _submit, icon: const Icon(Icons.check_circle_outline), label: Text(kind == 'vote' ? 'ثبت پیشنهاد' : kind == 'withdraw' ? 'ارسال برای بررسی' : kind == 'water' ? 'محاسبه و ثبت قبض' : kind == 'service' ? 'ارسال درخواست' : 'ثبت ارزیابی')),
           ])))),
         ],
         const SizedBox(height: 18),
-        Text('نمونهٔ نمایشی: برای ثبت نهایی و پرداخت آنلاین، اتصال سرویس مربوطه به سرور لازم است.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        Text('اطلاعات این نمونه در همین نشست برنامه نمایش داده می‌شود؛ ثبت نهایی، پرداخت یا همگام‌سازی نیازمند اتصال سرویس سمت سرور است.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, height: 1.6, color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ]),
     );
   }
 
-  Widget _subscriptionContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    const Text('۳ ماه اشتراک رایگان برای شروع', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 8), const Text('پس از دورهٔ آزمایشی، طرح دلخواه خود را انتخاب کنید.'),
-    const SizedBox(height: 12), ...['ماهانه', 'سه‌ماهه', 'سالانه'].map((x) => RadioListTile<String>(value: x, groupValue: _choice, title: Text('طرح $x'), subtitle: Text(x == 'ماهانه' ? 'پرداخت ماهانه' : x == 'سه‌ماهه' ? 'پرداخت هر سه ماه' : 'صرفه‌جویی در طرح سالانه'), onChanged: (v) => setState(() => _choice = v))),
+  Widget _sectionTitle(String title, {String? detail, IconData icon = Icons.dashboard_customize_outlined}) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(children: [Icon(icon, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), if (detail != null) Text(detail, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))]))]),
+  );
+
+  Widget _subscriptionContent(BuildContext context) {
+    final plans = [
+      ('ماهانه', '۲۹۰٬۰۰۰', 'پرداخت ماه‌به‌ماه', Icons.calendar_month_outlined),
+      ('سه‌ماهه', '۷۵۰٬۰۰۰', 'صرفه‌جویی نسبت به پرداخت ماهانه', Icons.date_range_outlined),
+      ('سالانه', '۲٬۷۰۰٬۰۰۰', 'بهترین ارزش؛ معادل ۲۲۵ هزار تومان در ماه', Icons.workspace_premium_outlined),
+    ];
+    return Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(18)), child: Row(children: [const Icon(Icons.card_giftcard_rounded, size: 32), const SizedBox(width: 12), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('۳ ماه استفادهٔ رایگان', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), Text('بدون هزینه در دورهٔ آزمایشی؛ هر زمان قابل لغو است.')]))])),
+      const SizedBox(height: 18), _sectionTitle('انتخاب طرح پس از دورهٔ آزمایشی', detail: 'همهٔ طرح‌ها شامل مدیریت ساختمان، گزارش و پشتیبانی هستند.'),
+      for (var i = 0; i < plans.length; i++) _planCard(plans[i], i),
+      const SizedBox(height: 8), FilledButton.icon(onPressed: _choice == null ? null : () => _message('طرح $_choice پس از دورهٔ آزمایشی انتخاب شد.'), icon: const Icon(Icons.lock_open_rounded), label: const Text('شروع دورهٔ آزمایشی رایگان')),
+      const SizedBox(height: 8), const Text('یادآوری پایان دورهٔ آزمایشی پیش از شروع پرداخت نمایش داده می‌شود.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+    ])));
+  }
+
+  Widget _planCard((String, String, String, IconData) plan, int index) {
+    final selected = _choice == plan.$1;
+    return Card(color: selected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(.55) : null, child: RadioListTile<String>(value: plan.$1, groupValue: _choice, onChanged: (v) => setState(() => _choice = v), secondary: Icon(plan.$4), title: Text('طرح ${plan.$1}', style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text('${plan.$3}\n${plan.$2} تومان پس از پایان دورهٔ رایگان'), isThreeLine: true));
+  }
+
+  Widget _voteContent(BuildContext context) {
+    final topics = [
+      ('تعمیر آسانسور', 'برآورد هزینه: ۱۲٬۰۰۰٬۰۰۰ تومان', 24, 8),
+      ('نصب دوربین ورودی', 'برآورد هزینه: ۸٬۵۰۰٬۰۰۰ تومان', 18, 11),
+      ('بهسازی روشنایی پارکینگ', 'برآورد هزینه: ۳٬۲۰۰٬۰۰۰ تومان', 15, 5),
+    ];
+    return Column(children: [
+      Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _sectionTitle('صندوق رأی ناشناس', detail: 'رأی شما از هویت و شمارهٔ واحد جدا نگه داشته می‌شود.', icon: Icons.how_to_vote_rounded),
+        Center(child: Container(width: 130, height: 112, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)), child: Stack(alignment: Alignment.center, children: [Icon(Icons.how_to_vote_rounded, size: 72, color: Theme.of(context).colorScheme.primary), Positioned(top: 20, child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(.65), borderRadius: BorderRadius.circular(5))))]))),
+        const SizedBox(height: 12), const Text('برای هر موضوع فقط یک رأی ثبت کنید. نتایج تجمیعی نمایش داده می‌شوند و انتخاب فردی قابل مشاهده نیست.', textAlign: TextAlign.center, style: TextStyle(height: 1.5)),
+      ]))),
+      for (var i = 0; i < topics.length; i++) _ballotCard(topics[i], i),
+    ]);
+  }
+
+  Widget _ballotCard((String, String, int, int) topic, int index) {
+    final total = topic.$3 + topic.$4;
+    final agree = total == 0 ? 0.0 : topic.$3 / total;
+    final choice = _votes[index];
+    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [Expanded(child: Text(topic.$1, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))), const Chip(label: Text('فعال'))]),
+      Text(topic.$2), const SizedBox(height: 12),
+      Row(children: [const Text('موافق'), const Spacer(), Text('${(agree * 100).round()}٪ موافق • ${((1 - agree) * 100).round()}٪ مخالف')]),
+      const SizedBox(height: 6), ClipRRect(borderRadius: BorderRadius.circular(9), child: LinearProgressIndicator(value: agree, minHeight: 12)),
+      const SizedBox(height: 8), Text('آرای ثبت‌شده: $total', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      const SizedBox(height: 8), Row(children: [Expanded(child: OutlinedButton.icon(onPressed: choice == null ? () => _castVote(index, 'موافقم') : null, icon: const Icon(Icons.thumb_up_alt_outlined), label: const Text('موافقم'))), const SizedBox(width: 8), Expanded(child: OutlinedButton.icon(onPressed: choice == null ? () => _castVote(index, 'مخالفم') : null, icon: const Icon(Icons.thumb_down_alt_outlined), label: const Text('مخالفم')))]),
+      if (choice != null) Text('رأی ناشناس شما ثبت شد: $choice', style: const TextStyle(fontWeight: FontWeight.w600)),
+    ])));
+  }
+
+  void _castVote(int index, String answer) { setState(() => _votes[index] = answer); _message('رأی شما به‌صورت ناشناس ثبت شد.'); }
+
+  Widget _evaluationContent(BuildContext context) {
+    final average = _criteria.map((x) => _ratings[x] ?? 4).fold<int>(0, (a, b) => a + b) / _criteria.length;
+    return Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _sectionTitle('ارزیابی شش‌ماههٔ مدیر', detail: 'دوره: شش ماه گذشته • امتیازدهی از ۱ تا ۵', icon: Icons.fact_check_outlined),
+      Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Theme.of(context).colorScheme.secondaryContainer, borderRadius: BorderRadius.circular(16)), child: Row(children: [const Icon(Icons.star_rounded, color: Colors.amber, size: 32), const SizedBox(width: 8), Text(average.toStringAsFixed(1), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)), const SizedBox(width: 8), const Expanded(child: Text('میانگین ارزیابی فعلی'))])),
+      const SizedBox(height: 14),
+      for (final criterion in _criteria) _ratingRow(criterion),
+      const SizedBox(height: 8), const Text('ارزیابی‌ها به‌صورت تجمیعی برای بهبود مدیریت استفاده می‌شوند.', style: TextStyle(height: 1.5, fontSize: 12)),
+    ])));
+  }
+
+  Widget _ratingRow(String criterion) {
+    final value = _ratings[criterion] ?? 4;
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(children: [Expanded(child: Text(criterion)), DropdownButton<int>(value: value, items: List.generate(5, (i) => i + 1).map((n) => DropdownMenuItem(value: n, child: Text('$n از ۵'))).toList(), onChanged: (v) => setState(() => _ratings[criterion] = v ?? 4))]));
+  }
+
+  Widget _serviceContent(BuildContext context) => Column(children: [
+    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _sectionTitle('پروفایل نیروهای خدماتی', detail: 'مشاهدهٔ تخصص، امتیاز ساکنان و ثبت درخواست.', icon: Icons.engineering_outlined),
+      for (var i = 0; i < _providers.length; i++) _providerCard(i),
+    ]))),
+    if (_selectedService >= 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [const Icon(Icons.assignment_turned_in_outlined), const SizedBox(width: 10), Expanded(child: Text('درخواست «${_providers[_selectedService]}» آمادهٔ ثبت است.'))]))),
+  ]);
+
+  Widget _providerCard(int i) {
+    final rating = _providerRatings[i] ?? 4.5;
+    return Card(child: Padding(padding: const EdgeInsets.all(13), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [CircleAvatar(child: Icon(i == 2 ? Icons.cleaning_services_outlined : Icons.person_outline)), const SizedBox(width: 11), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_providers[i], style: const TextStyle(fontWeight: FontWeight.bold)), Text(_providerNames[i], style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))])), Text('★ ${rating.toStringAsFixed(1)}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold))]),
+      Padding(padding: const EdgeInsets.only(top: 9, bottom: 8), child: Text(_providerDetails[i], style: const TextStyle(height: 1.4))),
+      Row(children: [const Icon(Icons.verified_outlined, size: 17), const SizedBox(width: 5), const Expanded(child: Text('پروفایل تأییدشده • پاسخ‌گو در ساعات کاری', style: TextStyle(fontSize: 11))), TextButton.icon(onPressed: () { setState(() => _selectedService = i); _message('برای ثبت نهایی، فرم درخواست را تکمیل کنید.'); }, icon: const Icon(Icons.send_outlined, size: 17), label: const Text('درخواست'))]),
+      if (_ratedProviders.contains(i)) const Text('از ثبت امتیاز شما سپاسگزاریم.', style: TextStyle(fontSize: 12)),
+      if (!_ratedProviders.contains(i)) Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 2, children: [const Text('امتیاز شما:'), for (var star = 1; star <= 5; star++) IconButton(visualDensity: VisualDensity.compact, onPressed: () => _rateProvider(i, star), icon: Icon(Icons.star, color: star <= rating.round() ? Colors.amber : Colors.grey, size: 20))]),
+    ])));
+  }
+
+  void _rateProvider(int index, int stars) { final old = _providerRatings[index] ?? 4.5; setState(() { _providerRatings[index] = ((old + stars) / 2 * 10).round() / 10; _ratedProviders.add(index); }); }
+
+  Widget _waterContent(BuildContext context) {
+    final usageSum = _meters.fold<int>(0, (sum, m) => sum + m.usage);
+    final allocations = _meters.map((m) => usageSum == 0 ? _billAmount ~/ _meters.length : (_billAmount * m.usage / usageSum).round()).toList();
+    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _sectionTitle('محاسبهٔ قبض با کنتور فرعی', detail: 'قرائت‌ها را ویرایش کنید؛ سهم هر واحد لحظه‌ای محاسبه می‌شود.', icon: Icons.water_drop_outlined),
+      Text('مبلغ قبض: ${_billAmount.toString()} تومان  •  مصرف کل: $usageSum مترمکعب', style: const TextStyle(fontWeight: FontWeight.w600)),
+      const SizedBox(height: 10),
+      SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columnSpacing: 18, columns: const [DataColumn(label: Text('واحد')), DataColumn(label: Text('قبلی')), DataColumn(label: Text('فعلی')), DataColumn(label: Text('مصرف')), DataColumn(label: Text('سهم قبض'))], rows: List<DataRow>.generate(_meters.length, (i) {
+        final meter = _meters[i];
+        return DataRow(cells: [DataCell(Text(meter.label)), DataCell(_meterInput(meter.previousController, i, 'previous')), DataCell(_meterInput(meter.currentController, i, 'current')), DataCell(Text('${meter.usage}')), DataCell(Text('${allocations[i]} تومان'))]);
+      }))),
+      const SizedBox(height: 10),
+      Row(children: [const Icon(Icons.info_outline, size: 18), const SizedBox(width: 7), Expanded(child: Text('روش محاسبه: مبلغ قبض × مصرف واحد ÷ مصرف کل. سهم‌ها بر اساس مصرف واقعی تقسیم شده‌اند.', style: const TextStyle(fontSize: 12, height: 1.5)))]),
+    ])));
+  }
+
+  Widget _meterInput(TextEditingController controller, int index, String field) => SizedBox(width: 76, child: TextField(controller: controller, keyboardType: TextInputType.number, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()), onChanged: (_) => setState(() {})));
+
+  Widget _withdrawSummary(BuildContext context) {
+    const rows = [
+      ('شارژهای ماه جاری', 1850000, Icons.home_work_outlined),
+      ('قبوض پرداخت‌شده', -420000, Icons.receipt_long_outlined),
+      ('هزینهٔ تعمیرات', -175000, Icons.build_outlined),
+      ('ماندهٔ قبلی', 620000, Icons.account_balance_outlined),
+    ];
+    final balance = rows.fold<int>(0, (sum, row) => sum + row.$2);
+    return Column(children: [
+      Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _sectionTitle('صورت‌حساب ساختمان', detail: 'نمونهٔ گردش مالی و ماندهٔ قابل برداشت', icon: Icons.account_balance_wallet_outlined),
+        for (final row in rows) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(row.$3), title: Text(row.$1), trailing: Text('${row.$2 < 0 ? '−' : '+'}${row.$2.abs()} تومان')),
+        const Divider(), ListTile(title: const Text('موجودی قابل درخواست', style: TextStyle(fontWeight: FontWeight.bold)), trailing: Text('$balance تومان', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+        const Text('گردش مالی به تفکیک واحد', style: TextStyle(fontWeight: FontWeight.bold)),
+        for (var i = 1; i <= 4; i++) _unitDebtRow(i, i * 125000 + 45000),
+      ]))),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _sectionTitle('درخواست‌های برداشت', detail: 'وضعیت درخواست‌های ثبت‌شده را پیگیری کنید.', icon: Icons.payments_outlined),
+        if (_withdrawals.isEmpty) const Text('هنوز درخواستی ثبت نشده است.', style: TextStyle(height: 1.5)),
+        for (final request in _withdrawals) ListTile(leading: const Icon(Icons.hourglass_top_rounded), title: Text(request), subtitle: const Text('در انتظار بررسی'), trailing: const Chip(label: Text('در انتظار'))),
+      ]))),
+    ]);
+  }
+
+  Widget _unitDebtRow(int unit, int amount) => ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: CircleAvatar(radius: 16, child: Text('$unit')), title: Text('واحد $unit'), subtitle: const Text('شارژ و هزینه‌های مشترک'), trailing: Text('$amount تومان'));
+
+  Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    _sectionTitle('گفت‌وگوی ساختمان', detail: 'پیام‌های گروه و اطلاعیه‌های ساکنان', icon: Icons.forum_outlined),
+    Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
+      const Center(child: Chip(avatar: Icon(Icons.lock_outline, size: 16), label: Text('گفت‌وگوی اعضای ساختمان'))),
+      for (final message in _messages) _chatBubble(message),
+    ])),
+    const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _chatController, minLines: 1, maxLines: 4, textInputAction: TextInputAction.send, onSubmitted: (_) => _sendChat(), decoration: InputDecoration(hintText: 'پیام خود را بنویسید…', border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)))), const SizedBox(width: 8), IconButton.filled(onPressed: _sendChat, tooltip: 'ارسال پیام', icon: const Icon(Icons.send_rounded))]),
   ])));
 
-  Widget _voteContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    const Text('موضوع‌های در حال رأی‌گیری', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-    const SizedBox(height: 12), _voteTile('تعمیر آسانسور', 'هزینهٔ برآوردی: ۱۲٬۰۰۰٬۰۰۰ تومان'), _voteTile('نصب دوربین ورودی', 'هزینهٔ برآوردی: ۸٬۵۰۰٬۰۰۰ تومان'),
-    const SizedBox(height: 8), const Text('رأی هر واحد به‌صورت ناشناس ثبت می‌شود.', style: TextStyle(fontSize: 12)),
-  ])));
-  Widget _voteTile(String title, String subtitle) => ListTile(contentPadding: EdgeInsets.zero, title: Text(title), subtitle: Text(subtitle), trailing: Wrap(spacing: 4, children: [IconButton(tooltip: 'موافق', onPressed: () => _message('رأی موافق به‌صورت نمایشی ثبت شد.'), icon: const Icon(Icons.thumb_up_alt_outlined)), IconButton(tooltip: 'مخالف', onPressed: () => _message('رأی مخالف به‌صورت نمایشی ثبت شد.'), icon: const Icon(Icons.thumb_down_alt_outlined))]));
+  Widget _chatBubble(Map<String, String> message) {
+    final mine = message['mine'] == 'true';
+    final colors = Theme.of(context).colorScheme;
+    return Align(alignment: mine ? Alignment.centerLeft : Alignment.centerRight, child: Container(margin: const EdgeInsets.symmetric(vertical: 5), padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10), constraints: const BoxConstraints(maxWidth: 285), decoration: BoxDecoration(color: mine ? colors.primaryContainer : colors.surface, borderRadius: BorderRadius.only(topLeft: const Radius.circular(16), topRight: const Radius.circular(16), bottomLeft: Radius.circular(mine ? 4 : 16), bottomRight: Radius.circular(mine ? 16 : 4))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [if (!mine) Text(message['name'] ?? 'عضو', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.primary)), Text(message['text'] ?? '', style: const TextStyle(height: 1.4)), Text(TimeOfDay.now().format(context), style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant))])));
+  }
 
-  Widget _evaluationContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    const Text('ارزیابی شش‌ماههٔ مدیریت', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), const SizedBox(height: 8), const Text('امتیاز کلی عملکرد مدیر'),
-    ...['شفافیت مالی', 'پاسخ‌گویی', 'رسیدگی به امور ساختمان'].map((x) => ListTile(title: Text(x), trailing: DropdownButton<int>(value: _values[x] == null ? 4 : int.tryParse(_values[x]!), items: [1,2,3,4,5].map((n) => DropdownMenuItem(value:n, child: Text('$n'))).toList(), onChanged: (v) => setState(() => _values[x] = '$v')))),
-  ])));
-  Widget _serviceContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [const Text('خدمات موجود', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 8), ...['لوله‌کش • امتیاز ۴٫۸', 'برق‌کار • امتیاز ۴٫۶', 'نظافت مشاعات • امتیاز ۴٫۹'].map((x) => ListTile(leading: const Icon(Icons.person_pin_circle_outlined), title: Text(x), trailing: TextButton(onPressed: () => _message('درخواست خدمت انتخاب شد.'), child: const Text('درخواست'))))])));
-  Widget _waterContent(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [const Text('تقسیم سهم واحدها', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 10), ...['واحد ۱', 'واحد ۲', 'واحد ۳'].map((x) => ListTile(leading: const Icon(Icons.water_outlined), title: Text(x), subtitle: const Text('قرائت کنتور: —'), trailing: const Text('سهم: —'))), const Text('مبلغ قبض پس از ثبت، طبق قرائت کنتور به بدهی واحدها افزوده می‌شود.', style: TextStyle(height: 1.5))])));
-  Widget _withdrawSummary(BuildContext context) => Card(child: const Padding(padding: EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('خلاصهٔ حساب ساختمان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), SizedBox(height: 10), Text('موجودی قابل درخواست: — تومان'), Text('درخواست برداشت پس از بررسی مدیر سامانه تسویه می‌شود.')])));
-  Widget _chatHistory(BuildContext context) => Card(child: const Padding(padding: EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Text('گفت‌وگوی ساکنان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), SizedBox(height: 14), Align(alignment: Alignment.centerRight, child: Chip(label: Text('به گروه ساختمان خوش آمدید'))), Align(alignment: Alignment.centerLeft, child: Chip(label: Text('اطلاعیه‌ها و پیام‌ها در اینجا نمایش داده می‌شوند')))])));
-  void _submit() { if (!(_formKey.currentState?.validate() ?? false)) return; _formKey.currentState!.save(); _message('اطلاعات به‌صورت محلی ثبت شد.'); }
-  void _message(String text) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text))); }
+  void _sendChat() {
+    final text = _chatController.text.trim();
+    if (text.isEmpty) return;
+    setState(() { _messages.add({'text': text, 'mine': 'true', 'name': 'شما'}); _chatController.clear(); });
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    _formKey.currentState!.save();
+    final kind = widget.item.kind;
+    if (kind == 'water') {
+      final amount = int.tryParse((_values['مبلغ کل قبض (تومان)'] ?? '').replaceAll(',', ''));
+      if (amount != null && amount > 0) setState(() => _billAmount = amount);
+      _message('سهم‌بندی قبض بر اساس قرائت کنتورها به‌روزرسانی شد.');
+    } else if (kind == 'withdraw') {
+      setState(() => _withdrawals.add('${_values['مبلغ درخواستی (تومان)'] ?? '—'} تومان • ${_values['شماره شبا'] ?? ''}'));
+      _message('درخواست برداشت برای بررسی ثبت شد.');
+    } else if (kind == 'vote') {
+      _message('پیشنهاد «${_values['عنوان موضوع رأی‌گیری'] ?? ''}» در فهرست بررسی قرار گرفت.');
+    } else if (kind == 'service') {
+      _message('درخواست خدمت برای ${_selectedService >= 0 ? _providers[_selectedService] : 'ارائه‌دهنده'} ثبت شد.');
+    } else {
+      _message('ارزیابی شما با موفقیت ثبت شد.');
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
 }
