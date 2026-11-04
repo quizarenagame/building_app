@@ -2254,8 +2254,8 @@ extension _PersianDigits on int {
   }
 }
 
-class _FeatureItem {
-  const _FeatureItem(this.title, this.subtitle, this.icon, this.kind);
+class _FeatureEntry {
+  const _FeatureEntry(this.title, this.subtitle, this.icon, this.kind);
   final String title, subtitle, kind;
   final IconData icon;
 }
@@ -2268,19 +2268,19 @@ class _FeatureHub extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = index == 1
-        ? <_FeatureItem>[
-            const _FeatureItem('خدمات و نیروهای خدماتی', 'ثبت تخصص، مشاهدهٔ درخواست‌ها و ارزیابی خدمات', Icons.handyman_rounded, 'service'),
-            const _FeatureItem('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
+        ? <_FeatureEntry>[
+            const _FeatureEntry('خدمات و نیروهای خدماتی', 'ثبت تخصص، مشاهدهٔ درخواست‌ها و ارزیابی خدمات', Icons.handyman_rounded, 'service'),
+            const _FeatureEntry('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
           ]
         : index == 2
-            ? <_FeatureItem>[
-                const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'),
-                const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'),
+            ? <_FeatureEntry>[
+                const _FeatureEntry('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'),
+                const _FeatureEntry('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'),
               ]
-            : <_FeatureItem>[
-                if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
-                const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
-                const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
+            : <_FeatureEntry>[
+                if (isManager) const _FeatureEntry('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
+                const _FeatureEntry('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
+                const _FeatureEntry('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
               ];
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
@@ -2311,7 +2311,7 @@ class _FeatureHub extends StatelessWidget {
 
 class _FeaturePage extends StatefulWidget {
   const _FeaturePage({required this.item});
-  final _FeatureItem item;
+  final _FeatureEntry item;
   @override
   State<_FeaturePage> createState() => _FeaturePageState();
 }
