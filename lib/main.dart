@@ -504,7 +504,7 @@ class _LoginFlowState extends State<LoginFlow> {
       const SizedBox(height: 18),
       _primaryButton(label: 'تأیید و ادامه', onPressed: _verifyOtp),
       const SizedBox(height: 14),
-      Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.55), borderRadius: BorderRadius.circular(24)), child: Text('زمان باقی‌مانده: ${_secondsLeft.toPersianDigits()} ثانیه', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)))),
+      Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.55), borderRadius: BorderRadius.circular(24)), child: Text('زمان باقی‌مانده: ${_secondsLeft.toPersianDigits()} ثانیه', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)))),
       Center(child: TextButton.icon(
         onPressed: _secondsLeft == 0 && !_isSendingOtp ? _submitPhone : null,
         icon: const Icon(Icons.refresh_rounded, size: 19),
@@ -2567,7 +2567,7 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     _sectionTitle('گفت‌وگوی ساختمان', detail: 'پیام‌های گروه و اطلاعیه‌های ساکنان', icon: Icons.forum_outlined),
-    Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
+    Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
       const Center(child: Chip(avatar: Icon(Icons.lock_outline, size: 16), label: Text('گفت‌وگوی اعضای ساختمان'))),
       for (final message in _messages) _chatBubble(message),
     ])),
