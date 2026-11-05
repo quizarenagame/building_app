@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Release APK
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Set up Flutter
@@ -26,14 +26,32 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Ensure Android Launcher Icons exist
+        run: |
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+
+          # نصب imagemagick برای ساخت آیکون تمیز با سایز استاندارد
+          sudo apt-get update -y && sudo apt-get install -y imagemagick
+
+          convert -size 48x48 xc:#12A889 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert -size 72x72 xc:#12A889 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert -size 96x96 xc:#12A889 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert -size 144x144 xc:#12A889 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert -size 192x192 xc:#12A889 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK (Release)
+      - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
