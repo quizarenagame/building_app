@@ -19,6 +19,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Create default debug keystore
+        run: |
+          mkdir -p /home/runner/.android
+          mkdir -p /home/runner/.config/.android
+          keytool -genkey -v -keystore /home/runner/.android/debug.keystore \
+            -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          cp /home/runner/.android/debug.keystore /home/runner/.config/.android/debug.keystore
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -34,7 +43,6 @@ jobs:
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
 
-          # نصب imagemagick برای ساخت آیکون تمیز با سایز استاندارد
           sudo apt-get update -y && sudo apt-get install -y imagemagick
 
           convert -size 48x48 xc:#12A889 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
