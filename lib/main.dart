@@ -40,9 +40,7 @@ class BuildingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xFF0D9488);
-    const emerald = Color(0xFF0D9488);
-    const amber = Color(0xFFF59E0B);
+    const seed = Color(0xFF12A889);
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeMode,
       builder: (context, mode, _) => MaterialApp(
@@ -50,19 +48,15 @@ class BuildingApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(primary: emerald, secondary: amber, surface: const Color(0xFFFCFDFD), outline: const Color(0xFFCBD5E1)),
-          scaffoldBackgroundColor: const Color(0xFFF1F5F5),
+          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
+          scaffoldBackgroundColor: const Color(0xFFF5F7F8),
           fontFamily: 'Roboto',
-          appBarTheme: const AppBarTheme(centerTitle: true, surfaceTintColor: Colors.transparent),
-          inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: Colors.white.withOpacity(.82), border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16)), borderSide: BorderSide.none), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16)), borderSide: BorderSide(color: Color(0xFFE2E8F0))), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16)), borderSide: BorderSide(color: emerald, width: 1.6))),
-          cardTheme: CardTheme(color: Colors.white.withOpacity(.94), elevation: 2, shadowColor: const Color(0xFF0F172A).withOpacity(.06), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE8EEF0))), margin: const EdgeInsets.symmetric(vertical: 6)),
+          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark).copyWith(primary: const Color(0xFF2DD4BF), secondary: const Color(0xFFFBBF24), surface: const Color(0xFF111827), outline: const Color(0xFF334155)),
-          scaffoldBackgroundColor: const Color(0xFF0B1220),
-          appBarTheme: const AppBarTheme(centerTitle: true, surfaceTintColor: Colors.transparent),
-          cardTheme: CardTheme(color: const Color(0xFF172233), elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFF263449))), margin: const EdgeInsets.symmetric(vertical: 6)),
+          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
+          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         themeMode: mode,
         home: Directionality(textDirection: TextDirection.rtl, child: _initialHome()),
@@ -113,10 +107,13 @@ String formatTomanAmount(int amount) {
   return '${_latinDigitsToPersian(grouped)} تومان';
 }
 
-String _latinDigitsToPersian(String value) => value.replaceAllMapped(
-  RegExp(r'[0-9]'),
-  (match) => '۰۱۲۳۴۵۶۷۸۹'[int.parse(match.group(0)!)],
-);
+String _latinDigitsToPersian(String value) {
+  const latin = '0123456789';
+  const persian = '۰۱۲۳۴۵۶۷۸۹';
+  var result = value;
+  for (var i = 0; i < 10; i++) { result = result.replaceAll(latin[i], persian[i]); }
+  return result;
+}
 
 extension StringPersianDigits on String {
   String toPersianDigits() => _latinDigitsToPersian(this);
@@ -487,7 +484,7 @@ class _LoginFlowState extends State<LoginFlow> {
       const SizedBox(height: 9),
       Text('کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
       const SizedBox(height: 15),
-      Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFF8E8), Color(0xFFFFF1D0)]), border: Border.all(color: const Color(0xFFF5D58A)), borderRadius: BorderRadius.circular(16)), child: const Row(children: [Icon(Icons.shield_rounded, color: Color(0xFFD97706)), SizedBox(width: 10), Expanded(child: Text('کد ۴ رقمی فقط برای شما ارسال شده است؛ آن را با کسی به‌اشتراک نگذارید.', textAlign: TextAlign.right, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600)))])),
+      Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی از طریق پیامک برای شمارهٔ شما ارسال می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
       const SizedBox(height: 25),
       TextFormField(
         controller: _otpController,
@@ -495,16 +492,14 @@ class _LoginFlowState extends State<LoginFlow> {
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
         maxLength: 4,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         style: const TextStyle(fontSize: 27, fontWeight: FontWeight.bold, letterSpacing: 12),
-        decoration: _inputDecoration(hint: '••••', counterText: '', prefix: const Icon(Icons.password_rounded)),
+        decoration: _inputDecoration(hint: '••••', counterText: ''),
         validator: (value) => _latinDigits(value ?? '').length == 4 ? null : 'کد تأیید باید ۴ رقم باشد.',
         onFieldSubmitted: (_) => _verifyOtp(),
       ),
       const SizedBox(height: 18),
       _primaryButton(label: 'تأیید و ادامه', onPressed: _verifyOtp),
       const SizedBox(height: 14),
-      Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.55), borderRadius: BorderRadius.circular(24)), child: Text('زمان باقی‌مانده: ${_secondsLeft.toPersianDigits()} ثانیه', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)))),
       Center(child: TextButton.icon(
         onPressed: _secondsLeft == 0 && !_isSendingOtp ? _submitPhone : null,
         icon: const Icon(Icons.refresh_rounded, size: 19),
@@ -1838,8 +1833,8 @@ class _UnitTile extends StatelessWidget {
                 Text('واحد مدیر', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF5C3D00))),
               ]),
             ),
-          ],
-          if (!occupied)
+          ]
+          else
             Text('خالی — برای انتخاب بزنید', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
           if (building.financialDebtFor(building.unitId(floor, unit)) > 0) ...[
             const SizedBox(height: 5),
@@ -2018,9 +2013,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           final days = int.tryParse(_latinDigits(daysController.text.trim()));
           if (titleController.text.trim().isEmpty) { setDialogState(() => error = 'موضوع را وارد کنید.'); return; }
           if (days == null || days < 3) { setDialogState(() => error = 'مهلت نظرسنجی باید حداقل ۳ روز باشد.'); return; }
-          final financialAmount = parseTomanAmount(financialController.text.trim()) ?? 0;
-          if (financialAmount < 0) { setDialogState(() => error = 'مبلغ مالی نمی‌تواند منفی باشد.'); return; }
-          Navigator.pop(dialogContext, _BuildingPoll(title: titleController.text.trim(), description: descriptionController.text.trim(), deadline: DateTime.now().add(Duration(days: days)), financialAmount: financialAmount));
+          Navigator.pop(dialogContext, _BuildingPoll(title: titleController.text.trim(), description: descriptionController.text.trim(), deadline: DateTime.now().add(Duration(days: days))));
         }, child: const Text('ایجاد نظرسنجی'))],
       ),
     ));
@@ -2250,7 +2243,15 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
 }
 
 extension _PersianDigits on int {
-  String toPersianDigits() => _latinDigitsToPersian(toString());
+  String toPersianDigits() {
+    const digits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+    final s = toString();
+    final buffer = StringBuffer();
+    for (final ch in s.codeUnits) {
+      buffer.write(ch == 0x2D ? '-' : digits[ch - 48]);
+    }
+    return buffer.toString();
+  }
 }
 
 class _FeatureItem {
@@ -2316,9 +2317,9 @@ class _FeaturePage extends StatefulWidget {
 }
 
 class _MeterReading {
-  _MeterReading(this.label, int prev, int curr)
-      : previousController = TextEditingController(text: '$prev'),
-        currentController = TextEditingController(text: '$curr');
+  _MeterReading(this.label, this.previous, this.current)
+      : previousController = TextEditingController(text: '$previous'),
+        currentController = TextEditingController(text: '$current');
   final String label;
   final TextEditingController previousController;
   final TextEditingController currentController;
@@ -2567,7 +2568,7 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     _sectionTitle('گفت‌وگوی ساختمان', detail: 'پیام‌های گروه و اطلاعیه‌های ساکنان', icon: Icons.forum_outlined),
-    Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
+    Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
       const Center(child: Chip(avatar: Icon(Icons.lock_outline, size: 16), label: Text('گفت‌وگوی اعضای ساختمان'))),
       for (final message in _messages) _chatBubble(message),
     ])),
