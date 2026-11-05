@@ -2317,7 +2317,7 @@ class _FeaturePage extends StatefulWidget {
 }
 
 class _MeterReading {
-  _MeterReading(this.label, this.previous, this.current)
+  _MeterReading(this.label, int previous, int current)
       : previousController = TextEditingController(text: '$previous'),
         currentController = TextEditingController(text: '$current');
   final String label;
