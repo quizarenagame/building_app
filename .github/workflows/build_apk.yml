@@ -45,7 +45,6 @@ jobs:
         run: |
           mkdir -p android/app
           
-          # ساخت مستقیم کلید امنیتی
           keytool -genkeypair -v \
             -keystore android/app/upload-keystore.jks \
             -alias upload \
@@ -56,13 +55,33 @@ jobs:
             -keypass MyPgemSecretPass2024 \
             -dname "CN=PGEM, OU=Mobile, O=PGEM, L=Tehran, ST=Tehran, C=IR"
 
-          # ساخت خودکار فایل تنظیمات کلید
           cat << 'EOF' > android/key.properties
           storePassword=MyPgemSecretPass2024
           keyPassword=MyPgemSecretPass2024
           keyAlias=upload
           storeFile=upload-keystore.jks
           EOF
+
+      - name: Ensure ic_launcher mipmap icons exist
+        working-directory: ${{ steps.locate.outputs.project_path }}
+        run: |
+          # ساخت پوشه‌های استاندارد آیکون اندروید در صورت عدم وجود
+          for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+            mkdir -p "android/app/src/main/res/$dir"
+          done
+
+          # اگر ic_launcher وجود نداشت، یک تصویر پیش‌فرض معتبر PNG تولید می‌کند
+          if [ ! -f "android/app/src/main/res/mipmap-hdpi/ic_launcher.png" ]; then
+            echo "Creating fallback launcher icons..."
+            python3 -c '
+          import base64
+          # یک PNG ساده و معتبر ۱x۱ پیکسل
+          png_data = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+          for d in ["mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"]:
+              with open(f"android/app/src/main/res/{d}/ic_launcher.png", "wb") as f:
+                  f.write(png_data)
+          '
+          fi
 
       - name: Install dependencies
         working-directory: ${{ steps.locate.outputs.project_path }}
