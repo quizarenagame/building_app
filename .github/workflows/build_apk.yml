@@ -2,8 +2,11 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -28,60 +31,181 @@ jobs:
 
       - name: Locate project directory
         id: locate
+        shell: bash
         run: |
+          set -euo pipefail
+
           if [ -f "pubspec.yaml" ]; then
-            echo "dir=." >> $GITHUB_OUTPUT
+            DIR="."
           elif [ -f "building_app/pubspec.yaml" ]; then
-            echo "dir=building_app" >> $GITHUB_OUTPUT
+            DIR="building_app"
           else
-            DIR=$(find . -maxdepth 3 -name pubspec.yaml -exec dirname {} \; | head -n 1)
-            echo "dir=$DIR" >> $GITHUB_OUTPUT
+            PUBSPEC="$(find . -maxdepth 3 -type f -name pubspec.yaml -print -quit)"
+            if [ -z "$PUBSPEC" ]; then
+              echo "::error::pubspec.yaml پیدا نشد."
+              exit 1
+            fi
+            DIR="$(dirname "$PUBSPEC")"
           fi
+
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "Flutter project: $DIR"
 
       - name: Create fallback app launcher icon if missing
         working-directory: ${{ steps.locate.outputs.dir }}
+        shell: bash
         run: |
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          set -euo pipefail
 
-          # اگر عکس لوگو در ریپو وجود دارد از آن استفاده کن، در غیر این صورت یک تصویر موقت بساز
           ICON_SRC=""
-          if [ -f "assets/icon/app_icon.png" ]; then
-            ICON_SRC="assets/icon/app_icon.png"
-          elif [ -f "app_icon.png" ]; then
-            ICON_SRC="app_icon.png"
-          elif [ -f "../app_icon.png" ]; then
-            ICON_SRC="../app_icon.png"
+
+          for candidate in \
+            "assets/icon/app_icon.png" \
+            "app_icon.png" \
+            "../app_icon.png" \
+            "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" \
+            "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" \
+            "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" \
+            "android/app/src/main/res/mipmap-hdpi/ic_launcher.png" \
+            "android/app/src/main/res/mipmap-mdpi/ic_launcher.png"; do
+            if [ -s "$candidate" ]; then
+              ICON_SRC="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$ICON_SRC" ]; then
+            python3 - <<'PY'
+          import struct
+          import zlib
+
+          size = 192
+          color = bytes((18, 168, 137, 255))
+
+          def chunk(tag, data):
+              length = struct.pack(">I", len(data))
+              checksum = struct.pack(">I", zlib.crc32(tag + data) & 0xffffffff)
+              return length + tag + data + checksum
+
+          raw = (b"\x00" + color * size) * size
+          png = (
+              b"\x89PNG\r\n\x1a\n"
+              + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
+              + chunk(b"IDAT", zlib.compress(raw))
+              + chunk(b"IEND", b"")
+          )
+
+          with open("/tmp/flutter_fallback_icon.png", "wb") as output:
+              output.write(png)
+          PY
+            ICON_SRC="/tmp/flutter_fallback_icon.png"
           fi
 
-          if [ -n "$ICON_SRC" ] && [ -f "$ICON_SRC" ]; then
-            cp "$ICON_SRC" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            cp "$ICON_SRC" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            cp "$ICON_SRC" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            cp "$ICON_SRC" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            cp "$ICON_SRC" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          else
-            # ساخت یک آیکون موقت PNG ساده با پایتون
-            python3 -c "import base64; img=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAA8SURBVHhe7cEBDQAAAMKg909tDwcUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeDUB630AAbT4e/YAAAAASUVORK5CYII='); open('android/app/src/main/res/mipmap-hdpi/ic_launcher.png','wb').write(img)"
-            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          fi
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            DIR="android/app/src/main/res/mipmap-$density"
+            TARGET="$DIR/ic_launcher.png"
+            mkdir -p "$DIR"
+
+            if [ ! -s "$TARGET" ]; then
+              cp "$ICON_SRC" "$TARGET"
+            fi
+          done
 
       - name: Get dependencies
         working-directory: ${{ steps.locate.outputs.dir }}
         run: flutter pub get
 
+      - name: Restore release signing key
+        working-directory: ${{ steps.locate.outputs.dir }}
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          for variable in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_PASSWORD KEY_ALIAS; do
+            if [ -z "${!variable}" ]; then
+              echo "::error::Secret مربوط به $variable تنظیم نشده است."
+              exit 1
+            fi
+          done
+
+          umask 077
+
+          printf '%s' "$KEYSTORE_BASE64" |
+            base64 --decode > android/app/upload-keystore.jks
+
+          keytool -list \
+            -keystore android/app/upload-keystore.jks \
+            -alias "$KEY_ALIAS" \
+            -storepass:env KEYSTORE_PASSWORD > /dev/null
+
+          {
+            printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'storeFile=upload-keystore.jks\n'
+          } > android/key.properties
+
       - name: Build APK
         working-directory: ${{ steps.locate.outputs.dir }}
         run: flutter build apk --release
+
+      - name: Verify release signing key
+        working-directory: ${{ steps.locate.outputs.dir }}
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
+          APKSIGNER="$(
+            find "$SDK/build-tools" -type f -name apksigner |
+              sort -V |
+              tail -n 1
+          )"
+
+          if [ ! -f "$APK" ] || [ -z "$APKSIGNER" ]; then
+            echo "::error::فایل APK یا ابزار apksigner پیدا نشد."
+            exit 1
+          fi
+
+          "$APKSIGNER" verify "$APK"
+
+          EXPECTED="$(
+            keytool -exportcert \
+              -alias "$KEY_ALIAS" \
+              -keystore android/app/upload-keystore.jks \
+              -storepass:env KEYSTORE_PASSWORD |
+              sha256sum |
+              awk '{print toupper($1)}'
+          )"
+
+          ACTUAL="$(
+            "$APKSIGNER" verify --print-certs "$APK" |
+              awk -F ': ' \
+                '/^Signer #1 certificate SHA-256 digest: / {
+                  print toupper($2)
+                  exit
+                }'
+          )"
+
+          if [ -z "$ACTUAL" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+            echo "::error::APK با کلید Release موردنظر امضا نشده است. تنظیمات Gradle را بررسی کنید."
+            exit 1
+          fi
+
+          echo "APK signature verified with the configured release key."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: ${{ steps.locate.outputs.dir }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
