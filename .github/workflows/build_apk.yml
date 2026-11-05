@@ -26,83 +26,14 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Locate project directory
-        id: locate
-        run: |
-          if [ -f "pubspec.yaml" ]; then
-            echo "project_path=." >> "$GITHUB_OUTPUT"
-          else
-            found_dir="$(dirname "$(find . -name "pubspec.yaml" | head -n 1)")"
-            if [ -z "$found_dir" ] || [ "$found_dir" = "." ]; then
-              echo "project_path=." >> "$GITHUB_OUTPUT"
-            else
-              echo "project_path=$found_dir" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-
-      - name: Create Keystore and key.properties automatically
-        working-directory: ${{ steps.locate.outputs.project_path }}
-        run: |
-          mkdir -p android/app
-          
-          keytool -genkeypair -v \
-            -keystore android/app/upload-keystore.jks \
-            -alias upload \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass MyPgemSecretPass2024 \
-            -keypass MyPgemSecretPass2024 \
-            -dname "CN=PGEM, OU=Mobile, O=PGEM, L=Tehran, ST=Tehran, C=IR"
-
-          cat << 'EOF' > android/key.properties
-          storePassword=MyPgemSecretPass2024
-          keyPassword=MyPgemSecretPass2024
-          keyAlias=upload
-          storeFile=upload-keystore.jks
-          EOF
-
-      - name: Ensure ic_launcher mipmap icons exist
-        working-directory: ${{ steps.locate.outputs.project_path }}
-        run: |
-          # ساخت پوشه‌های استاندارد آیکون اندروید در صورت عدم وجود
-          for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
-            mkdir -p "android/app/src/main/res/$dir"
-          done
-
-          # اگر ic_launcher وجود نداشت، یک تصویر پیش‌فرض معتبر PNG تولید می‌کند
-          if [ ! -f "android/app/src/main/res/mipmap-hdpi/ic_launcher.png" ]; then
-            echo "Creating fallback launcher icons..."
-            python3 -c '
-          import base64
-          # یک PNG ساده و معتبر ۱x۱ پیکسل
-          png_data = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
-          for d in ["mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"]:
-              with open(f"android/app/src/main/res/{d}/ic_launcher.png", "wb") as f:
-                  f.write(png_data)
-          '
-          fi
-
       - name: Install dependencies
-        working-directory: ${{ steps.locate.outputs.project_path }}
         run: flutter pub get
 
-      - name: Build Release APK
-        working-directory: ${{ steps.locate.outputs.project_path }}
-        run: flutter build apk --release
+      - name: Build APK (Release)
+        run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Find output APK
-        id: find_apk
-        working-directory: ${{ steps.locate.outputs.project_path }}
-        run: |
-          APK_PATH="$(find build/app/outputs/flutter-apk -type f -name "*release*.apk" | head -n 1)"
-          if [ -z "$APK_PATH" ]; then
-            APK_PATH="$(find . -type f -name "*.apk" | head -n 1)"
-          fi
-          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Upload APK artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: ${{ steps.locate.outputs.project_path }}/${{ steps.find_apk.outputs.apk_path }}
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
