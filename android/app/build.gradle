@@ -4,8 +4,14 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace "com.example.building_app"
+    namespace "ir.pgem.building_app"
     compileSdk 34
 
     compileOptions {
@@ -18,16 +24,32 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.building_app"
+        applicationId "ir.pgem.building_app"
         minSdk 21
         targetSdk 34
         versionCode 1
         versionName "1.0.0"
     }
 
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            } else {
+                // در صورت نبود فایل کلید (مثلاً بیلد تستی لوکال)
+                signingConfig signingConfigs.debug
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
