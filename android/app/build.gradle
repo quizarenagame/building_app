@@ -40,7 +40,8 @@ android {
                 storePassword keystoreProperties['storePassword']
             } else {
                 // در صورت نبود فایل کلید (مثلاً بیلد تستی لوکال)
-                signingConfig signingConfigs.debug
+                // حالت صحیح:
+                signingConfig = signingConfigs.debug
             }
         }
     }
