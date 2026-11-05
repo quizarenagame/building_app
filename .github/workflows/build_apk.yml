@@ -35,21 +35,40 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Ensure Android Launcher Icons exist
+      - name: Generate Building App Icon
         run: |
+          sudo apt-get update -y && sudo apt-get install -y imagemagick librsvg2-bin
+
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
 
-          sudo apt-get update -y && sudo apt-get install -y imagemagick
+          # ساخت آیکون شکیل و باکیفیت وکتور ساختمان
+          cat << 'EOF' > icon.svg
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+            <rect width="512" height="512" rx="115" fill="#12A889"/>
+            <path d="M120 420h272" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
+            <path d="M160 420V170l120-60v310" stroke="#FFFFFF" stroke-width="24" stroke-linejoin="round" fill="none"/>
+            <path d="M280 210h80v210h-80z" stroke="#FFFFFF" stroke-width="24" fill="#0E856D"/>
+            <!-- پنجره‌های ساختمان چپ -->
+            <rect x="190" y="200" width="30" height="30" rx="4" fill="#FFFFFF"/>
+            <rect x="190" y="260" width="30" height="30" rx="4" fill="#FFFFFF"/>
+            <rect x="190" y="320" width="30" height="30" rx="4" fill="#FFFFFF"/>
+            <!-- پنجره‌های ساختمان راست -->
+            <rect x="305" y="240" width="30" height="24" rx="4" fill="#FFFFFF"/>
+            <rect x="305" y="290" width="30" height="24" rx="4" fill="#FFFFFF"/>
+            <rect x="305" y="340" width="30" height="24" rx="4" fill="#FFFFFF"/>
+          </svg>
+          EOF
 
-          convert -size 48x48 xc:#12A889 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert -size 72x72 xc:#12A889 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert -size 96x96 xc:#12A889 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert -size 144x144 xc:#12A889 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert -size 192x192 xc:#12A889 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          # تبدیل فایل SVG به تمام سایزهای استاندارد لانچر اندروید
+          rsvg-convert -w 48 -h 48 icon.svg -o android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          rsvg-convert -w 72 -h 72 icon.svg -o android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          rsvg-convert -w 96 -h 96 icon.svg -o android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          rsvg-convert -w 144 -h 144 icon.svg -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          rsvg-convert -w 192 -h 192 icon.svg -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
       - name: Install dependencies
         run: flutter pub get
