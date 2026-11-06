@@ -338,57 +338,151 @@ class _LoginFlowState extends State<LoginFlow> {
   }
 
   Future<void> _verifyOtp() async {
-    if (_isVerifyingOtp || !(_otpKey.currentState?.validate() ?? false)) return;
-    final phone = _phoneController.text.trim();
-    final code = _latinDigits(_otpController.text.trim());
-    setState(() => _isVerifyingOtp = true);
-    try {
-      final response = await pb.send<Map<String, dynamic>>(
-        '/api/verify-otp',
-        method: 'POST',
-        body: {'phone': phone, 'code': code},
-      );
-      if (!mounted) return;
-      if (response['success'] != true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد تأیید صحیح نیست یا منقضی شده است.')));
-        return;
-      }
-      final token = response['token'];
-      final rawRecord = response['record'];
-      if (token is! String || token.isEmpty || rawRecord is! Map) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('پاسخ ورود از سرور کامل نیست. لطفاً دوباره تلاش کنید.')));
-        return;
-      }
-      final recordJson = Map<String, dynamic>.from(rawRecord);
-      final record = RecordModel.fromJson(recordJson);
-      pb.authStore.save(token, record);
-      _timer?.cancel();
-      final existingName = (record.data['name'] ?? '').toString().trim();
-      final existingLastName = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString().trim();
-      final existingRole = (record.data['role'] ?? '').toString().trim();
-      if (existingName.isNotEmpty || existingLastName.isNotEmpty) {
-        _nameController.text = existingName;
-        _lastNameController.text = existingLastName;
-        _role = existingRole == 'مدیر' ? 'مدیر' : 'ساکن';
-        _ownership = (record.data['ownership'] ?? 'ساکن').toString();
-        _buildingController.text = (record.data['building_name'] ?? '').toString();
-        if (mounted) setState(() => _step = _LoginStep.dashboard);
-      } else {
-        if (mounted) setState(() => _step = _LoginStep.account);
-      }
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('بررسی کد تأیید انجام نشد. لطفاً دوباره تلاش کنید.')));
-    } finally {
-      if (mounted) setState(() => _isVerifyingOtp = false);
+  if (_isVerifyingOtp || !(_otpKey.currentState?.validate() ?? false)) return;
+  final phone = _phoneController.text.trim();
+  final code = _latinDigits(_otpController.text.trim());
+  setState(() => _isVerifyingOtp = true);
+  try {
+    final response = await pb.send<Map<String, dynamic>>(
+      '/api/verify-otp',
+      method: 'POST',
+      body: {'phone': phone, 'code': code},
+    );
+    if (!mounted) return;
+    if (response['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد تأیید صحیح نیست یا منقضی شده است.')));
+      return;
     }
+    final token = response['token'];
+    final rawRecord = response['record'];
+    if (token is! String || token.isEmpty || rawRecord is! Map) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('پاسخ ورود از سرور کامل نیست. لطفاً دوباره تلاش کنید.')));
+      return;
+    }
+    final recordJson = Map<String, dynamic>.from(rawRecord);
+    final record = RecordModel.fromJson(recordJson);
+    pb.authStore.save(token, record);
+    _timer?.cancel();
+    final existingName = (record.data['name'] ?? '').toString().trim();
+    final existingLastName = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString().trim();
+    final existingRole = (record.data['role'] ?? '').toString().trim();
+    if (existingName.isNotEmpty || existingLastName.isNotEmpty) {
+      _nameController.text = existingName;
+      _lastNameController.text = existingLastName;
+      _role = existingRole == 'مدیر' ? 'مدیر' : 'ساکن';
+      _ownership = (record.data['ownership'] ?? 'ساکن').toString();
+      _buildingController.text = (record.data['building_name'] ?? '').toString();
+      if (mounted) setState(() => _step = _LoginStep.dashboard);
+    } else {
+      if (mounted) setState(() => _step = _LoginStep.account);
+    }
+  } catch (_) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('بررسی کد تأیید انجام نشد. لطفاً دوباره تلاش کنید.')));
+  } finally {
+    if (mounted) setState(() => _isVerifyingOtp = false);
   }
+}
 
-  void _submitAccount() {
-    if (!(_accountKey.currentState?.validate() ?? false)) return;
-    FocusScope.of(context).unfocus();
-    setState(() => _step = _LoginStep.success);
+
+ Future<void> _submitAccount() async {
+  if (!(_accountKey.currentState?.validate() ?? false)) return;
+  FocusScope.of(context).unfocus();
+
+  final phone = _phoneController.text.trim();
+  final name = _nameController.text.trim();
+  final lastName = _lastNameController.text.trim();
+  final role = _role; // "مدیر" یا "ساکن"
+  final ownership = _ownership; // "مالک" یا "مستأجر"
+  final buildingName = _buildingController.text.trim();
+
+  try {
+    // ارسال اطلاعات حساب به اندپوینت سروری که ساختیم
+    final response = await pb.send<Map<String, dynamic>>(
+      '/api/update-profile',
+      method: 'POST',
+      body: {
+        'phone': phone,
+        'name': name,
+        'last_name': lastName,
+        'role': role,
+        'ownership': ownership,
+        'building_name': buildingName,
+      },
+    );
+
+    if (response['success'] == true) {
+      // به‌روزرسانی محلی AuthStore در پاکت‌بیس با رکورد جدید برگشتی از سرور
+      if (response['record'] != null) {
+        final recordJson = response['record'] as Map<String, dynamic>;
+        // استفاده از توکن فعال موجود در authStore کلاینت
+        final currentToken = pb.authStore.token;
+        if (currentToken.isNotEmpty) {
+          final record = RecordModel.fromJson(recordJson);
+          pb.authStore.save(currentToken, record);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() => _step = _LoginStep.success);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['error'] ?? 'خطا در ذخیره پروفایل')),
+      );
+    }
+  } catch (err) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('خطای ارتباط با سرور: $err')),
+    );
   }
+}
+
+
+    if (response['success'] == true) {
+      // به‌روزرسانی محلی AuthStore در پاکت‌بیس با رکورد جدید برگشتی از سرور
+      if (response['record'] != null) {
+        final recordJson = response['record'] as Map<String, dynamic>;
+        // استفاده از توکن فعال موجود در authStore کلاینت
+        final currentToken = pb.authStore.token;
+        if (currentToken.isNotEmpty) {
+          final record = RecordModel.fromJson(recordJson);
+          pb.authStore.save(currentToken, record);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() => _step = _LoginStep.success);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['error'] ?? 'خطا در ذخیره پروفایل')),
+      );
+    }
+  } catch (err) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('خطای ارتباط با سرور: $err')),
+    );
+  }
+}
+
+      if (!mounted) return;
+      setState(() => _step = _LoginStep.success);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['error'] ?? 'خطا در ذخیره پروفایل')),
+      );
+    }
+  } catch (err) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('خطای ارتباط با سرور: $err')),
+    );
+  }
+}
 
   String get _stepTitle => switch (_step) {
     _LoginStep.phone => 'شماره همراه',
