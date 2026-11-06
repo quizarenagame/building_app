@@ -231,51 +231,36 @@ class _LoginFlowState extends State<LoginFlow> {
     });
   }
 
-  void _goBack() {
+void _goBack() {
   switch (_step) {
     case _LoginStep.phone:
       setState(() => _step = _LoginStep.welcome);
       break;
-
     case _LoginStep.otp:
-      _timer?.cancel();
       setState(() => _step = _LoginStep.phone);
       break;
-
     case _LoginStep.account:
       setState(() => _step = _LoginStep.otp);
       break;
-
     case _LoginStep.success:
-      setState(() => _step = _LoginStep.account);
+      // بعد از موفقیت، کاربر نباید به صفحه ساخت حساب برگردد.
+      // می‌توانید آن را به خوش‌آمدگویی هدایت کنید یا خروج از برنامه بگذارید:
+      SystemNavigator.pop(); 
       break;
-
     case _LoginStep.managerChoice:
       setState(() => _step = _LoginStep.account);
       break;
-
     case _LoginStep.dashboard:
-      setState(() => _step =
-          _role == 'مدیر' ? _LoginStep.managerChoice : _LoginStep.account);
+      // در صفحه داشبورد اصلی، دکمه برگشت نباید به مراحل ثبت نام برگردد.
+      // معمولاً در داشبورد با زدن دکمه برگشت، یا از برنامه خارج می‌شوند یا هشدار خروج نشان داده می‌شود:
+      SystemNavigator.pop();
       break;
-
     case _LoginStep.welcome:
-      final now = DateTime.now();
-      if (_lastPressedAt == null ||
-          now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
-        _lastPressedAt = now;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('برای خروج دوباره کلید بازگشت را فشار دهید'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else {
-        SystemNavigator.pop();
-      }
+      SystemNavigator.pop();
       break;
   }
 }
+
 
   Future<void> _resendOtp() async {
     if (_isSendingOtp) return;
