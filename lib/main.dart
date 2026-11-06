@@ -466,23 +466,23 @@ class _LoginFlowState extends State<LoginFlow> {
       SnackBar(content: Text('خطای ارتباط با سرور: $err')),
     );
   }
-}
+
 
       if (!mounted) return;
       setState(() => _step = _LoginStep.success);
-    } else {
+      else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(response['error'] ?? 'خطا در ذخیره پروفایل')),
       );
     }
-  } catch (err) {
+    catch (err) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('خطای ارتباط با سرور: $err')),
     );
   }
-}
+
 
   String get _stepTitle => switch (_step) {
     _LoginStep.phone => 'شماره همراه',
