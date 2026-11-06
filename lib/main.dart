@@ -201,6 +201,7 @@ class _LoginFlowState extends State<LoginFlow> {
   bool _isVerifyingOtp = false;
   bool _hidePassword = true;
   bool _hideConfirmPassword = true;
+  bool _fromDashboard = false;
 
   @override
   void dispose() {
@@ -240,7 +241,10 @@ void _goBack() {
       setState(() => _step = _LoginStep.phone);
       break;
     case _LoginStep.account:
-      setState(() => _step = _LoginStep.otp);
+      setState(() {
+        _step = _fromDashboard ? _LoginStep.dashboard : _LoginStep.otp;
+        _fromDashboard = false;
+      });
       break;
     case _LoginStep.success:
       // بعد از موفقیت، کاربر نباید به صفحه ساخت حساب برگردد.
@@ -248,7 +252,10 @@ void _goBack() {
       SystemNavigator.pop(); 
       break;
     case _LoginStep.managerChoice:
-      setState(() => _step = _LoginStep.account);
+      setState(() {
+        _step = _fromDashboard ? _LoginStep.dashboard : _LoginStep.account;
+        _fromDashboard = false;
+      });
       break;
     case _LoginStep.dashboard:
       // در صفحه داشبورد اصلی، دکمه برگشت نباید به مراحل ثبت نام برگردد.
@@ -441,7 +448,7 @@ void _goBack() {
         onPopInvoked: (didPop) { if (!didPop) _goBack(); },
         child: Scaffold(
           body: SafeArea(
-            child: DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', showMyBuildings: _showMyBuildings, onSwitch: () => setState(() => _step = _LoginStep.account)),
+            child: DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', showMyBuildings: _showMyBuildings, onSwitch: () => setState(() { _fromDashboard = true; _step = _LoginStep.account; }), onRoleChanged: (role) => setState(() => _role = role)),
           ),
         ),
       );
@@ -997,6 +1004,7 @@ class DashboardPage extends StatefulWidget {
     required this.ownership,
     this.showMyBuildings = false,
     this.onSwitch,
+    this.onRoleChanged,
   });
   final String name;
   final String role;
@@ -1004,6 +1012,7 @@ class DashboardPage extends StatefulWidget {
   final String ownership;
   final bool showMyBuildings;
   final VoidCallback? onSwitch;
+  final ValueChanged<String>? onRoleChanged;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -1014,8 +1023,11 @@ class _DashboardPageState extends State<DashboardPage> {
   _Building? _joinedBuilding;
   int? _myFloor;
   int? _myUnit;
+  String? _roleOverride;
+  bool _isChangingRole = false;
 
-  bool get _isManager => widget.role == 'مدیر';
+  String get _currentRole => _roleOverride ?? widget.role;
+  bool get _isManager => _currentRole == 'مدیر';
 
   @override
   void initState() {
@@ -1030,6 +1042,79 @@ class _DashboardPageState extends State<DashboardPage> {
       content: Text(message),
       backgroundColor: error ? Theme.of(context).colorScheme.error : null,
     ));
+  }
+
+  Future<void> _changeRole(String newRole) async {
+    if (_isChangingRole || newRole == _currentRole) return;
+    final record = pb.authStore.record;
+    if (record == null || !pb.authStore.isValid) {
+      _toast('نشست کاربری معتبر نیست؛ لطفاً دوباره وارد شوید.', error: true);
+      return;
+    }
+
+    setState(() => _isChangingRole = true);
+    try {
+      final data = record.data;
+      final response = await pb.send<Map<String, dynamic>>(
+        '/api/update-profile',
+        method: 'POST',
+        body: {
+          'phone': (data['phone'] ?? '').toString(),
+          'name': (data['name'] ?? '').toString(),
+          'last_name': (data['last_name'] ?? data['lastname'] ?? '').toString(),
+          'role': newRole,
+          'ownership': (data['ownership'] ?? widget.ownership).toString(),
+          'building_name': (data['building_name'] ?? widget.buildingName).toString(),
+        },
+      );
+
+      if (!mounted) return;
+      if (response['success'] != true || response['record'] is! Map) {
+        _toast((response['error'] ?? 'به‌روزرسانی نقش انجام نشد.').toString(), error: true);
+        return;
+      }
+
+      final updatedRecord = RecordModel.fromJson(
+        Map<String, dynamic>.from(response['record'] as Map),
+      );
+      final token = pb.authStore.token;
+      if (token.isEmpty) {
+        _toast('نشست کاربری معتبر نیست؛ لطفاً دوباره وارد شوید.', error: true);
+        return;
+      }
+      pb.authStore.save(token, updatedRecord);
+      setState(() {
+        _roleOverride = newRole;
+        selectedTab = 0;
+      });
+      widget.onRoleChanged?.call(newRole);
+      _toast('نقش شما به «$newRole» تغییر کرد.');
+    } catch (err) {
+      if (mounted) _toast('خطا در تغییر نقش: $err', error: true);
+    } finally {
+      if (mounted) setState(() => _isChangingRole = false);
+    }
+  }
+
+  Future<void> _showRoleDialog() async {
+    final selectedRole = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تغییر نقش'),
+        content: const Text('نقش موردنظر خود را انتخاب کنید.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'ساکن'),
+            child: const Text('ساکن'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, 'مدیر'),
+            child: const Text('مدیر'),
+          ),
+        ],
+      ),
+    );
+    if (selectedRole != null) await _changeRole(selectedRole);
   }
 
   Future<void> _logout() async {
@@ -1070,6 +1155,13 @@ class _DashboardPageState extends State<DashboardPage> {
               icon: const Icon(Icons.logout_rounded),
               onPressed: () => setState(() { _joinedBuilding = null; _myFloor = null; _myUnit = null; }),
             ),
+          IconButton(
+            tooltip: 'تغییر نقش',
+            icon: _isChangingRole
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.swap_horiz_rounded),
+            onPressed: _isChangingRole ? null : _showRoleDialog,
+          ),
           if (widget.onSwitch != null)
             IconButton(tooltip: 'ویرایش حساب', icon: const Icon(Icons.tune_rounded), onPressed: widget.onSwitch),
           IconButton(tooltip: 'خروج از حساب کاربری', icon: const Icon(Icons.logout_rounded), onPressed: _logout),
