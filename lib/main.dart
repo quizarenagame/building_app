@@ -906,6 +906,9 @@ class _Building {
   _ChargeSettingTopic? chargeSettingTopic;
   final List<_BuildingPoll> polls = [];
   final Map<String, int> financialDebtByUnitId = {};
+  /// بدهی آب به تفکیک واحد و شناسهٔ قبض: unitId -> {billId -> amount}.
+  final Map<String, Map<String, int>> waterDebtByUnitAndBill = {};
+  int totalWaterDebtFor(String unitId) => waterDebtByUnitAndBill[unitId]?.values.fold<int>(0, (a, b) => a + b) ?? 0;
   int get totalUnitCount => floors.values.fold<int>(0, (sum, count) => sum + count);
   int financialDebtFor(String unitId) => financialDebtByUnitId[unitId] ?? 0;
   void settlePolls() {
@@ -1140,7 +1143,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ownership: widget.ownership,
           onJoined: (building, floor, unit) => setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; }),
         ),
-      _ => _FeatureHub(index: selectedTab, isManager: _isManager),
+      _ => _FeatureHub(index: selectedTab, isManager: _isManager, building: _joinedBuilding),
     };
     return Scaffold(
       appBar: AppBar(
@@ -1805,7 +1808,12 @@ class _MemberInfoContent extends StatelessWidget {
       row('نام', member.name), row('شماره تماس', member.phone.isEmpty ? 'ثبت نشده' : member.phone),
       row('بدهی شارژ', charge == null ? 'شارژ مصوب نشده' : formatTomanAmount(charge)),
       if (unitId != null && building.financialDebtFor(unitId!) > 0) row('سهم بدهی مالی', formatTomanAmount(building.financialDebtFor(unitId!))),
-      row('بدهی آب', formatTomanAmount(member.waterDebt)), row('نوع مالکیت', member.ownership),
+      if (unitId != null) ...[
+        row('مجموع بدهی آب', formatTomanAmount(building.totalWaterDebtFor(unitId!))),
+        for (final bill in (building.waterDebtByUnitAndBill[unitId!] ?? const <String, int>{}).entries)
+          row('قبض ${bill.key}', formatTomanAmount(bill.value)),
+      ] else if (member.waterDebt > 0) row('بدهی آب', formatTomanAmount(member.waterDebt)),
+      row('نوع مالکیت', member.ownership),
       row('تاریخ و ساعت سکونت', _formatPersianDateTime(member.movedInAt)),
     ]);
   }
@@ -2117,7 +2125,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   Future<void> _editOrAddMember(String key, _Member? existing) async {
     final nameController = TextEditingController(text: existing?.name ?? '');
     final phoneController = TextEditingController(text: existing?.phone ?? '');
-    final waterDebtController = TextEditingController(text: '${existing?.waterDebt ?? 0}');
     var phoneError;
     var selectedRole = existing?.role == 'مدیر' ? 'مدیر' : 'ساکن';
     var selectedOwnership = existing?.ownership == 'مستأجر' ? 'مستأجر' : 'مالک';
@@ -2127,7 +2134,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'نام عضو')),
           TextField(controller: phoneController, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, decoration: InputDecoration(labelText: 'شماره تماس', errorText: phoneError), onChanged: (_) { if (phoneError != null) setDialogState(() => phoneError = null); }),
-          TextField(controller: waterDebtController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'بدهی آب (تومان)')),
           DropdownButtonFormField<String>(
             value: selectedRole,
             decoration: const InputDecoration(labelText: 'نقش'),
@@ -2151,14 +2157,12 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           final name = nameController.text.trim();
           final phone = _latinDigits(phoneController.text.trim());
           if (!RegExp(r'^09\d{9}$').hasMatch(phone)) { setDialogState(() => phoneError = 'شماره همراه باید ۱۱ رقم و با 09 شروع شود.'); return; }
-          final waterDebt = int.tryParse(_latinDigits(waterDebtController.text.trim())) ?? -1;
-          if (name.isNotEmpty && waterDebt >= 0) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership, phone: phone, waterDebt: waterDebt, movedInAt: existing?.movedInAt ?? DateTime.now()));
+          if (name.isNotEmpty) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership, phone: phone, waterDebt: existing?.waterDebt ?? 0, movedInAt: existing?.movedInAt ?? DateTime.now()));
         }, child: const Text('ذخیره'))],
       ),
     ));
     nameController.dispose();
     phoneController.dispose();
-    waterDebtController.dispose();
     if (result == null || !mounted) return;
     setState(() => b.occupants[key] = result);
     _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
@@ -2453,9 +2457,10 @@ class _FeatureItem {
 }
 
 class _FeatureHub extends StatelessWidget {
-  const _FeatureHub({required this.index, required this.isManager});
+  const _FeatureHub({required this.index, required this.isManager, this.building});
   final int index;
   final bool isManager;
+  final _Building? building;
 
   @override
   Widget build(BuildContext context) {
@@ -2490,7 +2495,7 @@ class _FeatureHub extends StatelessWidget {
             title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(item.subtitle)),
             trailing: const Icon(Icons.chevron_left_rounded),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(item: item))),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(item: item, building: building))),
           )),
         )),
         Card(color: Theme.of(context).colorScheme.secondaryContainer, child: const Padding(
@@ -2502,16 +2507,18 @@ class _FeatureHub extends StatelessWidget {
 }
 
 class _FeaturePage extends StatefulWidget {
-  const _FeaturePage({required this.item});
+  const _FeaturePage({required this.item, this.building});
   final _FeatureItem item;
+  final _Building? building;
   @override
   State<_FeaturePage> createState() => _FeaturePageState();
 }
 
 class _MeterReading {
-  _MeterReading(this.label, int previous, int current)
+  _MeterReading(this.unitId, this.label, int previous, int current)
       : previousController = TextEditingController(text: '$previous'),
         currentController = TextEditingController(text: '$current');
+  final String unitId;
   final String label;
   final TextEditingController previousController;
   final TextEditingController currentController;
@@ -2533,8 +2540,8 @@ class _FeaturePageState extends State<_FeaturePage> {
   ];
   final List<String> _withdrawals = [];
   final TextEditingController _chatController = TextEditingController();
-  final List<_MeterReading> _meters = List<_MeterReading>.generate(
-    6, (i) => _MeterReading('واحد ${i + 1}', 120 + i * 17, 135 + i * 17));
+  final TextEditingController _billIdController = TextEditingController();
+  late final List<_MeterReading> _meters;
   String? _choice;
   bool _checked = false;
   int _billAmount = 186000;
@@ -2564,7 +2571,7 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   List<String> get _fields => switch (widget.item.kind) {
     'withdraw' => ['مبلغ درخواستی (تومان)', 'شماره شبا', 'توضیحات برای مدیر سامانه'],
-    'water' => ['مبلغ کل قبض (تومان)', 'شماره قبض یا دورهٔ مصرف'],
+    'water' => ['مبلغ کل قبض (تومان)', 'شناسه قبض'],
     'subscription' => [],
     'vote' => ['عنوان موضوع رأی‌گیری', 'شرح پیشنهاد', 'هزینهٔ اجرای تصمیم (تومان)', 'مدت رأی‌گیری (روز)'],
     'evaluation' => ['توضیحات (اختیاری)'],
@@ -2573,8 +2580,33 @@ class _FeaturePageState extends State<_FeaturePage> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    final units = <String>[];
+    final building = widget.building;
+    if (building != null) {
+      final floors = building.floorUnits.keys.toList()..sort();
+      for (final floor in floors) {
+        final unitNumbers = [...building.floorUnits[floor]!]..sort();
+        for (final unit in unitNumbers) {
+          units.add(building.unitId(floor, unit));
+        }
+      }
+    }
+    _meters = List<_MeterReading>.generate(units.length, (i) {
+      final unitId = units[i];
+      final parts = unitId.split('/');
+      final label = parts.length == 2
+          ? 'طبقه ${parts[0]} — واحد ${parts[1]}'
+          : 'واحد $unitId';
+      return _MeterReading(unitId, label, 120 + i * 17, 135 + i * 17);
+    });
+  }
+
+  @override
   void dispose() {
     _chatController.dispose();
+    _billIdController.dispose();
     for (final meter in _meters) { meter.dispose(); }
     super.dispose();
   }
@@ -2603,7 +2635,9 @@ class _FeaturePageState extends State<_FeaturePage> {
             Text(kind == 'vote' ? 'پیشنهاد موضوع جدید' : kind == 'withdraw' ? 'ثبت درخواست برداشت' : kind == 'water' ? 'ثبت قبض آب' : kind == 'service' ? 'ثبت درخواست خدمت' : 'ثبت ارزیابی', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 14),
             ..._fields.map((label) => Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(
-              keyboardType: label.contains('مبلغ') || label.contains('هزینه') || label.contains('روز') || label.contains('شماره قبض') ? TextInputType.number : TextInputType.text,
+              controller: label == 'شناسه قبض' ? _billIdController : null,
+              keyboardType: label.contains('مبلغ') || label.contains('هزینه') || label.contains('روز') ? TextInputType.number : TextInputType.text,
+              textDirection: label == 'شناسه قبض' ? TextDirection.ltr : TextDirection.rtl,
               maxLines: label.contains('شرح') || label.contains('توضیحات') ? 3 : 1,
               decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))),
               validator: (v) => (v == null || v.trim().isEmpty) && !label.contains('اختیاری') ? 'این مورد را وارد کنید' : null,
@@ -2716,9 +2750,12 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _waterContent(BuildContext context) {
     final usageSum = _meters.fold<int>(0, (sum, m) => sum + m.usage);
-    final allocations = _meters.map((m) => usageSum == 0 ? _billAmount ~/ _meters.length : (_billAmount * m.usage / usageSum).round()).toList();
+    final allocations = _meters.isEmpty
+        ? <int>[]
+        : _meters.map((m) => usageSum == 0 ? _billAmount ~/ _meters.length : (_billAmount * m.usage / usageSum).round()).toList();
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _sectionTitle('محاسبهٔ قبض با کنتور فرعی', detail: 'قرائت‌ها را ویرایش کنید؛ سهم هر واحد لحظه‌ای محاسبه می‌شود.', icon: Icons.water_drop_outlined),
+      if (_meters.isEmpty) const Text('برای این ساختمان هنوز واحدی ثبت نشده است.'),
       Text('مبلغ قبض: ${_billAmount.toString()} تومان  •  مصرف کل: $usageSum مترمکعب', style: const TextStyle(fontWeight: FontWeight.w600)),
       const SizedBox(height: 10),
       SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columnSpacing: 18, columns: const [DataColumn(label: Text('واحد')), DataColumn(label: Text('قبلی')), DataColumn(label: Text('فعلی')), DataColumn(label: Text('مصرف')), DataColumn(label: Text('سهم قبض'))], rows: List<DataRow>.generate(_meters.length, (i) {
@@ -2784,9 +2821,44 @@ class _FeaturePageState extends State<_FeaturePage> {
     _formKey.currentState!.save();
     final kind = widget.item.kind;
     if (kind == 'water') {
-      final amount = int.tryParse((_values['مبلغ کل قبض (تومان)'] ?? '').replaceAll(',', ''));
-      if (amount != null && amount > 0) setState(() => _billAmount = amount);
-      _message('سهم‌بندی قبض بر اساس قرائت کنتورها به‌روزرسانی شد.');
+      final rawAmount = _latinDigits(_values['مبلغ کل قبض (تومان)'] ?? '')
+          .replaceAll(',', '').replaceAll('٬', '').trim();
+      final amount = int.tryParse(rawAmount);
+      final billId = _latinDigits(_billIdController.text.trim());
+      final building = widget.building;
+      if (amount == null || amount <= 0) {
+        _message('مبلغ قبض معتبر نیست.');
+        return;
+      }
+      if (billId.isEmpty) {
+        _message('شناسه قبض را وارد کنید.');
+        return;
+      }
+      if (building == null || _meters.isEmpty) {
+        _message('ساختمان یا واحدی برای ثبت سهم قبض انتخاب نشده است.');
+        return;
+      }
+      final usageTotal = _meters.fold<int>(0, (sum, meter) => sum + meter.usage);
+      final shares = <int>[];
+      if (usageTotal > 0) {
+        for (final meter in _meters) {
+          shares.add((amount * meter.usage / usageTotal).round());
+        }
+        final difference = amount - shares.fold<int>(0, (sum, share) => sum + share);
+        shares[shares.length - 1] += difference;
+      } else {
+        final equalShare = amount ~/ _meters.length;
+        final remainder = amount % _meters.length;
+        for (var i = 0; i < _meters.length; i++) {
+          shares.add(equalShare + (i < remainder ? 1 : 0));
+        }
+      }
+      for (var i = 0; i < _meters.length; i++) {
+        building.waterDebtByUnitAndBill
+            .putIfAbsent(_meters[i].unitId, () => <String, int>{})[billId] = shares[i];
+      }
+      setState(() => _billAmount = amount);
+      _message('سهم‌بندی قبض $billId برای ${_meters.length} واحد ثبت شد.');
     } else if (kind == 'withdraw') {
       setState(() => _withdrawals.add('${_values['مبلغ درخواستی (تومان)'] ?? '—'} تومان • ${_values['شماره شبا'] ?? ''}'));
       _message('درخواست برداشت برای بررسی ثبت شد.');
