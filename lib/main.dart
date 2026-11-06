@@ -439,51 +439,6 @@ class _LoginFlowState extends State<LoginFlow> {
   }
 }
 
-
-    if (response['success'] == true) {
-      // به‌روزرسانی محلی AuthStore در پاکت‌بیس با رکورد جدید برگشتی از سرور
-      if (response['record'] != null) {
-        final recordJson = response['record'] as Map<String, dynamic>;
-        // استفاده از توکن فعال موجود در authStore کلاینت
-        final currentToken = pb.authStore.token;
-        if (currentToken.isNotEmpty) {
-          final record = RecordModel.fromJson(recordJson);
-          pb.authStore.save(currentToken, record);
-        }
-      }
-
-      if (!mounted) return;
-      setState(() => _step = _LoginStep.success);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['error'] ?? 'خطا در ذخیره پروفایل')),
-      );
-    }
-  } catch (err) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('خطای ارتباط با سرور: $err')),
-    );
-  }
-
-
-      if (!mounted) return;
-      setState(() => _step = _LoginStep.success);
-      else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['error'] ?? 'خطا در ذخیره پروفایل')),
-      );
-    }
-    catch (err) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('خطای ارتباط با سرور: $err')),
-    );
-  }
-
-
   String get _stepTitle => switch (_step) {
     _LoginStep.phone => 'شماره همراه',
     _LoginStep.otp => 'تأیید شماره',
