@@ -277,6 +277,40 @@ class _LoginFlowState extends State<LoginFlow> {
   }
 }
 
+  Future<void> _resendOtp() async {
+    if (_isSendingOtp) return;
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) return;
+    
+    setState(() => _isSendingOtp = true);
+    try {
+      final response = await pb.send<Map<String, dynamic>>(
+        '/api/send-otp',
+        method: 'POST',
+        body: {'phone': phone},
+      );
+      if (!mounted) return;
+      if (response['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ارسال مجدد کد تأیید ناموفق بود. لطفاً دوباره تلاش کنید.')),
+        );
+        return;
+      }
+      _otpController.clear();
+      _startCountdown();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('کد تأیید مجدداً ارسال شد.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ارسال پیامک انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSendingOtp = false);
+    }
+  }
+
   Future<void> _submitPhone() async {
     if (_isSendingOtp || !(_phoneKey.currentState?.validate() ?? false)) return;
     _phoneController.text = _latinDigits(_phoneController.text).replaceAll(' ', '').trim();
@@ -533,7 +567,7 @@ class _LoginFlowState extends State<LoginFlow> {
       _primaryButton(label: 'تأیید و ادامه', onPressed: _verifyOtp),
       const SizedBox(height: 14),
       Center(child: TextButton.icon(
-        onPressed: _secondsLeft == 0 && !_isSendingOtp ? _submitPhone : null,
+        onPressed: _secondsLeft == 0 && !_isSendingOtp ? _resendOtp : null,
         icon: const Icon(Icons.refresh_rounded, size: 19),
         label: Text(_isSendingOtp ? 'در حال ارسال پیامک...' : (_secondsLeft == 0 ? 'ارسال دوباره کد پیامکی' : 'ارسال دوباره تا ${_secondsLeft} ثانیه دیگر')),
       )),
