@@ -176,6 +176,7 @@ class LoginFlow extends StatefulWidget {
 }
 
 class _LoginFlowState extends State<LoginFlow> {
+       DateTime? _lastPressedAt;
   _LoginStep _step = _LoginStep.welcome;
   final _phoneKey = GlobalKey<FormState>();
   final _otpKey = GlobalKey<FormState>();
@@ -231,19 +232,50 @@ class _LoginFlowState extends State<LoginFlow> {
   }
 
   void _goBack() {
-    switch (_step) {
-      case _LoginStep.phone: setState(() => _step = _LoginStep.welcome); break;
-      case _LoginStep.otp:
-        _timer?.cancel();
-        setState(() => _step = _LoginStep.phone);
-        break;
-      case _LoginStep.account: setState(() => _step = _LoginStep.otp); break;
-      case _LoginStep.success: setState(() => _step = _LoginStep.account); break;
-      case _LoginStep.managerChoice: setState(() => _step = _LoginStep.account); break;
-      case _LoginStep.dashboard: setState(() => _step = _role == 'مدیر' ? _LoginStep.managerChoice : _LoginStep.account); break;
-      case _LoginStep.welcome: break; // هیچ‌وقت از برنامه خارج نمی‌شود
-    }
+  switch (_step) {
+    case _LoginStep.phone:
+      setState(() => _step = _LoginStep.welcome);
+      break;
+
+    case _LoginStep.otp:
+      _timer?.cancel();
+      setState(() => _step = _LoginStep.phone);
+      break;
+
+    case _LoginStep.account:
+      setState(() => _step = _LoginStep.otp);
+      break;
+
+    case _LoginStep.success:
+      setState(() => _step = _LoginStep.account);
+      break;
+
+    case _LoginStep.managerChoice:
+      setState(() => _step = _LoginStep.account);
+      break;
+
+    case _LoginStep.dashboard:
+      setState(() => _step =
+          _role == 'مدیر' ? _LoginStep.managerChoice : _LoginStep.account);
+      break;
+
+    case _LoginStep.welcome:
+      final now = DateTime.now();
+      if (_lastPressedAt == null ||
+          now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
+        _lastPressedAt = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('برای خروج دوباره کلید بازگشت را فشار دهید'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        SystemNavigator.pop();
+      }
+      break;
   }
+}
 
   Future<void> _submitPhone() async {
     if (_isSendingOtp || !(_phoneKey.currentState?.validate() ?? false)) return;
