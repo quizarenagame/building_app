@@ -94,6 +94,11 @@ String _latinDigits(String value) {
   return result;
 }
 
+String _normalizeSearchText(String value) => _latinDigits(value)
+    .replaceAll('ي', 'ی').replaceAll('ك', 'ک')
+    .replaceAll(RegExp(r'[\u200c\s]+'), ' ')
+    .trim().toLowerCase();
+
 
 /// Parse Persian/Arabic/Latin digits and common thousands separators into Toman.
 int? parseTomanAmount(String value) {
@@ -135,7 +140,7 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('چهارمحال و بختیاری', ['اردل', 'ارمند', 'باباحیدر', 'بازفت', 'بروجن', 'بلداجی', 'بن', 'جونقان', 'خانمیرزا', 'رودشت', 'زاینده رود', 'سامان', 'شهرکرد', 'شیدا', 'صمصامی', 'فارسان', 'فرخ شهر', 'فلارد', 'کوهرنگ', 'کیار', 'گندمان', 'لاران', 'لردگان', 'منج', 'میانکوه', 'ناغان']),
   MapEntry('خراسان جنوبی', ['آیسک', 'ارسک', 'اسلامیه', 'بشروئیه', 'بیرجند', 'جلگه ماژان', 'خوسف', 'درح', 'درمیان', 'دستگردان', 'دیهوک', 'زهان', 'زیرکوه', 'سده', 'سربیشه', 'سرداران', 'سرایان', 'شاخنات', 'شاسکوه', 'شوسف', 'طبس', 'فردوس', 'قائن', 'قهستان', 'گزیک', 'مود', 'نهبندان', 'نیمبلوک']),
   MapEntry('خراسان رضوی', ['بوژگان', 'پائین جام', 'تایباد', 'تربت جام', 'تربت حیدریه', 'جغتای', 'جلگه رخ', 'جلگه زوزن', 'جنت آباد', 'جنگل', 'جوین', 'چاپشلو', 'چناران', 'خلیل آباد', 'خواف', 'خوشاب', 'داورزن', 'درگز', 'رادکان', 'رشتخوار', 'رضویه', 'روداب', 'زاوه', 'زاوین', 'زبرخان', 'سبزوار', 'سرخس', 'سرولایت', 'سلامی', 'سلیمان', 'سنگان', 'سیدآباد', 'شادمهر', 'شامکان', 'شاندیز', 'ششتمد', 'ششطراز', 'شهرآباد', 'صالح آباد', 'طاغنکوه', 'طرقبه', 'عطاملک', 'فرح دشت', 'فریمان', 'فیروزه', 'قاسم آباد', 'قلندر آباد', 'قوچان', 'کاخک', 'کاشمر', 'کدکن', 'کلات', 'کوهسرخ', 'گلبهار', 'گلمکان', 'گناباد', 'لطف آباد', 'مرزداران', 'مشکان', 'ملک آباد', 'مه ولات', 'میان جلگه', 'میان ولایت', 'نصرآباد', 'نوخندان', 'نوده انقلاب', 'نیشابور', 'هزارمسجد', 'هلالی', 'یونسی']),
-  MapEntry('خراسان شمالی', ['بجنورد', 'شیروان', 'اسفراین', 'جاجرم', 'آشخانه']),
+  MapEntry('خراسان شمالی', ['سرحد', 'سملقان', 'سنخواست', 'شیروان', 'صفی آباد', 'غلامان', 'فاروج', 'قوشخانه', 'گرمخان', 'گرمه', 'مانه']),
   MapEntry('خوزستان', ['اهواز', 'آبادان', 'خرمشهر', 'دزفول', 'ماهشهر', 'بهبهان']),
   MapEntry('زنجان', ['زنجان', 'ابهر', 'خرمدره', 'قیدار', 'سلطانیه']),
   MapEntry('سمنان', ['سمنان', 'شاهرود', 'دامغان', 'گرمسار', 'مهدی‌شهر']),
@@ -813,10 +818,13 @@ class AppSharedState {
   }
 
   List<_Building> search(String query) {
-    final q = _key(query);
-    final digits = _latinDigits(query.trim());
+    final q = _normalizeSearchText(query);
     if (q.isEmpty) return [];
-    return buildings.values.where((b) => _key(b.name).contains(q) || (b.buildingCode.isNotEmpty && _latinDigits(b.buildingCode) == digits)).toList();
+    return buildings.values.where((b) {
+      final searchable = _normalizeSearchText('${b.name} ${b.province} ${b.city} ${b.address}');
+      final code = _normalizeSearchText(b.buildingCode);
+      return searchable.contains(q) || (code.isNotEmpty && code.contains(q));
+    }).toList();
   }
 
   bool exists(String name) => findByName(name) != null;
@@ -888,6 +896,8 @@ void _applyBuildingRecord(_Building b, RecordModel record) {
   if (code.isNotEmpty) b.buildingCode = code;
   final address = (data['address'] ?? '').toString().trim();
   if (address.isNotEmpty) b.address = address;
+  b.province = (data['province'] ?? data['state'] ?? b.province).toString().trim();
+  b.city = (data['city'] ?? data['town'] ?? b.city).toString().trim();
   final structure = data['floors_data'];
   if (structure != null) _applyBuildingStructure(b, structure);
   if (b.floors.isEmpty && data['floors'] != null) _applyBuildingStructure(b, {'floors': data['floors']});
@@ -899,6 +909,7 @@ Future<void> _persistBuilding(_Building b) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_buildingCacheKey(b), jsonEncode({
       'name': b.name, 'address': b.address, 'building_code': b.buildingCode,
+      'province': b.province, 'city': b.city,
       'recordId': b.recordId, 'created_by': b.createdBy, 'floors_data': structure,
     }));
   } catch (_) {}
@@ -927,6 +938,8 @@ Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
     b.recordId = (d['recordId'] ?? '').toString().isEmpty ? null : d['recordId'].toString();
     b.createdBy = (d['created_by'] ?? '').toString().isEmpty ? null : d['created_by'].toString();
     b.buildingCode = (d['building_code'] ?? '').toString();
+    b.province = (d['province'] ?? '').toString();
+    b.city = (d['city'] ?? '').toString();
     _applyBuildingStructure(b, d['floors_data']);
     return b;
   } catch (_) { return null; }
@@ -1093,7 +1106,7 @@ class _ChargeSettingTopic {
 }
 
 class _Building {
-  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', this.recordId});
+  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', this.province = '', this.city = '', this.recordId});
   String name;
   String address;
   String buildingCode;
@@ -1890,16 +1903,111 @@ class _ResidentHome extends StatefulWidget {
 class _ResidentHomeState extends State<_ResidentHome> {
   final _searchKey = GlobalKey<FormState>();
   final _searchController = TextEditingController();
+  final _joinedSearchController = TextEditingController();
+  final List<_Building> _joinedBuildings = [];
+  bool _isLoadingJoined = false;
   String? _foundBuildingName;
   final List<_Building> _searchResults = [];
   _Building? _selectedBuilding;
   bool _isSearching = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadJoinedBuildings();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _joinedSearchController.dispose();
     super.dispose();
   }
+  bool _isJoinedByCurrentResident(_Building building) {
+    final userId = pb.authStore.record?.id ?? '';
+    final phone = _cleanMemberPhone((pb.authStore.record?.data['phone'] ?? '').toString());
+    return building.occupants.values.any((member) => member.role != 'مدیر' && (
+      (phone.isNotEmpty && _cleanMemberPhone(member.phone) == phone) ||
+      (widget.name.trim().isNotEmpty && _normalizeSearchText(member.name) == _normalizeSearchText(widget.name))
+    )) || (userId.isNotEmpty && building.createdBy == userId && building.occupants.values.any((m) => m.role != 'مدیر'));
+  }
+
+  Future<void> _loadJoinedBuildings() async {
+    if (_isLoadingJoined) return;
+    _isLoadingJoined = true;
+    final found = <String, _Building>{};
+    void add(_Building building) {
+      final key = building.recordId?.isNotEmpty == true
+          ? 'id:${building.recordId}'
+          : '${_normalizeSearchText(building.name)}|${_normalizeSearchText(building.address)}';
+      found[key] = building;
+    }
+    for (final building in AppSharedState.instance.buildings.values) {
+      if (_isJoinedByCurrentResident(building)) add(building);
+    }
+    final userId = pb.authStore.record?.id ?? '';
+    if (userId.isNotEmpty && pb.authStore.isValid) {
+      try {
+        final records = await pb.collection('members').getFullList(
+          filter: 'user = "$userId" && status = "active"', sort: '-created', batch: 200,
+        );
+        for (final memberRecord in records) {
+          final data = memberRecord.data;
+          final buildingId = (data['building'] ?? data['building_id'] ?? '').toString();
+          final buildingName = (data['building_name'] ?? '').toString().trim();
+          _Building? building;
+          for (final candidate in AppSharedState.instance.buildings.values) {
+            if ((buildingId.isNotEmpty && candidate.recordId == buildingId) ||
+                (buildingName.isNotEmpty && _normalizeSearchText(candidate.name) == _normalizeSearchText(buildingName))) {
+              building = candidate;
+              break;
+            }
+          }
+          if (building == null && buildingId.isNotEmpty) {
+            try {
+              final record = await pb.collection('buildings').getOne(buildingId);
+              final name = (record.data['name'] ?? '').toString().trim();
+              if (name.isNotEmpty) {
+                building = AppSharedState.instance.buildingByName(name, address: (record.data['address'] ?? '').toString());
+                _applyBuildingRecord(building, record);
+                if (building.floors.isEmpty) {
+                  final cache = await _restoreCachedBuilding(_buildingCacheKey(building));
+                  if (cache != null) _applyBuildingStructure(building, _buildingStructure(cache));
+                }
+              }
+            } catch (_) {}
+          }
+          if (building == null && buildingName.isNotEmpty) {
+            building = AppSharedState.instance.buildingByName(buildingName, address: (data['address'] ?? '').toString());
+            building.recordId = buildingId.isEmpty ? building.recordId : buildingId;
+            building.buildingCode = (data['building_code'] ?? building.buildingCode).toString();
+          }
+          if (building != null) add(building);
+        }
+      } catch (_) {
+        // Keep locally cached memberships visible while offline or when the members API is unavailable.
+      }
+    }
+    if (mounted) setState(() {
+      _joinedBuildings
+        ..clear()
+        ..addAll(found.values);
+      _isLoadingJoined = false;
+    });
+    else _isLoadingJoined = false;
+  }
+
+  List<_Building> get _visibleJoinedBuildings {
+    final all = <String, _Building>{};
+    for (final b in [..._joinedBuildings, ...AppSharedState.instance.buildings.values.where(_isJoinedByCurrentResident)]) {
+      final key = b.recordId?.isNotEmpty == true ? 'id:${b.recordId}' : '${_normalizeSearchText(b.name)}|${_normalizeSearchText(b.address)}';
+      all[key] = b;
+    }
+    final q = _normalizeSearchText(_joinedSearchController.text);
+    if (q.isEmpty) return all.values.toList();
+    return all.values.where((b) => _normalizeSearchText('${b.name} ${b.province} ${b.city} ${b.address} ${b.buildingCode}').contains(q)).toList();
+  }
+
   void _toast(String message, {bool error = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1922,16 +2030,21 @@ class _ResidentHomeState extends State<_ResidentHome> {
     for (final b in AppSharedState.instance.search(query)) { add(b); }
     try {
       final records = await pb.collection('buildings').getFullList(batch: 200);
-      final q = query.toLowerCase();
-      final normalizedDigits = _latinDigits(query);
+      final queryText = _normalizeSearchText(query);
       for (final record in records) {
         final data = record.data;
         final name = (data['name'] ?? '').toString().trim();
         final address = (data['address'] ?? '').toString().trim();
         final code = (data['building_code'] ?? '').toString().trim();
-        if (name.isEmpty || !(name.toLowerCase().contains(q) || (code.isNotEmpty && _latinDigits(code) == normalizedDigits))) continue;
+        final province = (data['province'] ?? data['state'] ?? '').toString().trim();
+        final city = (data['city'] ?? data['town'] ?? '').toString().trim();
+        final searchableText = _normalizeSearchText('$name $province $city $address');
+        final normalizedCode = _normalizeSearchText(code);
+        if (name.isEmpty || !(searchableText.contains(queryText) || (normalizedCode.isNotEmpty && normalizedCode.contains(queryText)))) continue;
         final b = AppSharedState.instance.buildingByName(name, address: address);
         b.address = address;
+        b.province = province;
+        b.city = city;
         if (code.isNotEmpty) b.buildingCode = code;
         _applyBuildingRecord(b, record);
         if (b.floors.isEmpty) {
@@ -1945,7 +2058,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
     }
     if (!mounted) return;
     setState(() { _isSearching = false; _searchResults..clear()..addAll(results); });
-    if (results.isEmpty) _toast('ساختمانی با این نام یا کد یافت نشد.', error: true);
+    if (results.isEmpty) _toast('ساختمانی با این مشخصات یافت نشد.', error: true);
   }
 
   void _selectBuilding(_Building b) {
@@ -1965,6 +2078,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
       return;
     }
     widget.onJoined(b, floor, unit);
+    if (mounted) setState(() { if (!_joinedBuildings.contains(b)) _joinedBuildings.add(b); });
     final userId = pb.authStore.record?.id ?? '';
     if (userId.isNotEmpty) unawaited(_cacheResidentMembership(userId, b, floor, unit));
     unawaited(_persistBuilding(b));
@@ -2048,12 +2162,12 @@ class _ResidentHomeState extends State<_ResidentHome> {
                 const Text('جست‌وجوی ساختمان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ]),
               const SizedBox(height: 6),
-              Text('نام ساختمان یا کد ۶ رقمی را جست‌وجو کنید؛ آدرس و کد برای تشخیص ساختمان‌های هم‌نام نمایش داده می‌شود.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.6)),
+              Text('نام، استان، شهر، نشانی یا شناسهٔ یکتای ساختمان را جست‌وجو کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.6)),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'نام ساختمان یا کد عددی',
+                  hintText: 'نام، استان، شهر یا شناسهٔ یکتا',
                   prefixIcon: const Icon(Icons.travel_explore_rounded),
                   suffixIcon: IconButton(icon: _isSearching ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.search_rounded), onPressed: _isSearching ? null : _search),
                   filled: true, fillColor: Theme.of(context).colorScheme.surface,
@@ -2073,7 +2187,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
                     child: ListTile(
                       leading: const Icon(Icons.apartment_rounded),
                       title: Text(candidate.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('آدرس: ${candidate.address.isEmpty ? 'ثبت نشده' : candidate.address}\nکد ساختمان: ${candidate.buildingCode.isEmpty ? 'در دسترس نیست' : candidate.buildingCode.toPersianDigits()}'),
+                      subtitle: Text('${candidate.province.isNotEmpty || candidate.city.isNotEmpty ? 'استان/شهر: ${candidate.province} ${candidate.city}\n' : ''}آدرس: ${candidate.address.isEmpty ? 'ثبت نشده' : candidate.address}\nکد ساختمان: ${candidate.buildingCode.isEmpty ? 'در دسترس نیست' : candidate.buildingCode.toPersianDigits()}'),
                       isThreeLine: true,
                       trailing: const Icon(Icons.chevron_left_rounded),
                       selected: identical(_selectedBuilding, candidate),
@@ -2086,27 +2200,50 @@ class _ResidentHomeState extends State<_ResidentHome> {
         ),
       ),
       const SizedBox(height: 8),
-      Builder(builder: (context) {
-        final joined = AppSharedState.instance.buildings.values.where((building) =>
-          building.occupants.values.any((member) => member.name == widget.name && member.role != 'مدیر')
-        ).toList();
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('ساختمان‌های عضو‌شده', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
-          if (joined.isEmpty)
-            Card(child: Padding(padding: const EdgeInsets.all(14), child: Text('هنوز عضو ساختمانی نشده‌اید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))))
-          else
-            ...joined.map((building) => Card(
-              margin: const EdgeInsets.only(bottom: 6),
-              child: ListTile(
-                leading: const Icon(Icons.apartment_rounded),
-                title: Text(building.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(building.address.isEmpty ? 'آدرس ثبت نشده' : building.address),
-                trailing: const Icon(Icons.chevron_left_rounded),
-                onTap: () => _selectBuilding(building),
-              ),
-            )),
-        ]);
-      }),
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('ساختمان‌هایی که عضو هستید', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+        TextField(
+          controller: _joinedSearchController,
+          decoration: InputDecoration(
+            hintText: 'جست‌وجو در ساختمان‌های عضو‌شده',
+            prefixIcon: const Icon(Icons.filter_list_rounded),
+            suffixIcon: _joinedSearchController.text.isEmpty ? null : IconButton(
+              tooltip: 'پاک کردن جست‌وجو', icon: const Icon(Icons.close_rounded),
+              onPressed: () { _joinedSearchController.clear(); setState(() {}); },
+            ),
+            filled: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          onChanged: (_) => setState(() {}),
+          textInputAction: TextInputAction.search,
+        ),
+        const SizedBox(height: 8),
+        Builder(builder: (context) {
+          final joined = _visibleJoinedBuildings;
+          if (joined.isEmpty) {
+            final hasAny = _joinedBuildings.isNotEmpty || AppSharedState.instance.buildings.values.any(_isJoinedByCurrentResident);
+            return Card(child: Padding(padding: const EdgeInsets.all(14), child: Text(
+              hasAny ? 'ساختمانی با این عبارت در فهرست عضویت پیدا نشد.' : (_isLoadingJoined ? 'در حال بارگذاری فهرست ساختمان‌های عضو‌شده…' : 'هنوز عضو ساختمانی نشده‌اید.'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            )));
+          }
+          return Column(children: joined.map((building) => Card(
+            margin: const EdgeInsets.only(bottom: 6),
+            child: ListTile(
+              leading: const Icon(Icons.apartment_rounded),
+              title: Text(building.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text([
+                if (building.province.isNotEmpty || building.city.isNotEmpty) '${building.province}${building.province.isNotEmpty && building.city.isNotEmpty ? '، ' : ''}${building.city}',
+                building.address.isEmpty ? 'آدرس ثبت نشده' : building.address,
+                if (building.buildingCode.isNotEmpty) 'شناسه: ${building.buildingCode.toPersianDigits()}',
+              ].join(' • ')),
+              trailing: const Icon(Icons.chevron_left_rounded),
+              onTap: () => _selectBuilding(building),
+            ),
+          )).toList());
+        }),
+      ]),
       const SizedBox(height: 16),
       if (found != null) ...[
         Text('ساختمان: ${found.name}\nآدرس: ${found.address.isEmpty ? 'ثبت نشده' : found.address}\nکد: ${found.buildingCode.isEmpty ? 'در دسترس نیست' : found.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
