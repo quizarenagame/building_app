@@ -3383,21 +3383,9 @@ class _SettingsPageState extends State<_SettingsPage> {
   }
 
   void _showSupport() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => SafeArea(child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: const [
-          Text('ارتباط با پشتیبانی', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 14),
-          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.phone_in_talk_outlined), title: Text('تلفن پشتیبانی'), subtitle: Text('۰۲۱-۹۱۰۰۱۲۳۴')),
-          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.email_outlined), title: Text('ایمیل'), subtitle: Text('support@buildingapp.ir')),
-          Text('پاسخ‌گویی در روزهای کاری', style: TextStyle(color: Colors.grey)),
-        ]),
-      )),
-    );
+    Navigator.of(context).push<void>(MaterialPageRoute<void>(
+      builder: (_) => _SupportTicketsPage(phoneNumber: widget.phoneNumber, role: widget.role),
+    ));
   }
 
   @override
@@ -3426,6 +3414,261 @@ class _SettingsPageState extends State<_SettingsPage> {
         ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
       ])),
     ],
+  );
+}
+
+class _SupportTicketsPage extends StatefulWidget {
+  const _SupportTicketsPage({required this.phoneNumber, required this.role, this.name});
+
+  final String phoneNumber;
+  final String role;
+  final String? name;
+
+  @override
+  State<_SupportTicketsPage> createState() => _SupportTicketsPageState();
+}
+
+class _SupportTicketsPageState extends State<_SupportTicketsPage> with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  final _subjectController = TextEditingController();
+  final _messageController = TextEditingController();
+  late final TabController _tabController;
+  late Future<List<RecordModel>> _ticketsFuture;
+  bool _sending = false;
+
+  String get _userId => pb.authStore.record?.id ?? '';
+
+  String get _userName {
+    final passedName = (widget.name ?? '').trim();
+    if (passedName.isNotEmpty) return passedName;
+    final data = pb.authStore.record?.data ?? const <String, dynamic>{};
+    final first = (data['name'] ?? '').toString().trim();
+    final last = (data['last_name'] ?? data['lastname'] ?? '').toString().trim();
+    final fullName = [first, last].where((part) => part.isNotEmpty).join(' ');
+    return fullName.isEmpty ? '—' : fullName;
+  }
+
+  String get _userPhone {
+    final stored = (pb.authStore.record?.data['phone'] ?? '').toString().trim();
+    return stored.isNotEmpty ? stored : widget.phoneNumber;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _ticketsFuture = _loadTickets();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _subjectController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<List<RecordModel>> _loadTickets() async {
+    if (_userId.isEmpty) return <RecordModel>[];
+    final result = await pb.collection('tickets').getList(
+      filter: 'user = "$_userId"',
+      sort: '-created',
+      perPage: 100,
+    );
+    return result.items;
+  }
+
+  Future<void> _refreshTickets() async {
+    setState(() => _ticketsFuture = _loadTickets());
+    await _ticketsFuture;
+  }
+
+  void _showTicketSuccess() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      backgroundColor: const Color(0xFF168A68),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+      margin: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      content: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 420),
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.translate(offset: Offset(0, 8 * (1 - value)), child: child),
+        ),
+        child: const Row(children: [
+          Icon(Icons.check_circle_rounded, color: Colors.white),
+          SizedBox(width: 10),
+          Expanded(child: Text('تیکت شما با موفقیت ارسال شد و در اسرع وقت پاسخ داده خواهد شد')),
+        ]),
+      ),
+    ));
+  }
+
+  Future<void> _submitTicket() async {
+    if (_sending || !(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _sending = true);
+    try {
+      await pb.collection('tickets').create(body: {
+        'user': _userId,
+        'name': _userName == '—' ? '' : _userName,
+        'phone': _userPhone,
+        'role': widget.role,
+        'subject': _subjectController.text.trim(),
+        'message': _messageController.text.trim(),
+        'status': 'open',
+        'admin_reply': '',
+      });
+      if (!mounted) return;
+      _subjectController.clear();
+      _messageController.clear();
+      setState(() => _ticketsFuture = _loadTickets());
+      _tabController.animateTo(1);
+      _showTicketSuccess();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('ارسال تیکت انجام نشد. لطفاً دوباره تلاش کنید. ($error)'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Widget _userInfoCard() {
+    final color = Theme.of(context).colorScheme.primary;
+    return Card(
+      margin: EdgeInsets.zero,
+      color: color.withValues(alpha: 0.07),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: color.withValues(alpha: 0.18))),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [Icon(Icons.verified_user_outlined, color: color), const SizedBox(width: 8), const Text('مشخصات ثبت‌شدهٔ شما', style: TextStyle(fontWeight: FontWeight.bold))]),
+          const SizedBox(height: 12),
+          _readonlyInfo(Icons.person_outline, 'نام و نام خانوادگی', _userName),
+          const SizedBox(height: 8),
+          _readonlyInfo(Icons.phone_android_rounded, 'شماره همراه', _userPhone.isEmpty ? '—' : _userPhone),
+          const SizedBox(height: 8),
+          _readonlyInfo(Icons.badge_outlined, 'نقش کاربر', widget.role),
+        ]),
+      ),
+    );
+  }
+
+  Widget _readonlyInfo(IconData icon, String label, String value) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(12)),
+    child: Row(children: [
+      Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+      const SizedBox(width: 9),
+      Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
+      Expanded(child: Text(value, textAlign: TextAlign.start)),
+      Icon(Icons.lock_outline_rounded, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+    ]),
+  );
+
+  Widget _buildNewTicketTab() => Form(
+    key: _formKey,
+    child: ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _userInfoCard(),
+        const SizedBox(height: 20),
+        Text('موضوع تیکت', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _subjectController,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(hintText: 'موضوع درخواست خود را بنویسید', prefixIcon: const Icon(Icons.short_text_rounded), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
+          validator: (value) => (value ?? '').trim().isEmpty ? 'لطفاً موضوع تیکت را وارد کنید' : null,
+        ),
+        const SizedBox(height: 16),
+        Text('متن پیام / شرح مشکل', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _messageController,
+          minLines: 5,
+          maxLines: 8,
+          textInputAction: TextInputAction.newline,
+          decoration: InputDecoration(hintText: 'شرح درخواست یا مشکل خود را کامل بنویسید', alignLabelWithHint: true, prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 92), child: Icon(Icons.edit_note_rounded)), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
+          validator: (value) => (value ?? '').trim().isEmpty ? 'لطفاً شرح مشکل را وارد کنید' : null,
+        ),
+        const SizedBox(height: 22),
+        SizedBox(
+          height: 52,
+          child: FilledButton.icon(
+            onPressed: _sending ? null : _submitTicket,
+            icon: _sending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send_rounded),
+            label: Text(_sending ? 'در حال ارسال...' : 'ارسال تیکت'),
+            style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _ticketCard(RecordModel ticket) {
+    final data = ticket.data;
+    final reply = (data['admin_reply'] ?? '').toString().trim();
+    final hasReply = reply.isNotEmpty;
+    final statusColor = hasReply ? const Color(0xFF168A68) : const Color(0xFFB7791F);
+    final created = (data['created'] ?? '').toString();
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: Text((data['subject'] ?? 'بدون موضوع').toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+            const SizedBox(width: 8),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)), child: Text(hasReply ? 'پاسخ داده شده' : 'در انتظار بررسی', style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold))),
+          ]),
+          if (created.isNotEmpty) ...[const SizedBox(height: 7), Text(created, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))],
+          const SizedBox(height: 12),
+          Text((data['message'] ?? '').toString(), style: const TextStyle(height: 1.5)),
+          if (hasReply) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.65), borderRadius: BorderRadius.circular(14), border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [Icon(Icons.support_agent_rounded, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), Text('پاسخ پشتیبانی', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary))]),
+                const SizedBox(height: 8),
+                Text(reply, style: const TextStyle(height: 1.5)),
+              ]),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildMyTicketsTab() => FutureBuilder<List<RecordModel>>(
+    future: _ticketsFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+      if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off_outlined, size: 42), const SizedBox(height: 12), const Text('بارگذاری تیکت‌ها با خطا روبه‌رو شد'), const SizedBox(height: 12), OutlinedButton.icon(onPressed: _refreshTickets, icon: const Icon(Icons.refresh), label: const Text('تلاش دوباره'))])));
+      final tickets = snapshot.data ?? <RecordModel>[];
+      if (tickets.isEmpty) return RefreshIndicator(onRefresh: _refreshTickets, child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(32), children: const [SizedBox(height: 100), Icon(Icons.support_agent_outlined, size: 54), SizedBox(height: 14), Center(child: Text('هنوز تیکتی ثبت نکرده‌اید'))]));
+      return RefreshIndicator(onRefresh: _refreshTickets, child: ListView.builder(padding: const EdgeInsets.all(16), physics: const AlwaysScrollableScrollPhysics(), itemCount: tickets.length, itemBuilder: (context, index) => _ticketCard(tickets[index])));
+    },
+  );
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('پشتیبانی و تیکت‌ها'),
+      bottom: TabBar(controller: _tabController, tabs: const [Tab(text: 'ثبت تیکت جدید', icon: Icon(Icons.add_comment_outlined)), Tab(text: 'تیکت‌های من', icon: Icon(Icons.confirmation_number_outlined))]),
+    ),
+    body: TabBarView(controller: _tabController, children: [_buildNewTicketTab(), _buildMyTicketsTab()]),
   );
 }
 
