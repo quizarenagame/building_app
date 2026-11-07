@@ -160,8 +160,8 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('کرمانشاه', ['ازگله', 'اسلام‌آباد غرب', 'باوله', 'باینگان', 'بیستون', 'بیلوار', 'پاوه', 'ثلالث باباجانی', 'جوانرود', 'حمیل', 'دالاهو', 'دشت ذهاب', 'دینور', 'روانسر', 'زمکان', 'سرپل ذهاب', 'سنقر', 'سومار', 'شاهو', 'صحنه', 'فیروزآباد', 'قصرشیرین', 'قلعه شاهین', 'کرمانشاه', 'کلاشی', 'کلیائی', 'کنگاور', 'کوزران', 'گهواره', 'گوآور', 'گیلانغرب', 'ماهیدشت', 'نوسود', 'هرسین']),
   MapEntry('کهگیلویه و بویراحمد', ['باشت', 'بوستان', 'پاتاوه', 'چاروسا', 'چرام', 'چیتاب', 'دهدشت', 'دوگنبدان', 'دیشموک', 'زیلائی', 'سپیدار', 'سرآسیاب یوسفی', 'سرفاریاب', 'سوق', 'سی سخت', 'قلعه ممبی', 'لنده', 'لوداب', 'لیکک', 'مارگون', 'موگرمون', 'یاسوج']),
   MapEntry('گلستان', ['آزادشهر', 'آق قلا', 'القجر ', 'انبارآلوم', 'اینچه برون', 'بندر ترکمن', 'بندر گز', 'تاتار علیا', 'جلین', 'خان ببین', 'دلند', 'دوزین', 'رامیان', 'سرخنکلاته', 'سنگدوین', 'سیجوال', 'سیمین شهر', 'صادق آباد', 'علی آباد کتول', 'فاضل آباد', 'فراغی', 'قرق', 'کردکوی', 'کلاله', 'گالیکش', 'گرگان', 'گلی داغ', 'گمیشان', 'گنبد کاووس', 'مراوه', 'مزرعه کتول', 'مینودشت', 'نگین شهر', 'نوده خاندوز', 'نوکنده', 'ینقاق']),
-  MapEntry('گیلان', ['رشت', 'بندر انزلی', 'لاهیجان', 'لنگرود', 'تالش', 'رودسر']),
-  MapEntry('لرستان', ['خرم‌آباد', 'بروجرد', 'دورود', 'الیگودرز', 'کوهدشت']),
+  MapEntry('گیلان', ['آستارا', 'آستانه اشرفیه ', 'احمدسرگوراب', 'اسالم', 'اطاقور', 'املش', 'بره سر', 'بندرانزلی', 'پره سر', 'پیربازار', 'تالش', 'توتکابن', 'تولم شهر', 'جیرنده', 'چابکسر', 'چاف و چمخاله', 'چوبر', 'حویق', 'خشکبیجار', 'خمام', 'دیلمان', 'رانکوه', 'رحیم آباد', 'رستم آباد', 'رشت', 'رضوانشهر', 'رودبار', 'رودبنه', 'رودسر', 'زیباکنار', 'سنگر', 'سیاهکل', 'شاندرمن', 'شفت', 'شلمان', 'صومعه سرا', 'ضیابر', 'طاهرگوراب', 'فومن', 'کلاچای', 'کوچصفهان', 'کومله', 'کیاشهر', 'گوراب زرمیخ', 'لاهیجان', 'لشت نشا', 'لنگرود', 'لوشان', 'لولمان', 'لوندویل', 'لیسار', 'ماسال', 'ماسوله', 'ماکلوان', 'منجیل', 'واجارگاه']),
+  MapEntry('لرستان', ['ازنا', 'اشترینان', 'الشتر', 'الیگودرز', 'بربرود', 'بروجرد', 'بیرانوند', 'پاپی', 'پلدختر', 'جاپلق', 'چگنی', 'خاوه', 'خرم آباد', 'درب گنبد', 'دورود', 'ذلقی', 'رومشکان', 'زاغه', 'ززوماهرو', 'سوری', 'سیلاخور', 'شاهیوند', 'شیروان', 'طرهان', 'فیروزآباد', 'کاکاوند', 'کوهدشت', 'کوهنانی', 'معمولان', 'نورآباد', 'ویسیان']),
   MapEntry('مازندران', ['ساری', 'بابل', 'آمل', 'قائم‌شهر', 'چالوس', 'تنکابن']),
   MapEntry('مرکزی', ['اراک', 'ساوه', 'خمین', 'محلات', 'دلیجان', 'شازند']),
   MapEntry('هرمزگان', ['بندرعباس', 'قشم', 'کیش', 'میناب', 'بندرلنگه']),
@@ -459,7 +459,15 @@ void _goBack() {
       }
 
       if (!mounted) return;
-      setState(() => _step = _fromDashboard ? _LoginStep.dashboard : _LoginStep.success);
+      // پس از ذخیره، صفحهٔ ویرایش باز می‌ماند تا کاربر پیام را ببیند و خودش بازگردد.
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('تغییرات با موفقیت ذخیره شد'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ));
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1288,6 +1296,7 @@ class _DashboardPageState extends State<DashboardPage> {
   int? _myUnit;
   String? _roleOverride;
   bool _isChangingRole = false;
+  List<String> _serviceSpecialties = <String>[];
 
   String get _currentRole => _roleOverride ?? widget.role;
   bool get _isManager => _currentRole == 'مدیر';
@@ -1295,11 +1304,38 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    _loadServiceSpecialties();
     if (_isManager && pb.authStore.isValid) {
       _loadManagerBuildings();
     } else if (!_isManager) {
       _restoreResidentMembership();
     }
+  }
+
+  String get _serviceSpecialtiesKey => 'service_specialties_${pb.authStore.record?.id ?? 'guest'}';
+
+  Future<void> _loadServiceSpecialties() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList(_serviceSpecialtiesKey) ?? <String>[];
+      if (mounted) setState(() => _serviceSpecialties = saved);
+    } catch (_) {}
+  }
+
+  Future<void> _saveServiceSpecialties(List<String> values) async {
+    final cleaned = values.toSet().toList();
+    if (mounted) setState(() => _serviceSpecialties = cleaned);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_serviceSpecialtiesKey, cleaned);
+      // Keep specialties in the locally cached auth metadata as well.
+      final token = pb.authStore.token;
+      final record = pb.authStore.record;
+      if (token.isNotEmpty && record != null) {
+        record.data['service_specialties'] = cleaned;
+        pb.authStore.save(token, record);
+      }
+    } catch (_) {}
   }
 
   Future<void> _restoreResidentMembership() async {
@@ -1516,9 +1552,13 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final body = switch (selectedTab) {
-      0 => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
+      0 => _currentRole == 'خدماتی'
+          ? _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true)
+          : _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
       1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding),
-      2 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
+      2 => _currentRole == 'خدماتی'
+          ? _ServiceHome(name: widget.name, specialties: _serviceSpecialties)
+          : _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
           building: _joinedBuilding,
           name: widget.name,
           myFloor: _myFloor,
@@ -1538,6 +1578,9 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           )),
           phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
+          role: _currentRole,
+          specialties: _serviceSpecialties,
+          onSpecialtiesChanged: _saveServiceSpecialties,
         ),
       _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
     };
@@ -3200,25 +3243,134 @@ extension _PersianDigits on int {
   }
 }
 
+class _ServiceHome extends StatelessWidget {
+  const _ServiceHome({required this.name, required this.specialties, this.showRequestsOnly = false});
+  final String name;
+  final List<String> specialties;
+  final bool showRequestsOnly;
+
+  static const List<Map<String, String>> _requests = <Map<String, String>>[
+    {'block': 'بلوک A', 'address': 'تهران، خیابان بهار، کوچه یاس', 'requester': 'مریم رضایی', 'phone': '۰۹۱۲۳۴۵۶۷۸۹', 'specialty': 'لوله‌کشی و تأسیسات', 'description': 'نشتی آب زیر سینک آشپزخانه نیاز به بررسی دارد.'},
+    {'block': 'بلوک B', 'address': 'تهران، خیابان آزادی، پلاک ۲۴', 'requester': 'علی محمدی (مدیر)', 'phone': '۰۹۳۵۱۲۳۴۵۶۷', 'specialty': 'برق‌کاری ساختمان', 'description': 'چراغ‌های راهروی طبقه سوم روشن نمی‌شوند.'},
+    {'block': 'بلوک C', 'address': 'کرج، گوهردشت، خیابان پنجم', 'requester': 'زهرا احمدی', 'phone': '۰۹۱۰۹۸۷۶۵۴۳', 'specialty': 'نظافت مشاعات', 'description': 'برای نظافت راه‌پله و ورودی ساختمان درخواست نیرو داریم.'},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      children: [
+        if (!showRequestsOnly) ...[
+          Text('خانهٔ نیروی خدماتی', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text('سلام $name، تخصص‌های ثبت‌شدهٔ شما:', style: TextStyle(color: colors.onSurfaceVariant)),
+          const SizedBox(height: 12),
+          Card(color: colors.primaryContainer, child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: specialties.isEmpty
+                ? const Row(children: [Icon(Icons.info_outline), SizedBox(width: 10), Expanded(child: Text('هنوز تخصصی انتخاب نشده است؛ آن‌ها را از بخش تنظیمات اضافه کنید.'))])
+                : Wrap(spacing: 8, runSpacing: 8, children: specialties.map((item) => Chip(avatar: const Icon(Icons.check_circle_outline, size: 18), label: Text(item))).toList()),
+          )),
+        ],
+        Row(children: [
+          Expanded(child: Text(showRequestsOnly ? 'درخواست‌های دریافتی' : 'درخواست‌های تازه', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+          const Icon(Icons.notifications_active_outlined, color: Colors.green),
+        ]),
+        const SizedBox(height: 8),
+        Text('درخواست‌های نمونه از مدیران و ساکنان ساختمان‌ها', style: TextStyle(color: colors.onSurfaceVariant)),
+        const SizedBox(height: 12),
+        ..._requests.map((request) => Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [const Icon(Icons.apartment_rounded, color: Colors.teal), const SizedBox(width: 8), Expanded(child: Text(request['block']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text(request['specialty']!), visualDensity: VisualDensity.compact)]),
+              const Divider(height: 18),
+              _requestLine(Icons.location_on_outlined, 'آدرس', request['address']!),
+              _requestLine(Icons.person_outline, 'درخواست‌دهنده', request['requester']!),
+              _requestLine(Icons.phone_outlined, 'شماره تماس', request['phone']!),
+              _requestLine(Icons.handyman_outlined, 'تخصص درخواست‌شده', request['specialty']!),
+              _requestLine(Icons.notes_rounded, 'شرح درخواست', request['description']!),
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: () {}, icon: const Icon(Icons.mark_chat_read_outlined), label: const Text('مشاهدهٔ درخواست'))),
+            ]),
+          ),
+        )),
+      ],
+    );
+  }
+
+  static Widget _requestLine(IconData icon, String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, size: 19, color: Colors.teal), const SizedBox(width: 8),
+      Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
+      Expanded(child: Text(value, style: const TextStyle(height: 1.4))),
+    ]),
+  );
+}
+
 class _FeatureItem {
   const _FeatureItem(this.title, this.subtitle, this.icon, this.kind);
   final String title, subtitle, kind;
   final IconData icon;
 }
 
-class _SettingsPage extends StatelessWidget {
+class _SettingsPage extends StatefulWidget {
   const _SettingsPage({
     required this.onLogout,
     required this.onEditAccount,
     required this.onRoleChange,
     required this.onSubscription,
     required this.phoneNumber,
+    required this.role,
+    required this.specialties,
+    required this.onSpecialtiesChanged,
   });
   final VoidCallback onLogout;
   final VoidCallback onEditAccount;
   final VoidCallback onRoleChange;
   final VoidCallback onSubscription;
   final String phoneNumber;
+  final String role;
+  final List<String> specialties;
+  final ValueChanged<List<String>> onSpecialtiesChanged;
+
+  @override
+  State<_SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<_SettingsPage> {
+  static const List<String> _availableSpecialties = <String>[
+    'لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور',
+  ];
+  late List<String> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List<String>.of(widget.specialties);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.specialties != widget.specialties) {
+      _selected = List<String>.of(widget.specialties);
+    }
+  }
+
+  void _toggleSpecialty(String value, bool checked) {
+    setState(() {
+      if (checked) {
+        if (!_selected.contains(value)) _selected.add(value);
+      } else {
+        _selected.remove(value);
+      }
+    });
+    widget.onSpecialtiesChanged(List<String>.of(_selected));
+  }
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -3226,39 +3378,33 @@ class _SettingsPage extends StatelessWidget {
     children: [
       Text('تنظیمات', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
       const SizedBox(height: 12),
+      if (widget.role == 'خدماتی') ...[
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Row(children: [Icon(Icons.handyman_outlined), SizedBox(width: 10), Text('تخصص‌های من', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17))]),
+              const SizedBox(height: 4),
+              Text('تخصص‌های قابل ارائه را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ..._availableSpecialties.map((specialty) => CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: Text(specialty),
+                value: _selected.contains(specialty),
+                onChanged: (value) => _toggleSpecialty(specialty, value ?? false),
+              )),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
       Card(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        ListTile(
-          leading: const Icon(Icons.phone_outlined),
-          title: Text('شماره همراه: $phoneNumber'),
-        ),
-        ListTile(
-          leading: const Icon(Icons.manage_accounts_outlined),
-          title: const Text('ویرایش حساب کاربری'),
-          trailing: const Icon(Icons.chevron_left_rounded),
-          onTap: onEditAccount,
-        ),
-        ListTile(
-          leading: const Icon(Icons.workspace_premium_outlined),
-          title: const Text('خرید اشتراک برنامه'),
-          trailing: const Icon(Icons.chevron_left_rounded),
-          onTap: onSubscription,
-        ),
-        ListTile(
-          leading: const Icon(Icons.swap_horiz_rounded),
-          title: const Text('تغییر نقش'),
-          trailing: const Icon(Icons.chevron_left_rounded),
-          onTap: onRoleChange,
-        ),
-        ListTile(
-          leading: const Icon(Icons.palette_outlined),
-          title: const Text('تغییر تم روشن/تاریک'),
-          trailing: _ThemeToggle(),
-        ),
-        ListTile(
-          leading: const Icon(Icons.logout_rounded),
-          title: const Text('خروج از حساب کاربری'),
-          onTap: onLogout,
-        ),
+        ListTile(leading: const Icon(Icons.phone_outlined), title: Text('شماره همراه: ${widget.phoneNumber}')),
+        ListTile(leading: const Icon(Icons.manage_accounts_outlined), title: const Text('ویرایش حساب کاربری'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onEditAccount),
+        ListTile(leading: const Icon(Icons.workspace_premium_outlined), title: const Text('خرید اشتراک برنامه'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onSubscription),
+        ListTile(leading: const Icon(Icons.swap_horiz_rounded), title: const Text('تغییر نقش'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onRoleChange),
+        ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('تغییر تم روشن/تاریک'), trailing: _ThemeToggle()),
+        ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
       ])),
     ],
   );
