@@ -67,6 +67,8 @@ class BuildingApp extends StatelessWidget {
   }
 }
 
+String _normalizeRole(String? value) => const {'مدیر', 'ساکن', 'خدماتی'}.contains(value) ? value! : 'ساکن';
+
 Widget _initialHome(BuildContext context) {
   if (!pb.authStore.isValid) return const LoginFlow();
   final record = pb.authStore.record;
@@ -77,7 +79,7 @@ Widget _initialHome(BuildContext context) {
   final roleValue = (data['role'] ?? '').toString().trim();
   return DashboardPage(
     name: fullName.isEmpty ? (record?.id ?? '') : fullName,
-    role: roleValue == 'مدیر' ? 'مدیر' : 'ساکن',
+    role: _normalizeRole(roleValue),
     buildingName: (data['building_name'] ?? '').toString(),
     ownership: (data['ownership'] ?? 'ساکن').toString(),
     showMyBuildings: data['show_my_buildings'] == true,
@@ -155,9 +157,9 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('قم', ['پردیسان', 'جعفرآباد', 'خلجستان', 'سلفچگان', 'فردو', 'قاهان', 'قم', 'قمرود', 'قنوات', 'کهک']),
   MapEntry('کردستان', ['سنندج', 'سیروان', 'قروه', 'کامیاران', 'کرانی', 'کرفتو', 'کلاترزان', 'مریوان', 'موچش', 'نمشیر', 'ننور']),
   MapEntry('کرمان', ['آسمینون', 'ارزوئیه', 'اسفندقه', 'اسماعیلی', 'انار', 'بافت', 'بردسیر', 'بلورد', 'بلوک', 'بم', 'بهرمان', 'پاریز', 'جازموریان', 'جبالبارز', 'جیرفت', 'چاه داد خدا', 'چاه مرید', 'چترود', 'حور', 'خبر', 'درب بهشت', 'دهبکری', 'دهج', 'رابر', 'راور', 'راین', 'رفسنجان', 'رودبار', 'ریگان', 'زرند', 'زیدآباد', 'سیرجان', 'شهداد', 'شهربابک', 'صوغان', 'عنبرآباد', 'فاریاب', 'فردوس', 'فهرج', 'قلعه گنج', 'کرمان', 'کشکوئیه', 'کهنوج', 'کوهبنان', 'کوهساران', 'کیانشهر', 'گلباف', 'گلزار', 'گلستان', 'گنبکی', 'لاله زار', 'ماهان', 'منوجان', 'نرمانشیر', 'نگار', 'نگین کویر', 'هنزا', 'یزدان شهر']),
-  MapEntry('کرمانشاه', ['کرمانشاه', 'اسلام‌آباد غرب', 'هرسین', 'کنگاور', 'پاوه', 'جوانرود']),
-  MapEntry('کهگیلویه و بویراحمد', ['یاسوج', 'دهدشت', 'گچساران', 'لیکک']),
-  MapEntry('گلستان', ['گرگان', 'گنبدکاووس', 'علی‌آباد کتول', 'بندرترکمن', 'آق‌قلا']),
+  MapEntry('کرمانشاه', ['ازگله', 'اسلام‌آباد غرب', 'باوله', 'باینگان', 'بیستون', 'بیلوار', 'پاوه', 'ثلالث باباجانی', 'جوانرود', 'حمیل', 'دالاهو', 'دشت ذهاب', 'دینور', 'روانسر', 'زمکان', 'سرپل ذهاب', 'سنقر', 'سومار', 'شاهو', 'صحنه', 'فیروزآباد', 'قصرشیرین', 'قلعه شاهین', 'کرمانشاه', 'کلاشی', 'کلیائی', 'کنگاور', 'کوزران', 'گهواره', 'گوآور', 'گیلانغرب', 'ماهیدشت', 'نوسود', 'هرسین']),
+  MapEntry('کهگیلویه و بویراحمد', ['باشت', 'بوستان', 'پاتاوه', 'چاروسا', 'چرام', 'چیتاب', 'دهدشت', 'دوگنبدان', 'دیشموک', 'زیلائی', 'سپیدار', 'سرآسیاب یوسفی', 'سرفاریاب', 'سوق', 'سی سخت', 'قلعه ممبی', 'لنده', 'لوداب', 'لیکک', 'مارگون', 'موگرمون', 'یاسوج']),
+  MapEntry('گلستان', ['آزادشهر', 'آق قلا', 'القجر ', 'انبارآلوم', 'اینچه برون', 'بندر ترکمن', 'بندر گز', 'تاتار علیا', 'جلین', 'خان ببین', 'دلند', 'دوزین', 'رامیان', 'سرخنکلاته', 'سنگدوین', 'سیجوال', 'سیمین شهر', 'صادق آباد', 'علی آباد کتول', 'فاضل آباد', 'فراغی', 'قرق', 'کردکوی', 'کلاله', 'گالیکش', 'گرگان', 'گلی داغ', 'گمیشان', 'گنبد کاووس', 'مراوه', 'مزرعه کتول', 'مینودشت', 'نگین شهر', 'نوده خاندوز', 'نوکنده', 'ینقاق']),
   MapEntry('گیلان', ['رشت', 'بندر انزلی', 'لاهیجان', 'لنگرود', 'تالش', 'رودسر']),
   MapEntry('لرستان', ['خرم‌آباد', 'بروجرد', 'دورود', 'الیگودرز', 'کوهدشت']),
   MapEntry('مازندران', ['ساری', 'بابل', 'آمل', 'قائم‌شهر', 'چالوس', 'تنکابن']),
@@ -228,7 +230,7 @@ class _LoginFlowState extends State<LoginFlow> {
         _nameController.text = (record.data['name'] ?? '').toString();
         _lastNameController.text = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString();
         final role = (record.data['role'] ?? '').toString();
-        _role = role == 'مدیر' ? 'مدیر' : 'ساکن';
+        _role = _normalizeRole(role);
         _ownership = (record.data['ownership'] ?? 'ساکن').toString();
         _buildingController.text = (record.data['building_name'] ?? '').toString();
         _showMyBuildings = record.data['show_my_buildings'] == true;
@@ -391,7 +393,7 @@ void _goBack() {
     if (existingName.isNotEmpty || existingLastName.isNotEmpty) {
       _nameController.text = existingName;
       _lastNameController.text = existingLastName;
-      _role = existingRole == 'مدیر' ? 'مدیر' : 'ساکن';
+      _role = _normalizeRole(existingRole);
       _ownership = (record.data['ownership'] ?? 'ساکن').toString();
       _buildingController.text = (record.data['building_name'] ?? '').toString();
       if (mounted) setState(() => _step = _LoginStep.dashboard);
@@ -434,15 +436,26 @@ void _goBack() {
     );
 
     if (response['success'] == true) {
-      // به‌روزرسانی محلی AuthStore در پاکت‌بیس با رکورد جدید برگشتی از سرور
-      if (response['record'] != null) {
-        final recordJson = response['record'] as Map<String, dynamic>;
-        // استفاده از توکن فعال موجود در authStore کلاینت
-        final currentToken = pb.authStore.token;
-        if (currentToken.isNotEmpty) {
-          final record = RecordModel.fromJson(recordJson);
-          pb.authStore.save(currentToken, record);
+      // The server is the source of truth. Persist its refreshed auth record locally as
+      // well, so the restored session uses the edited profile after an app restart.
+      final currentToken = pb.authStore.token;
+      final currentRecord = pb.authStore.record;
+      if (currentToken.isNotEmpty && currentRecord != null) {
+        final returnedRecord = response['record'];
+        final updatedRecord = returnedRecord is Map
+            ? RecordModel.fromJson(Map<String, dynamic>.from(returnedRecord))
+            : currentRecord;
+        if (returnedRecord is! Map) {
+          updatedRecord.data.addAll({
+            'phone': phone,
+            'name': name,
+            'last_name': lastName,
+            'role': role,
+            'ownership': ownership,
+            'building_name': buildingName,
+          });
         }
+        pb.authStore.save(currentToken, updatedRecord);
       }
 
       if (!mounted) return;
@@ -735,6 +748,8 @@ void _goBack() {
       FilledButton.icon(onPressed: () => _selectRole('مدیر'), icon: const Icon(Icons.manage_accounts_outlined), label: const Text('مدیر')),
       const SizedBox(height: 12),
       OutlinedButton.icon(onPressed: () => _selectRole('ساکن'), icon: const Icon(Icons.people_outline), label: const Text('ساکنین')),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(onPressed: () => _selectRole('خدماتی'), icon: const Icon(Icons.handyman_outlined), label: const Text('نیروی خدماتی')),
     ]);
   }
 
@@ -1475,6 +1490,11 @@ class _DashboardPageState extends State<DashboardPage> {
             onPressed: () => Navigator.pop(dialogContext, 'مدیر'),
             child: const Text('مدیر'),
           ),
+          TextButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, 'خدماتی'),
+            icon: const Icon(Icons.handyman_outlined),
+            label: const Text('نیروی خدماتی'),
+          ),
         ],
       ),
     );
@@ -1511,6 +1531,12 @@ class _DashboardPageState extends State<DashboardPage> {
           onEditAccount: widget.onSwitch ?? () {},
           onLogout: _logout,
           onRoleChange: _showRoleDialog,
+          onSubscription: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => _FeaturePage(
+              item: const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
+              building: _joinedBuilding,
+            ),
+          )),
           phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
         ),
       _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
@@ -1519,7 +1545,7 @@ class _DashboardPageState extends State<DashboardPage> {
       appBar: AppBar(
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('سلام، ${widget.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          Text(_isManager ? 'نقش شما: مدیر ساختمان' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+          Text(_isManager ? 'نقش شما: مدیر ساختمان' : _currentRole == 'خدماتی' ? 'نقش شما: نیروی خدماتی' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
         ]),
         actions: [
           if (!_isManager && _joinedBuilding != null)
@@ -1529,8 +1555,6 @@ class _DashboardPageState extends State<DashboardPage> {
               onPressed: () => setState(() { _joinedBuilding = null; _myFloor = null; _myUnit = null; }),
             ),
 
-          if (widget.onSwitch != null)
-            IconButton(tooltip: 'ویرایش حساب', icon: const Icon(Icons.tune_rounded), onPressed: widget.onSwitch),
         ],
       ),
       body: SafeArea(child: body),
@@ -3187,11 +3211,13 @@ class _SettingsPage extends StatelessWidget {
     required this.onLogout,
     required this.onEditAccount,
     required this.onRoleChange,
+    required this.onSubscription,
     required this.phoneNumber,
   });
   final VoidCallback onLogout;
   final VoidCallback onEditAccount;
   final VoidCallback onRoleChange;
+  final VoidCallback onSubscription;
   final String phoneNumber;
 
   @override
@@ -3210,6 +3236,12 @@ class _SettingsPage extends StatelessWidget {
           title: const Text('ویرایش حساب کاربری'),
           trailing: const Icon(Icons.chevron_left_rounded),
           onTap: onEditAccount,
+        ),
+        ListTile(
+          leading: const Icon(Icons.workspace_premium_outlined),
+          title: const Text('خرید اشتراک برنامه'),
+          trailing: const Icon(Icons.chevron_left_rounded),
+          onTap: onSubscription,
         ),
         ListTile(
           leading: const Icon(Icons.swap_horiz_rounded),
@@ -3253,12 +3285,11 @@ class _FeatureHub extends StatelessWidget {
             : <_FeatureItem>[
                 if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
                 const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
-                const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
               ];
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
-        Text(index == 1 ? 'درخواست‌ها و ارتباط' : index == 2 ? 'رأی‌گیری و ارزیابی' : 'امور مالی و اشتراک',
+        Text(index == 1 ? 'درخواست‌ها و ارتباط' : index == 2 ? 'رأی‌گیری و ارزیابی' : 'امور مالی',
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
