@@ -1104,12 +1104,13 @@ class _ChargeSettingTopic {
     return true;
   }
 }
-
 class _Building {
-  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', this.province = '', this.city = '', this.recordId});
+  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', String province = '', String city = '', this.recordId}) : province = province, city = city;
   String name;
   String address;
   String buildingCode;
+  String province = '';
+  String city = '';
   String? recordId;
   /// حساب مدیری که ساختمان را ایجاد کرده؛ مستقل از انتخاب/اشغال هر واحد.
   String? createdBy;
