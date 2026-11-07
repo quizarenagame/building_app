@@ -130,11 +130,11 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('اصفهان', ['اصفهان', 'آران و بیدگل', 'ابریشم', 'اردستان', 'اژیه', 'انارک', 'بادرود', 'باغ بهادران', 'برخوار', 'برزک', 'بوئین و میاندشت', 'پادنا', 'پادنا علیا', 'پیربکران', 'تیران', 'جرقویه', 'چادگان', 'چنارود', 'حبیب آباد', 'خمینی شهر', 'خوانسار', 'خور', 'داران', 'دهاقان', 'علویجه', 'رامشه', 'رودشت', 'زنده رود', 'زواره', 'زیبا شهر', 'سمیرم', 'سیستان', 'شاهین شهر', 'شهرضا', 'عسگران', 'فریدونهشر', 'فلاورجان', 'فولادشهر', 'قمصر', 'قهدریجان', 'کاشان', 'کرچمبو', 'موهپایه', 'کویرات', 'گلپایگان', 'لنجان', 'مبارکه', 'مهاباد', 'موگوئی', 'میمه', 'نائین', 'نجف آباد', 'نطنز', 'نیاسر', 'هرند', 'وردشت', 'ورزنه']),
   MapEntry('البرز', ['کرج', 'آسارا', 'اشتهارد', 'پلنگ آباد', 'تنکمان', 'چهارباغ', 'رامجین', 'طالقان', 'فردیس', 'کوهسار', 'گرمدره', 'ماهدشت', 'محمدشهر', 'مشکین دشت', 'نظرآباد', 'هشتگرد']),
   MapEntry('ایلام', ['آبدانان', 'ایلام', 'ایوان', 'بدره', 'بولی', 'جزمان', 'چرداول', 'چوار', 'دره شهر', 'دشت عباس', 'دهلران', 'زاگرس', 'زرنه', 'زرین آباد', 'سراب باغ', 'سراب میمه', 'سیروان', 'سیوان', 'شباب', 'صالح آباد', 'کارزان', 'کلات', 'گچی', 'ماژین', 'ملکشاهی', 'مهران', 'موسیان', 'هلیلان', 'هندمینی']),
-  MapEntry('بوشهر', ['بوشهر', 'برازجان', 'گناوه', 'کنگان', 'عسلویه', 'خورموج']),
-  MapEntry('تهران', ['تهران', 'ری', 'شمیرانات', 'اسلام‌شهر', 'شهریار', 'ورامین', 'پاکدشت']),
-  MapEntry('چهارمحال و بختیاری', ['شهرکرد', 'بروجن', 'فارسان', 'لردگان', 'فرخ‌شهر']),
-  MapEntry('خراسان جنوبی', ['بیرجند', 'قائن', 'طبس', 'فردوس', 'نهبندان']),
-  MapEntry('خراسان رضوی', ['مشهد', 'نیشابور', 'سبزوار', 'تربت حیدریه', 'کاشمر', 'قوچان']),
+  MapEntry('بوشهر', ['آبپخش', 'آبدان', 'ارم', 'امام حسن', 'اهرم', 'برازجان', 'بردخون', 'بندر دیر', 'بندرکنگان', 'بندر گناوه', 'بوشکان', 'بوشهر', 'جم', 'چاه مبارک', 'چغادک', 'خارک', 'خارکو', 'خورموج', 'دلوار', 'دیلم', 'ریز', 'ریگ', 'سعدآباد', 'سیراف', 'شبانکاره', 'شنبه و طسوج', 'عسلویه', 'کاکی', 'وحدتیه']),
+  MapEntry('تهران', ['تهران', 'آبسرد', 'آبعلی', 'آفتاب', 'احمدآباد مستوفی', 'ارجمند', 'اسلامشهر', 'اندیشه', 'باغستان', 'باقرشهر', 'بهارستان', 'بومهن', 'پاکدشت', 'پردیس', 'پرند', 'پیشوا', 'تلو', 'جاجرود', 'جلیل آباد', 'جوادآباد', 'جوقین', 'چهاردانگه', 'قیامدشت', 'دماوند', 'رباط کریم', 'رودهن', 'سرخه حصار', 'شاهدشهر', 'شریف آباد', 'شمشک', 'شهریار', 'صباشهر', 'صفادشت', 'فردوسیه', 'فشاپویه', 'برازجان']),
+  MapEntry('چهارمحال و بختیاری', ['اردل', 'ارمند', 'باباحیدر', 'بازفت', 'بروجن', 'بلداجی', 'بن', 'جونقان', 'خانمیرزا', 'رودشت', 'زاینده رود', 'سامان', 'شهرکرد', 'شیدا', 'صمصامی', 'فارسان', 'فرخ شهر', 'فلارد', 'کوهرنگ', 'کیار', 'گندمان', 'لاران', 'لردگان', 'منج', 'میانکوه', 'ناغان']),
+  MapEntry('خراسان جنوبی', ['آیسک', 'ارسک', 'اسلامیه', 'بشروئیه', 'بیرجند', 'جلگه ماژان', 'خوسف', 'درح', 'درمیان', 'دستگردان', 'دیهوک', 'زهان', 'زیرکوه', 'سده', 'سربیشه', 'سرداران', 'سرایان', 'شاخنات', 'شاسکوه', 'شوسف', 'طبس', 'فردوس', 'قائن', 'قهستان', 'گزیک', 'مود', 'نهبندان', 'نیمبلوک']),
+  MapEntry('خراسان رضوی', ['بوژگان', 'پائین جام', 'تایباد', 'تربت جام', 'تربت حیدریه', 'جغتای', 'جلگه رخ', 'جلگه زوزن', 'جنت آباد', 'جنگل', 'جوین', 'چاپشلو', 'چناران', 'خلیل آباد', 'خواف', 'خوشاب', 'داورزن', 'درگز', 'رادکان', 'رشتخوار', 'رضویه', 'روداب', 'زاوه', 'زاوین', 'زبرخان', 'سبزوار', 'سرخس', 'سرولایت', 'سلامی', 'سلیمان', 'سنگان', 'سیدآباد', 'شادمهر', 'شامکان', 'شاندیز', 'ششتمد', 'ششطراز', 'شهرآباد', 'صالح آباد', 'طاغنکوه', 'طرقبه', 'عطاملک', 'فرح دشت', 'فریمان', 'فیروزه', 'قاسم آباد', 'قلندر آباد', 'قوچان', 'کاخک', 'کاشمر', 'کدکن', 'کلات', 'کوهسرخ', 'گلبهار', 'گلمکان', 'گناباد', 'لطف آباد', 'مرزداران', 'مشکان', 'ملک آباد', 'مه ولات', 'میان جلگه', 'میان ولایت', 'نصرآباد', 'نوخندان', 'نوده انقلاب', 'نیشابور', 'هزارمسجد', 'هلالی', 'یونسی']),
   MapEntry('خراسان شمالی', ['بجنورد', 'شیروان', 'اسفراین', 'جاجرم', 'آشخانه']),
   MapEntry('خوزستان', ['اهواز', 'آبادان', 'خرمشهر', 'دزفول', 'ماهشهر', 'بهبهان']),
   MapEntry('زنجان', ['زنجان', 'ابهر', 'خرمدره', 'قیدار', 'سلطانیه']),
@@ -1468,7 +1468,9 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final body = switch (selectedTab) {
-      0 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
+      0 => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
+      1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding),
+      2 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
           building: _joinedBuilding,
           name: widget.name,
           myFloor: _myFloor,
@@ -1476,7 +1478,9 @@ class _DashboardPageState extends State<DashboardPage> {
           ownership: widget.ownership,
           onJoined: (building, floor, unit) => setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; }),
         ),
-      _ => _FeatureHub(index: selectedTab, isManager: _isManager, building: _joinedBuilding),
+      3 => _FeatureHub(index: 3, isManager: _isManager, building: _joinedBuilding),
+      4 => _SettingsPage(onEditAccount: widget.onSwitch, onLogout: _logout),
+      _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
     };
     return Scaffold(
       appBar: AppBar(
@@ -1510,10 +1514,11 @@ class _DashboardPageState extends State<DashboardPage> {
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() => selectedTab = index),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'خدمات'),
-          NavigationDestination(icon: Icon(Icons.handyman_outlined), label: 'درخواست‌ها'),
-          NavigationDestination(icon: Icon(Icons.campaign_outlined), label: 'اطلاعیه‌ها'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'امور مالی'),
+          NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
+          NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
+          NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
         ],
       ),
     );
@@ -2952,6 +2957,40 @@ class _FeatureItem {
   final IconData icon;
 }
 
+class _SettingsPage extends StatelessWidget {
+  const _SettingsPage({required this.onLogout, this.onEditAccount});
+  final VoidCallback onLogout;
+  final VoidCallback? onEditAccount;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      Text('تنظیمات', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 12),
+      Card(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (onEditAccount != null)
+          ListTile(
+            leading: const Icon(Icons.manage_accounts_outlined),
+            title: const Text('ویرایش حساب کاربری'),
+            trailing: const Icon(Icons.chevron_left_rounded),
+            onTap: onEditAccount,
+          ),
+        ListTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: const Text('تغییر تم روشن/تاریک'),
+          trailing: _ThemeToggle(),
+        ),
+        ListTile(
+          leading: const Icon(Icons.logout_rounded),
+          title: const Text('خروج از حساب کاربری'),
+          onTap: onLogout,
+        ),
+      ])),
+    ],
+  );
+}
+
 class _FeatureHub extends StatelessWidget {
   const _FeatureHub({required this.index, required this.isManager, this.building});
   final int index;
@@ -2995,7 +3034,7 @@ class _FeatureHub extends StatelessWidget {
           )),
         )),
         Card(color: Theme.of(context).colorScheme.secondaryContainer, child: const Padding(
-          padding: EdgeInsets.all(16), child: Text('ساختمان و اعضا\nایجاد ساختمان و طبقات (مدیر) یا جست‌وجو و عضویت در ساختمان (ساکن) از تب «خدمات» در دسترس است.', style: TextStyle(height: 1.7)),
+          padding: EdgeInsets.all(16), child: Text('ساختمان و اعضا\nایجاد ساختمان و طبقات (مدیر) یا جست‌وجو و عضویت در ساختمان (ساکن) از تب «خانه» در دسترس است.', style: TextStyle(height: 1.7)),
         )),
       ],
     );
