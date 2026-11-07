@@ -1716,6 +1716,45 @@ class _ManagerHomeState extends State<_ManagerHome> {
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.8)),
   );
 
+  Future<void> _deleteManagedBuilding(_Building building) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف ساختمان'),
+        content: const Text('آیا از حذف این ساختمان اطمینان دارید؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    var serverDeleted = building.recordId == null || building.recordId!.isEmpty;
+    if (building.recordId != null && building.recordId!.isNotEmpty) {
+      try {
+        await pb.collection('buildings').delete(building.recordId!);
+        serverDeleted = true;
+      } catch (_) {
+        // Remove from this device even when offline; server deletion can be retried later.
+      }
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_buildingCacheKey(building));
+    AppSharedState.instance.buildings.removeWhere((key, value) =>
+        identical(value, building) ||
+        (building.recordId?.isNotEmpty == true && value.recordId == building.recordId) ||
+        (value.name.trim().toLowerCase() == building.name.trim().toLowerCase() &&
+         value.address.trim().toLowerCase() == building.address.trim().toLowerCase()));
+    if (!mounted) return;
+    setState(() {});
+    if (serverDeleted) {
+      _toast('ساختمان «${building.name}» حذف شد.');
+    } else {
+      _toast('ساختمان از این دستگاه حذف شد؛ حذف از سرور به‌دلیل قطع اتصال انجام نشد.', error: true);
+    }
+  }
+
   Widget _myBuildingsSection(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final buildings = AppSharedState.instance.buildings.values
@@ -1751,6 +1790,11 @@ class _ManagerHomeState extends State<_ManagerHome> {
                     Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     if (b.address.isNotEmpty) Text(b.address, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
                   ])),
+                  IconButton(
+                    tooltip: 'حذف ساختمان',
+                    icon: Icon(Icons.delete_outline_rounded, color: colors.error),
+                    onPressed: () => _deleteManagedBuilding(b),
+                  ),
                   Icon(Icons.chevron_left_rounded, color: colors.onSurfaceVariant),
                 ]),
               ),
@@ -1911,6 +1955,39 @@ class _ResidentHomeState extends State<_ResidentHome> {
   final List<_Building> _searchResults = [];
   _Building? _selectedBuilding;
   bool _isSearching = false;
+  bool _searchByBuildingName = true;
+  bool _searchByUniqueCode = true;
+  bool _searchByCity = true;
+  bool _searchByProvince = true;
+
+  bool _matchesSelectedSearchFields(_Building building, String query) {
+    final q = _normalizeSearchText(query);
+    if (q.isEmpty) return true;
+    final fields = <String>[
+      if (_searchByBuildingName) building.name,
+      if (_searchByUniqueCode) building.buildingCode,
+      if (_searchByCity) building.city,
+      if (_searchByProvince) building.province,
+    ];
+    return fields.any((field) {
+      final normalized = _normalizeSearchText(field);
+      return normalized.isNotEmpty && normalized.contains(q);
+    });
+  }
+
+  Widget _searchFieldFilters() => Wrap(
+    spacing: 4,
+    runSpacing: 0,
+    children: [
+      _searchFilter('بر اساس نام ساختمان', _searchByBuildingName, (value) => setState(() => _searchByBuildingName = value)),
+      _searchFilter('شناسه یکتا', _searchByUniqueCode, (value) => setState(() => _searchByUniqueCode = value)),
+      _searchFilter('شهر', _searchByCity, (value) => setState(() => _searchByCity = value)),
+      _searchFilter('استان', _searchByProvince, (value) => setState(() => _searchByProvince = value)),
+    ],
+  );
+
+  Widget _searchFilter(String label, bool selected, ValueChanged<bool> onChanged) =>
+      FilterChip(label: Text(label), selected: selected, onSelected: onChanged, visualDensity: VisualDensity.compact);
 
   @override
   void initState() {
@@ -2006,7 +2083,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
     }
     final q = _normalizeSearchText(_joinedSearchController.text);
     if (q.isEmpty) return all.values.toList();
-    return all.values.where((b) => _normalizeSearchText('${b.name} ${b.province} ${b.city} ${b.address} ${b.buildingCode}').contains(q)).toList();
+    return all.values.where((b) => _matchesSelectedSearchFields(b, q)).toList();
   }
 
   void _toast(String message, {bool error = false}) {
@@ -2022,16 +2099,20 @@ class _ResidentHomeState extends State<_ResidentHome> {
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
     setState(() { _isSearching = true; _selectedBuilding = null; _foundBuildingName = null; });
+    if (!(_searchByBuildingName || _searchByUniqueCode || _searchByCity || _searchByProvince)) {
+      _toast('حداقل یک گزینهٔ جست‌وجو را انتخاب کنید.', error: true);
+      return;
+    }
     final results = <_Building>[];
     final seen = <String>{};
     void add(_Building b) {
+      if (!_matchesSelectedSearchFields(b, query)) return;
       final key = b.recordId?.isNotEmpty == true ? b.recordId! : (b.buildingCode.isNotEmpty ? b.buildingCode : '${b.name}|${b.address}');
       if (seen.add(key)) results.add(b);
     }
-    for (final b in AppSharedState.instance.search(query)) { add(b); }
+    for (final b in AppSharedState.instance.buildings.values) { add(b); }
     try {
       final records = await pb.collection('buildings').getFullList(batch: 200);
-      final queryText = _normalizeSearchText(query);
       for (final record in records) {
         final data = record.data;
         final name = (data['name'] ?? '').toString().trim();
@@ -2039,15 +2120,14 @@ class _ResidentHomeState extends State<_ResidentHome> {
         final code = (data['building_code'] ?? '').toString().trim();
         final province = (data['province'] ?? data['state'] ?? '').toString().trim();
         final city = (data['city'] ?? data['town'] ?? '').toString().trim();
-        final searchableText = _normalizeSearchText('$name $province $city $address');
-        final normalizedCode = _normalizeSearchText(code);
-        if (name.isEmpty || !(searchableText.contains(queryText) || (normalizedCode.isNotEmpty && normalizedCode.contains(queryText)))) continue;
+        if (name.isEmpty) continue;
         final b = AppSharedState.instance.buildingByName(name, address: address);
         b.address = address;
         b.province = province;
         b.city = city;
         if (code.isNotEmpty) b.buildingCode = code;
         _applyBuildingRecord(b, record);
+        if (!_matchesSelectedSearchFields(b, query)) continue;
         if (b.floors.isEmpty) {
           final cache = await _restoreCachedBuilding(_buildingCacheKey(b));
           if (cache != null) _applyBuildingStructure(b, _buildingStructure(cache));
@@ -2178,6 +2258,8 @@ class _ResidentHomeState extends State<_ResidentHome> {
                 ),
                 onFieldSubmitted: (_) => _search(),
               ),
+              const SizedBox(height: 8),
+              _searchFieldFilters(),
               if (_searchResults.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 const Text('نتایج جست‌وجو — ساختمان درست را بر اساس آدرس انتخاب کنید:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
@@ -3096,7 +3178,7 @@ class _FeatureItem {
 }
 
 class _SettingsPage extends StatelessWidget {
-  const _SettingsPage({required this.onLogout, this.onEditAccount});
+  const _SettingsPage({required this.onLogout, required this.onEditAccount});
   final VoidCallback onLogout;
   final VoidCallback? onEditAccount;
 
