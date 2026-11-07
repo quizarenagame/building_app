@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pocketbase/pocketbase.dart';
@@ -801,9 +802,20 @@ class AppSharedState {
     return null;
   }
 
-  _Building buildingByName(String name) {
+  _Building buildingByName(String name, {String address = ''}) {
     final displayName = name.trim().replaceAll(RegExp(r'\s+'), ' ');
-    return findByName(displayName) ?? (buildings[_key(displayName)] = _Building(displayName));
+    _Building? existing;
+    for (final item in buildings.values) { if (_key(item.name) == _key(displayName) && (address.isEmpty || _key(item.address) == _key(address))) { existing = item; break; } }
+    if (existing != null) return existing;
+    final key = '${_key(displayName)}|${_key(address)}';
+    return buildings.putIfAbsent(key, () => _Building(displayName, address: address.trim()));
+  }
+
+  List<_Building> search(String query) {
+    final q = _key(query);
+    final digits = _latinDigits(query.trim());
+    if (q.isEmpty) return [];
+    return buildings.values.where((b) => _key(b.name).contains(q) || (b.buildingCode.isNotEmpty && _latinDigits(b.buildingCode) == digits)).toList();
   }
 
   bool exists(String name) => findByName(name) != null;
@@ -893,8 +905,11 @@ class _ChargeSettingTopic {
 }
 
 class _Building {
-  _Building(this.name, {this.createdBy});
+  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', this.recordId});
   String name;
+  String address;
+  String buildingCode;
+  String? recordId;
   /// حساب مدیری که ساختمان را ایجاد کرده؛ مستقل از انتخاب/اشغال هر واحد.
   String? createdBy;
   /// هر طبقه: شماره طبقه -> تعداد واحدها
@@ -1200,6 +1215,7 @@ class _ManagerHome extends StatefulWidget {
 
 class _ManagerHomeState extends State<_ManagerHome> {
   late final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
   final _createFormKey = GlobalKey<FormState>();
   final _floorController = TextEditingController();
   final _unitsController = TextEditingController();
@@ -1208,6 +1224,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
   @override
   void dispose() {
     _nameController.dispose();
+    _addressController.dispose();
     _floorController.dispose();
     _unitsController.dispose();
     super.dispose();
@@ -1223,18 +1240,46 @@ class _ManagerHomeState extends State<_ManagerHome> {
 
   _Building? get _building => widget.building;
 
-  /// یک فرم واحد: ساختمان را ایجاد/به‌روزرسانی می‌کند و طبقات آن را می‌سازد.
-  void _createBuildingWithFloors() {
+  /// ایجاد ساختمان در PocketBase و سپس به‌روزرسانی مدل محلی و طبقات.
+  Future<void> _createBuildingWithFloors() async {
     if (!(_createFormKey.currentState?.validate() ?? false)) return;
     final name = _nameController.text.trim();
+    final address = _addressController.text.trim();
     final floorCount = int.parse(_latinDigits(_floorController.text.trim()));
     final unitsPerFloor = int.parse(_latinDigits(_unitsController.text.trim()));
-    final isNew = !AppSharedState.instance.exists(name);
-    final b = AppSharedState.instance.buildingByName(name);
-    // مالکیت مدیریتی با ایجاد ساختمان ثبت می‌شود؛ مدیر به هیچ واحدی خودکار
-    // منتسب نمی‌شود و در صورت تمایل می‌تواند بعداً در یک واحد مستقر شود.
-    if (isNew || b.createdBy == null) b.createdBy = widget.managerName;
+    final isNew = !AppSharedState.instance.buildings.values.any((item) => item.name.trim().toLowerCase() == name.toLowerCase() && item.address.trim().toLowerCase() == address.toLowerCase());
+    final b = AppSharedState.instance.buildingByName(name, address: address);
+    if (isNew || b.createdBy == null) b.createdBy = pb.authStore.record?.id ?? widget.managerName;
+    b.address = address;
+    if (isNew && b.recordId == null) {
+      final code = await _generateUniqueBuildingCode();
+      b.buildingCode = code;
+      try {
+        final body = <String, dynamic>{'name': name, 'address': address, 'created_by': pb.authStore.record?.id, 'building_code': code};
+        try {
+          final record = await pb.collection('buildings').create(body: body);
+          b.recordId = record.id;
+          final savedCode = (record.data['building_code'] ?? '').toString().trim();
+          if (savedCode.isNotEmpty) b.buildingCode = savedCode;
+        } on ClientException catch (e) {
+          // Older schemas may not yet contain building_code. Retry only when the
+          // server explicitly reports that field as invalid/missing.
+          final details = '${e.response} ${e.originalError}'.toLowerCase();
+          if (e.statusCode == 400 && details.contains('building_code')) {
+            final fallback = Map<String, dynamic>.from(body)..remove('building_code');
+            final record = await pb.collection('buildings').create(body: fallback);
+            b.recordId = record.id;
+          } else {
+            rethrow;
+          }
+        }
+        _toast('ساختمان در پاکت‌بیس ذخیره شد. کد ساختمان: ${b.buildingCode.toPersianDigits()}');
+      } catch (e) {
+        _toast('ثبت در پاکت‌بیس انجام نشد؛ اطلاعات در حافظهٔ برنامه حفظ شد. $e', error: true);
+      }
+    }
     _nameController.text = b.name;
+    _addressController.text = b.address;
     widget.onBuildingChanged(b);
     if (b.floors.isNotEmpty && !isNew) {
       _toast('ساختمان «${b.name}» از قبل ساخته شده است؛ با کلیک روی نام آن وارد شوید.');
@@ -1245,7 +1290,21 @@ class _ManagerHomeState extends State<_ManagerHome> {
       if (!b.addFloor(floorNumber, unitsPerFloor, continueNumbering: _continueUnitNumbers)) break;
     }
     widget.onBuildingChanged(b);
-    _toast('ساختمان «${b.name}» با ${floorCount.toPersianDigits()} طبقه ساخته شد. با کلیک روی نام آن وارد نمای ساختمان شوید.');
+    _toast('ساختمان «${b.name}» با ${floorCount.toPersianDigits()} طبقه ساخته شد. کد: ${b.buildingCode.toPersianDigits()}');
+  }
+
+  Future<String> _generateUniqueBuildingCode() async {
+    final random = Random.secure();
+    final known = AppSharedState.instance.buildings.values.map((b) => b.buildingCode).where((c) => c.isNotEmpty).toSet();
+    try {
+      final records = await pb.collection('buildings').getFullList(fields: 'building_code', batch: 200);
+      for (final record in records) { final code = (record.data['building_code'] ?? '').toString(); if (code.isNotEmpty) known.add(code); }
+    } catch (_) { /* Offline/server schema without the code field: local uniqueness still applies. */ }
+    for (var attempt = 0; attempt < 1000; attempt++) {
+      final candidate = (100000 + random.nextInt(900000)).toString();
+      if (!known.contains(candidate)) return candidate;
+    }
+    return DateTime.now().microsecondsSinceEpoch.toString().substring(7, 13);
   }
 
   Future<void> _renameBuilding() async {
@@ -1393,6 +1452,13 @@ class _ManagerHomeState extends State<_ManagerHome> {
                   validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام ساختمان حداقل ۲ حرف باشد.',
                 ),
                 const SizedBox(height: 12),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: _deco(context, 'آدرس کامل و الزامی ساختمان', Icons.place_outlined),
+                  maxLines: 2,
+                  validator: (v) => (v?.trim().length ?? 0) >= 5 ? null : 'آدرس ساختمان را کامل و الزامی وارد کنید.',
+                ),
+                const SizedBox(height: 12),
                 Row(children: [
                   Expanded(
                     child: TextFormField(
@@ -1465,7 +1531,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('${b.floors.length.toPersianDigits()} طبقه — ${b.floors.values.fold<int>(0, (sum, n) => sum + n).toPersianDigits()} واحد', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    Text('${b.address}\nکد ساختمان: ${b.buildingCode.toPersianDigits()}\n${b.floors.length.toPersianDigits()} طبقه — ${b.floors.values.fold<int>(0, (sum, n) => sum + n).toPersianDigits()} واحد', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   ])),
                   Icon(Icons.chevron_left_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ]),
@@ -1510,6 +1576,9 @@ class _ResidentHomeState extends State<_ResidentHome> {
   final _searchKey = GlobalKey<FormState>();
   final _searchController = TextEditingController();
   String? _foundBuildingName;
+  final List<_Building> _searchResults = [];
+  _Building? _selectedBuilding;
+  bool _isSearching = false;
 
   @override
   void dispose() {
@@ -1525,16 +1594,47 @@ class _ResidentHomeState extends State<_ResidentHome> {
   }
 
 
-  void _search() {
-    final name = _searchController.text.trim();
-    if (name.isEmpty) return;
-    final building = AppSharedState.instance.findByName(name);
-    if (building == null) {
-      setState(() => _foundBuildingName = null);
-      _toast('ساختمانی با نام «$name» در این نسخهٔ محلی یافت نشد.', error: true);
-      return;
+  Future<void> _search() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
+    setState(() { _isSearching = true; _selectedBuilding = null; _foundBuildingName = null; });
+    final results = <_Building>[];
+    final seen = <String>{};
+    void add(_Building b) {
+      final key = b.recordId?.isNotEmpty == true ? b.recordId! : (b.buildingCode.isNotEmpty ? b.buildingCode : '${b.name}|${b.address}');
+      if (seen.add(key)) results.add(b);
     }
-    setState(() => _foundBuildingName = building.name);
+    for (final b in AppSharedState.instance.search(query)) { add(b); }
+    try {
+      final records = await pb.collection('buildings').getFullList(batch: 200);
+      final q = query.toLowerCase();
+      final normalizedDigits = _latinDigits(query);
+      for (final record in records) {
+        final data = record.data;
+        final name = (data['name'] ?? '').toString().trim();
+        final address = (data['address'] ?? '').toString().trim();
+        final code = (data['building_code'] ?? '').toString().trim();
+        if (name.isEmpty || !(name.toLowerCase().contains(q) || (code.isNotEmpty && _latinDigits(code) == normalizedDigits))) continue;
+        final b = AppSharedState.instance.buildingByName(name, address: address);
+        b.address = address;
+        if (code.isNotEmpty) b.buildingCode = code;
+        b.recordId = record.id;
+        final rawFloors = data['floors'];
+        if (b.floors.isEmpty && rawFloors is Map) {
+          for (final entry in rawFloors.entries) { final floor = int.tryParse(entry.key.toString()); final count = int.tryParse(entry.value.toString()); if (floor != null && count != null && count > 0 && count <= 50) b.addFloor(floor, count); }
+        }
+        add(b);
+      }
+    } catch (_) {
+      // Locally synced buildings remain searchable when the API is unavailable.
+    }
+    if (!mounted) return;
+    setState(() { _isSearching = false; _searchResults..clear()..addAll(results); });
+    if (results.isEmpty) _toast('ساختمانی با این نام یا کد یافت نشد.', error: true);
+  }
+
+  void _selectBuilding(_Building b) {
+    setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
   }
 
   void _joinUnit(_Building b, int floor, int unit) {
@@ -1615,7 +1715,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
     }
 
     // جست‌وجوی ساختمان و انتخاب واحد
-    final found = _foundBuildingName == null ? null : AppSharedState.instance.findByName(_foundBuildingName!);
+    final found = _selectedBuilding ?? (_foundBuildingName == null ? null : AppSharedState.instance.findByName(_foundBuildingName!));
     return ListView(padding: const EdgeInsets.all(16), children: [
       Card(
         child: Padding(
@@ -1629,14 +1729,14 @@ class _ResidentHomeState extends State<_ResidentHome> {
                 const Text('جست‌وجوی ساختمان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ]),
               const SizedBox(height: 6),
-              Text('نام ساختمانی را که مدیر ایجاد کرده است وارد کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.6)),
+              Text('نام ساختمان یا کد ۶ رقمی را جست‌وجو کنید؛ آدرس و کد برای تشخیص ساختمان‌های هم‌نام نمایش داده می‌شود.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.6)),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'مثلاً برج آسمان',
+                  hintText: 'نام ساختمان یا کد عددی',
                   prefixIcon: const Icon(Icons.travel_explore_rounded),
-                  suffixIcon: IconButton(icon: const Icon(Icons.search_rounded), onPressed: _search),
+                  suffixIcon: IconButton(icon: _isSearching ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.search_rounded), onPressed: _isSearching ? null : _search),
                   filled: true, fillColor: Theme.of(context).colorScheme.surface,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
@@ -1644,21 +1744,23 @@ class _ResidentHomeState extends State<_ResidentHome> {
                 ),
                 onFieldSubmitted: (_) => _search(),
               ),
-              if (AppSharedState.instance.buildings.isNotEmpty) ...[
+              if (_searchResults.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('ساختمان‌های محلی موجود:', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const Text('نتایج جست‌وجو — ساختمان درست را بر اساس آدرس انتخاب کنید:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final name in AppSharedState.instance.buildings.keys)
-                      ActionChip(label: Text(name), onPressed: () {
-                        _searchController.text = name;
-                        setState(() => _foundBuildingName = name);
-                      }),
-                  ],
-                ),
+                for (final candidate in _searchResults)
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    child: ListTile(
+                      leading: const Icon(Icons.apartment_rounded),
+                      title: Text(candidate.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('آدرس: ${candidate.address.isEmpty ? 'ثبت نشده' : candidate.address}\nکد ساختمان: ${candidate.buildingCode.isEmpty ? 'در دسترس نیست' : candidate.buildingCode.toPersianDigits()}'),
+                      isThreeLine: true,
+                      trailing: const Icon(Icons.chevron_left_rounded),
+                      selected: identical(_selectedBuilding, candidate),
+                      onTap: () => _selectBuilding(candidate),
+                    ),
+                  ),
               ],
             ]),
           ),
@@ -1666,7 +1768,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
       ),
       const SizedBox(height: 16),
       if (found != null) ...[
-        Text('واحدهای ساختمان «${found.name}» را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text('ساختمان: ${found.name}\nآدرس: ${found.address.isEmpty ? 'ثبت نشده' : found.address}\nکد: ${found.buildingCode.isEmpty ? 'در دسترس نیست' : found.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 10),
         _BuildingLayout(
           building: found,
