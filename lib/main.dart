@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -821,6 +822,116 @@ class AppSharedState {
   bool exists(String name) => findByName(name) != null;
 }
 
+String _buildingCacheKey(_Building b) {
+  final identity = b.recordId?.isNotEmpty == true ? b.recordId! : '${b.name.trim()}|${b.address.trim()}';
+  return 'b_floors_${Uri.encodeComponent(identity)}';
+}
+
+Map<String, dynamic> _buildingStructure(_Building b) => <String, dynamic>{
+  'floors': {for (final e in b.floors.entries) e.key.toString(): e.value},
+  'floor_units': {for (final e in b.floorUnits.entries) e.key.toString(): e.value},
+  'occupants': {for (final e in b.occupants.entries) e.key: {
+    'name': e.value.name, 'role': e.value.role, 'ownership': e.value.ownership,
+    'phone': e.value.phone, 'waterDebt': e.value.waterDebt,
+    'movedInAt': e.value.movedInAt.toIso8601String(),
+  }},
+};
+
+void _applyBuildingStructure(_Building b, dynamic raw) {
+  dynamic value = raw;
+  if (value is String && value.trim().isNotEmpty) {
+    try { value = jsonDecode(value); } catch (_) { return; }
+  }
+  if (value is! Map) return;
+  final data = Map<String, dynamic>.from(value);
+  final rawFloors = data['floors'];
+  if (rawFloors is Map) {
+    for (final entry in rawFloors.entries) {
+      final floor = int.tryParse(entry.key.toString());
+      final count = int.tryParse(entry.value.toString());
+      if (floor == null || count == null || floor < 1 || count < 1 || count > 50) continue;
+      if (!b.floors.containsKey(floor)) b.addFloor(floor, count);
+      else if ((b.floorUnits[floor]?.length ?? 0) != count) b.updateUnits(floor, count);
+    }
+  }
+  final rawUnits = data['floor_units'] ?? data['floorUnits'];
+  if (rawUnits is Map) {
+    for (final entry in rawUnits.entries) {
+      final floor = int.tryParse(entry.key.toString());
+      final unitsRaw = entry.value;
+      if (floor == null || !b.floors.containsKey(floor) || unitsRaw is! List) continue;
+      final units = unitsRaw.map((v) => int.tryParse(v.toString())).whereType<int>().where((v) => v > 0).toList();
+      if (units.isNotEmpty) b.updateFloorUnits(floor, units);
+    }
+  }
+  final rawOccupants = data['occupants'];
+  if (rawOccupants is Map && b.occupants.isEmpty) {
+    for (final entry in rawOccupants.entries) {
+      final item = entry.value;
+      if (item is! Map) continue;
+      final d = Map<String, dynamic>.from(item);
+      final date = DateTime.tryParse((d['movedInAt'] ?? '').toString());
+      b.occupants[entry.key.toString()] = _Member(
+        (d['name'] ?? '').toString(), (d['role'] ?? 'ساکن').toString(),
+        (d['ownership'] ?? 'ساکن').toString(), phone: (d['phone'] ?? '').toString(),
+        waterDebt: int.tryParse((d['waterDebt'] ?? 0).toString()) ?? 0, movedInAt: date,
+      );
+    }
+  }
+}
+
+void _applyBuildingRecord(_Building b, RecordModel record) {
+  final data = record.data;
+  b.recordId = record.id;
+  b.createdBy = (data['created_by'] ?? b.createdBy ?? '').toString();
+  final code = (data['building_code'] ?? '').toString().trim();
+  if (code.isNotEmpty) b.buildingCode = code;
+  final address = (data['address'] ?? '').toString().trim();
+  if (address.isNotEmpty) b.address = address;
+  final structure = data['floors_data'];
+  if (structure != null) _applyBuildingStructure(b, structure);
+  if (b.floors.isEmpty && data['floors'] != null) _applyBuildingStructure(b, {'floors': data['floors']});
+}
+
+Future<void> _persistBuilding(_Building b) async {
+  final structure = _buildingStructure(b);
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_buildingCacheKey(b), jsonEncode({
+      'name': b.name, 'address': b.address, 'building_code': b.buildingCode,
+      'recordId': b.recordId, 'created_by': b.createdBy, 'floors_data': structure,
+    }));
+  } catch (_) {}
+  final id = b.recordId;
+  if (id == null || id.isEmpty || !pb.authStore.isValid) return;
+  // Keep the JSON structure canonical on servers with a JSON field. For older
+  // collections, the local durable cache still protects all floor/unit data.
+  try {
+    await pb.collection('buildings').update(id, body: {'floors_data': structure});
+  } catch (_) {
+    try { await pb.collection('buildings').update(id, body: {'floors': structure['floors']}); } catch (_) {}
+  }
+}
+
+Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(cacheKey);
+    if (raw == null) return null;
+    final data = jsonDecode(raw);
+    if (data is! Map) return null;
+    final d = Map<String, dynamic>.from(data);
+    final name = (d['name'] ?? '').toString().trim();
+    if (name.isEmpty) return null;
+    final b = AppSharedState.instance.buildingByName(name, address: (d['address'] ?? '').toString());
+    b.recordId = (d['recordId'] ?? '').toString().isEmpty ? null : d['recordId'].toString();
+    b.createdBy = (d['created_by'] ?? '').toString().isEmpty ? null : d['created_by'].toString();
+    b.buildingCode = (d['building_code'] ?? '').toString();
+    _applyBuildingStructure(b, d['floors_data']);
+    return b;
+  } catch (_) { return null; }
+}
+
 class _Member {
   _Member(this.name, this.role, this.ownership, {this.phone = '', this.waterDebt = 0, DateTime? movedInAt})
       : movedInAt = movedInAt ?? DateTime.now();
@@ -1071,8 +1182,48 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    // عضویت ساکن تنها پس از جست‌وجو و انتخاب یک واحد انجام می‌شود.
-    // فیلد نام ساختمان ثبت‌نام نباید ساختمان کاذب بسازد یا کاربر را خودکار عضو کند.
+    if (_isManager && pb.authStore.isValid) _loadManagerBuildings();
+  }
+
+  Future<void> _loadManagerBuildings() async {
+    final userId = pb.authStore.record?.id;
+    if (userId == null || userId.isEmpty) return;
+    // Restore the durable local cache first, so management remains usable offline.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in prefs.getKeys().where((k) => k.startsWith('b_floors_'))) {
+        final cached = await _restoreCachedBuilding(key);
+        if (cached != null && cached.createdBy == userId) {
+          AppSharedState.instance.buildings['${AppSharedState.instance._key(cached.name)}|${AppSharedState.instance._key(cached.address)}'] = cached;
+        }
+      }
+    } catch (_) {}
+    try {
+      final records = await pb.collection('buildings').getFullList(
+        filter: 'created_by = "$userId"', sort: '-created', batch: 200,
+      );
+      final loaded = <_Building>[];
+      for (final record in records) {
+        final name = (record.data['name'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+        final address = (record.data['address'] ?? '').toString().trim();
+        final building = AppSharedState.instance.buildingByName(name, address: address);
+        _applyBuildingRecord(building, record);
+        final cache = await _restoreCachedBuilding(_buildingCacheKey(building));
+        if (building.floors.isEmpty && cache != null) _applyBuildingStructure(building, _buildingStructure(cache));
+        await _persistBuilding(building);
+        loaded.add(building);
+      }
+      if (mounted && loaded.isNotEmpty && _joinedBuilding == null) {
+        setState(() => _joinedBuilding = loaded.first);
+      }
+    } catch (_) {
+      // The locally cached buildings above are still available offline.
+      if (mounted && _joinedBuilding == null) {
+        final userBuildings = AppSharedState.instance.buildings.values.where((b) => b.createdBy == userId).toList();
+        if (userBuildings.isNotEmpty) setState(() => _joinedBuilding = userBuildings.first);
+      }
+    }
   }
 
   void _toast(String message, {bool error = false}) {
@@ -1310,6 +1461,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
       final floorNumber = (b.floors.keys.fold<int>(0, (m, f) => f > m ? f : m)) + 1;
       if (!b.addFloor(floorNumber, unitsPerFloor, continueNumbering: _continueUnitNumbers)) break;
     }
+    await _persistBuilding(b);
     widget.onBuildingChanged(b);
     _toast('ساختمان «${b.name}» با ${floorCount.toPersianDigits()} طبقه ساخته شد. کد: ${b.buildingCode.toPersianDigits()}');
   }
@@ -1402,8 +1554,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
   Widget _myBuildingsList(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final buildings = AppSharedState.instance.buildings.values
-        .where((b) => b.createdBy == widget.managerName ||
-            b.occupants.values.any((m) => m.name == widget.managerName))
+        .where((b) => b.createdBy == (pb.authStore.record?.id ?? widget.managerName) ||
+            b.createdBy == widget.managerName || b.occupants.values.any((m) => m.name == widget.managerName))
         .toList();
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1639,10 +1791,10 @@ class _ResidentHomeState extends State<_ResidentHome> {
         final b = AppSharedState.instance.buildingByName(name, address: address);
         b.address = address;
         if (code.isNotEmpty) b.buildingCode = code;
-        b.recordId = record.id;
-        final rawFloors = data['floors'];
-        if (b.floors.isEmpty && rawFloors is Map) {
-          for (final entry in rawFloors.entries) { final floor = int.tryParse(entry.key.toString()); final count = int.tryParse(entry.value.toString()); if (floor != null && count != null && count > 0 && count <= 50) b.addFloor(floor, count); }
+        _applyBuildingRecord(b, record);
+        if (b.floors.isEmpty) {
+          final cache = await _restoreCachedBuilding(_buildingCacheKey(b));
+          if (cache != null) _applyBuildingStructure(b, _buildingStructure(cache));
         }
         add(b);
       }
@@ -1669,6 +1821,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
       return;
     }
     widget.onJoined(b, floor, unit);
+    unawaited(_persistBuilding(b));
     _toast('خوش آمدید! شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} «${b.name}» قرار گرفتید.');
   }
 
@@ -2259,6 +2412,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         b.occupants.removeWhere((_, occupant) => occupant.name == widget.managerName && occupant.role == 'مدیر');
         b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر', phone: managerPhone);
       });
+      await _persistBuilding(b);
       _toast('شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
     } else if (action == 'register') {
       await _editOrAddMember(key, null);
@@ -2344,6 +2498,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     ));
     if (destination == null || !mounted) return;
     setState(() { b.occupants.remove(fromKey); b.occupants[destination] = member; });
+    await _persistBuilding(b);
     _toast('عضو به واحد ${int.parse(destination.split('/')[1]).toPersianDigits()} طبقه ${int.parse(destination.split('/')[0]).toPersianDigits()} منتقل شد.');
   }
 
@@ -2393,7 +2548,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     if (mounted) setState(() {});
   }
 
-  bool get _isManagerOfBuilding => b.createdBy == widget.managerName || b.occupants.values.any((m) => m.name == widget.managerName && m.role == 'مدیر');
+  bool get _isManagerOfBuilding => b.createdBy == (pb.authStore.record?.id ?? widget.managerName) || b.createdBy == widget.managerName || b.occupants.values.any((m) => m.name == widget.managerName && m.role == 'مدیر');
 
   Future<void> _rename() async {
     final controller = TextEditingController(text: b.name);
@@ -2414,6 +2569,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     controller.dispose();
     if (newName == null || newName.trim() == b.name) return;
     setState(() => b.rename(newName.trim()));
+    await _persistBuilding(b);
     _toast('نام ساختمان به «${b.name}» تغییر کرد.');
   }
 
@@ -2446,6 +2602,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     );
     if (result == null) return;
     setState(() => b.updateFloorUnits(floor, result));
+    await _persistBuilding(b);
     _toast('واحدهای طبقه ${floor.toPersianDigits()} به‌روزرسانی شد.');
   }
 
@@ -2469,6 +2626,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     controller.dispose();
     if (result == null || result == unitsNow) return;
     setState(() => b.updateUnits(floor, result));
+    await _persistBuilding(b);
     _toast('طبقه ${floor.toPersianDigits()} به ${result.toPersianDigits()} واحد به‌روزرسانی شد.');
   }
 
@@ -2496,6 +2654,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     );
     if (result == null) return;
     setState(() => b.addFloor(result.$1, result.$2));
+    await _persistBuilding(b);
     _toast('طبقه ${result.$1.toPersianDigits()} با ${result.$2.toPersianDigits()} واحد اضافه شد.');
   }
 
