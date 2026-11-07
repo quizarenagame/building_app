@@ -126,8 +126,8 @@ enum _LoginStep { welcome, phone, otp, account, success, managerChoice, dashboar
 const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('آذربایجان شرقی', ['تبریز', 'آبش احمد', 'آذرشهر', 'اسکو', 'اهر', 'الخچی', 'باسمنج', 'بستان آباد', 'بناب', 'ترکمانچای', 'تسوج', 'تیکمه داش', 'جلفا', 'چاراویماق', 'چهاردانگه', 'خاروانا', 'خدا آفرین', 'خسروشاه', 'خواجه', 'سراب', 'سراجو', 'سهند', 'سیه رود', 'شادیان', 'شبستر', 'صوفیان', 'عجب شیر', 'فندقلو', 'قلعه چای', 'کاغذکنان', 'کشکسرای', 'کلیبر', 'کندوان', 'گرمادوز', 'گوگان', 'لیلان', 'مراغه', 'مرند', 'ملکان', 'ممقان', 'منجوان', 'مهربان', 'میانه', 'نظر کهریزی', 'هریس', 'هشترود', 'هوراند', 'ورزقان', 'یامچی']),
   MapEntry('آذربایجان غربی', ['ارس', 'ارومیه', 'اشنویه', 'انزل', 'ایواوغلی', 'باروق', 'بازرگان', 'بکتاش', 'بوکان', 'پلدشت', 'پیرانشهر', 'تخت سلیمان', 'تکاب', 'چالدران', 'چهاربرج', 'حاجیلار', 'خلیفان', 'خوی', 'دشتک', 'ربط', 'سردشت', 'سلماس', 'سیلوانه', 'سیمینه', 'شاهین دژ', 'شوط', 'صفائیه', 'صومای برادوست', 'فیرورق', 'فیروزآباد', 'قره ضیاءالدین', 'قره قوین', 'قطور', 'کشاورز', 'کوهسار', 'لاجان', 'ماکو', 'محمدیار', 'مهاباد', 'میاندوآب', 'نالوس', 'نختالو', 'نقده', 'نوشین شهر', 'وزینه']),
-  MapEntry('اردبیل', ['اردبیل', 'پارس‌آباد', 'مشگین‌شهر', 'خلخال', 'گرمی']),
-  MapEntry('اصفهان', ['اصفهان', 'کاشان', 'خمینی‌شهر', 'نجف‌آباد', 'شهرضا', 'شاهین‌شهر']),
+  MapEntry('اردبیل', ['ارشق', 'اسلام آباد', 'اصلاندوز', 'انگوت', 'بران', 'بیله سوار', 'پارس آباد', 'ثمرین', 'خلخال', 'خورش رستم', 'دره رود', 'سبلان', 'سرعین', 'شاهرود', 'عنبران', 'فیروز', 'قشلاق دشت', 'قصابه', 'کوثر', 'کوراییم', 'گرمی', 'مرادلو', 'مشگین شهر', 'موران', 'نمین', 'نیر', 'هیر', 'ویلکیج']),
+  MapEntry('اصفهان', ['اصفهان', 'آران و بیدگل', 'ابریشم', 'اردستان', 'اژیه', 'انارک', 'بادرود', 'باغ بهادران', 'برخوار', 'برزک', 'بوئین و میاندشت', 'پادنا', 'پادنا علیا', 'پیربکران', 'تیران', 'جرقویه', 'چادگان', 'چنارود', 'حبیب آباد', 'خمینی شهر', 'خوانسار', 'خور', 'داران', 'دهاقان', 'علویجه', 'رامشه', 'رودشت', 'زنده رود', 'زواره', 'زیبا شهر', 'سمیرم', 'سیستان', 'شاهین شهر', 'شهرضا', 'عسگران', 'فریدونهشر', 'فلاورجان', 'فولادشهر', 'قمصر', 'قهدریجان', 'کاشان', 'کرچمبو', 'موهپایه', 'کویرات', 'گلپایگان', 'لنجان', 'مبارکه', 'مهاباد', 'موگوئی', 'میمه', 'نائین', 'نجف آباد', 'نطنز', 'نیاسر', 'هرند', 'وردشت', 'ورزنه']),
   MapEntry('البرز', ['کرج', 'فردیس', 'نظرآباد', 'هشتگرد', 'محمدشهر']),
   MapEntry('ایلام', ['ایلام', 'دهلران', 'ایوان', 'آبدانان', 'مهران']),
   MapEntry('بوشهر', ['بوشهر', 'برازجان', 'گناوه', 'کنگان', 'عسلویه', 'خورموج']),
@@ -911,6 +911,65 @@ Future<void> _persistBuilding(_Building b) async {
   } catch (_) {
     try { await pb.collection('buildings').update(id, body: {'floors': structure['floors']}); } catch (_) {}
   }
+  await _syncBuildingMembers(b);
+}
+
+/// همگام‌سازی اعضای فعال هر ساختمان با collection اعضا در PocketBase.
+/// رکوردهای حذف‌شده/جابجا‌شده غیرفعال می‌شوند تا تاریخچه از بین نرود.
+Future<void> _syncBuildingMembers(_Building b) async {
+  final buildingId = b.recordId;
+  if (buildingId == null || buildingId.isEmpty || !pb.authStore.isValid) return;
+  try {
+    final currentUser = pb.authStore.record;
+    final currentUserId = currentUser?.id ?? '';
+    final currentPhone = _latinDigits((currentUser?.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
+    final records = await pb.collection('members').getFullList(batch: 200);
+    final related = records.where((r) => (r.data['building'] ?? r.data['building_id'] ?? '').toString() == buildingId).toList();
+    final seen = <String>{};
+    for (final entry in b.occupants.entries) {
+      final parts = entry.key.split('/');
+      if (parts.length != 2) continue;
+      final floor = int.tryParse(parts[0]);
+      final unit = int.tryParse(parts[1]);
+      if (floor == null || unit == null) continue;
+      final member = entry.value;
+      final phone = _latinDigits(member.phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
+      final memberUserId = phone.isNotEmpty && phone == currentPhone ? currentUserId : '';
+      final body = <String, dynamic>{
+        'building': buildingId,
+        'building_name': b.name,
+        'user': memberUserId,
+        'phone': member.phone,
+        'name': member.name,
+        'role': member.role,
+        'ownership': member.ownership,
+        'floor': floor,
+        'unit': unit,
+        'status': 'active',
+      };
+      final existing = related.where((r) {
+        final recordPhone = _latinDigits((r.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
+        return phone.isNotEmpty ? recordPhone == phone :
+          (r.data['floor']?.toString() == floor.toString() && r.data['unit']?.toString() == unit.toString() && (r.data['user'] ?? '').toString() == memberUserId);
+      }).firstOrNull;
+      if (existing == null) {
+        await pb.collection('members').create(body: body);
+      } else {
+        seen.add(existing.id);
+        await pb.collection('members').update(existing.id, body: body);
+      }
+    }
+    for (final record in related) {
+      if (seen.contains(record.id)) continue;
+      final phone = _latinDigits((record.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
+      final stillPresent = b.occupants.values.any((m) => phone.isNotEmpty && _latinDigits(m.phone.replaceAll(RegExp(r'\s+|-'), '')).trim() == phone);
+      if (!stillPresent && (record.data['status'] ?? '').toString() != 'inactive') {
+        await pb.collection('members').update(record.id, body: {'status': 'inactive'});
+      }
+    }
+  } catch (_) {
+    // Keep the durable local building cache usable if members schema/network is unavailable.
+  }
 }
 
 Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
@@ -1168,7 +1227,7 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserver {
   int selectedTab = 0;
   _Building? _joinedBuilding;
   int? _myFloor;
@@ -1182,7 +1241,66 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    if (_isManager && pb.authStore.isValid) _loadManagerBuildings();
+    WidgetsBinding.instance.addObserver(this);
+    if (pb.authStore.isValid) {
+      if (_isManager) _loadManagerBuildings();
+      _restoreMembership();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && pb.authStore.isValid) {
+      if (_isManager) _loadManagerBuildings();
+      _restoreMembership();
+    }
+  }
+
+  Future<void> _restoreMembership() async {
+    final user = pb.authStore.record;
+    if (user == null) return;
+    final userId = user.id;
+    final phone = _latinDigits((user.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
+    try {
+      // Pull the full member list and match locally to tolerate either phone- or user-linked rows.
+      final records = await pb.collection('members').getFullList(batch: 200);
+      final memberships = records.where((r) {
+        final status = (r.data['status'] ?? 'active').toString().toLowerCase();
+        final rowPhone = _latinDigits((r.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
+        final rowUser = (r.data['user'] ?? r.data['user_id'] ?? '').toString();
+        return status == 'active' && ((rowUser.isNotEmpty && rowUser == userId) || (phone.isNotEmpty && rowPhone == phone));
+      }).toList();
+      if (memberships.isEmpty) return;
+      final membership = memberships.last;
+      final buildingId = (membership.data['building'] ?? membership.data['building_id'] ?? '').toString();
+      if (buildingId.isEmpty) return;
+      final record = await pb.collection('buildings').getOne(buildingId);
+      final name = (record.data['name'] ?? '').toString().trim();
+      if (name.isEmpty) return;
+      final building = AppSharedState.instance.buildingByName(name, address: (record.data['address'] ?? '').toString());
+      _applyBuildingRecord(building, record);
+      if (building.floors.isEmpty) {
+        final cache = await _restoreCachedBuilding(_buildingCacheKey(building));
+        if (cache != null) _applyBuildingStructure(building, _buildingStructure(cache));
+      }
+      final floor = int.tryParse((membership.data['floor'] ?? '').toString());
+      final unit = int.tryParse((membership.data['unit'] ?? '').toString());
+      if (floor == null || unit == null) return;
+      final existing = building.occupantOf(floor, unit);
+      if (existing == null && phone.isNotEmpty) {
+        building.assign(floor, unit, _Member(widget.name, _currentRole, widget.ownership, phone: phone));
+      }
+      if (mounted) setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; });
+      await _persistBuilding(building);
+    } catch (_) {
+      // Offline resume: the local cache already restores the manager's buildings.
+    }
   }
 
   Future<void> _loadManagerBuildings() async {
@@ -1214,8 +1332,9 @@ class _DashboardPageState extends State<DashboardPage> {
         await _persistBuilding(building);
         loaded.add(building);
       }
-      if (mounted && loaded.isNotEmpty && _joinedBuilding == null) {
-        setState(() => _joinedBuilding = loaded.first);
+      final allOwned = AppSharedState.instance.buildings.values.where((b) => b.createdBy == userId).toList();
+      if (mounted && _joinedBuilding == null && (loaded.isNotEmpty || allOwned.isNotEmpty)) {
+        setState(() => _joinedBuilding = loaded.isNotEmpty ? loaded.first : allOwned.first);
       }
     } catch (_) {
       // The locally cached buildings above are still available offline.
@@ -1815,7 +1934,8 @@ class _ResidentHomeState extends State<_ResidentHome> {
       _toast('واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} قبلاً به ${b.occupantOf(floor, unit)!.name} اختصاص یافته است.', error: true);
       return;
     }
-    final err = b.assign(floor, unit, _Member(widget.name, 'ساکن', widget.ownership));
+    final phone = (pb.authStore.record?.data['phone'] ?? '').toString();
+    final err = b.assign(floor, unit, _Member(widget.name, 'ساکن', widget.ownership, phone: phone));
     if (err != null) {
       _toast(err, error: true);
       return;
@@ -2425,7 +2545,11 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         title: const Text('حذف عضو'), content: Text('عضو «${member.name}» از این واحد حذف شود؟'),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف عضو'))],
       ));
-      if (confirmed == true && mounted) { setState(() => b.occupants.remove(key)); _toast('عضو از واحد تخلیه شد.'); }
+      if (confirmed == true && mounted) {
+        setState(() => b.occupants.remove(key));
+        await _persistBuilding(b);
+        _toast('عضو از واحد تخلیه شد.');
+      }
     }
   }
 
@@ -2477,6 +2601,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       return;
     }
     setState(() => b.occupants[key] = result);
+    await _persistBuilding(b);
     _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
   }
 
