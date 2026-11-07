@@ -123,7 +123,7 @@ extension StringPersianDigits on String {
 enum _LoginStep { welcome, phone, otp, account, success, managerChoice, dashboard }
 
 const List<MapEntry<String, List<String>>> _iranProvinceCities = [
-  MapEntry('آذربایجان شرقی', ['تبریز', 'مراغه', 'مرند', 'اهر', 'جلفا']),
+  MapEntry('آذربایجان شرقی', ['تبریز', 'آبش احمد', 'آذرشهر', 'اسکو', 'اهر', 'الخچی', 'باسمنج', 'بستان آباد', 'بناب', 'ترکمانچای', 'تسوج', 'تیکمه داش', 'جلفا', 'چاراویماق', 'چهاردانگه', 'خاروانا', 'خدا آفرین', 'خسروشاه', 'خواجه', 'سراب', 'سراجو', 'سهند', 'سیه رود', 'شادیان', 'شبستر', 'صوفیان', 'عجب شیر', 'فندقلو', 'قلعه چای', 'کاغذکنان', 'کشکسرای', 'کلیبر', 'کندوان', 'گرمادوز', 'گوگان', 'لیلان', 'مراغه', 'مرند', 'ملکان', 'ممقان', 'منجوان', 'مهربان', 'میانه', 'نظر کهریزی', 'هریس', 'هشترود', 'هوراند', 'ورزقان', 'یامچی']),
   MapEntry('آذربایجان غربی', ['ارومیه', 'خوی', 'میاندوآب', 'مهاباد', 'بوکان', 'سلماس']),
   MapEntry('اردبیل', ['اردبیل', 'پارس‌آباد', 'مشگین‌شهر', 'خلخال', 'گرمی']),
   MapEntry('اصفهان', ['اصفهان', 'کاشان', 'خمینی‌شهر', 'نجف‌آباد', 'شهرضا', 'شاهین‌شهر']),
@@ -864,8 +864,13 @@ class _ChargeProposal {
 }
 
 class _ChargeSettingTopic {
-  _ChargeSettingTopic(this.title);
+  _ChargeSettingTopic(this.title, {DateTime? createdAt})
+      : createdAt = createdAt ?? DateTime.now(),
+        deadline = (createdAt ?? DateTime.now()).add(const Duration(days: 7));
   final String title;
+  final DateTime createdAt;
+  final DateTime deadline;
+  bool get isActive => DateTime.now().isBefore(deadline);
   /// پیشنهادهای ثبت‌شده با اطلاعات نویسنده (برای همه قابل نمایش).
   final List<_ChargeProposal> proposals = [];
   /// رأی هر واحد ناشناس است: unitId -> مبلغ انتخابی. UI فقط تعداد کل رأی‌ها را می‌بیند.
@@ -891,12 +896,14 @@ class _ChargeSettingTopic {
   int votesFor(int amount) => votesByUnitId.values.where((v) => v == amount).length;
 
   bool propose(int amount, String unitId, String authorName) {
+    if (!isActive) return false;
     if (proposals.any((p) => p.amount == amount)) return false;
     proposals.add(_ChargeProposal(amount: amount, unitId: unitId, authorName: authorName));
     return true;
   }
 
   bool vote(String unitId, int amount) {
+    if (!isActive) return false;
     if (votesByUnitId.containsKey(unitId)) return false;
     if (!proposals.any((p) => p.amount == amount)) return false;
     votesByUnitId[unitId] = amount;
@@ -948,9 +955,23 @@ class _Building {
   bool isOccupied(int floor, int unit) => occupants.containsKey('$floor/$unit');
   _Member? occupantOf(int floor, int unit) => occupants['$floor/$unit'];
 
+  bool hasOccupantWithPhone(String phone, {String? excludeKey}) {
+    final clean = _latinDigits(phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
+    if (clean.isEmpty) return false;
+    for (final entry in occupants.entries) {
+      if (excludeKey != null && entry.key == excludeKey) continue;
+      final p = _latinDigits(entry.value.phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
+      if (p.isNotEmpty && p == clean) return true;
+    }
+    return false;
+  }
+
   String? assign(int floor, int unit, _Member member) {
     final key = '$floor/$unit';
     if (occupants.containsKey(key)) return 'این واحد قبلاً به ${occupants[key]!.name} اختصاص یافته است.';
+    if (member.phone.isNotEmpty && hasOccupantWithPhone(member.phone, excludeKey: key)) {
+      return 'کاربری با این شماره تماس قبلاً در واحد دیگری ثبت شده است و امکان اشغال بیش از یک واحد وجود ندارد.';
+    }
     occupants[key] = member;
     return null;
   }
@@ -1700,7 +1721,11 @@ class _ResidentHomeState extends State<_ResidentHome> {
           ),
         ),
         const SizedBox(height: 16),
-        _BuildingLayout(building: b, highlightMemberName: widget.name),
+        _BuildingLayout(
+          building: b,
+          onUnitTap: (floor, unit) => _showResidentUnit(b, floor, unit),
+          highlightMemberName: widget.name,
+        ),
         const SizedBox(height: 12),
         _ResidentChargeCard(building: b, unitId: b.unitId(widget.myFloor!, widget.myUnit!), onChanged: () { if (mounted) setState(() {}); }),
         const SizedBox(height: 12),
@@ -1806,6 +1831,10 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
   @override void dispose() { _amountController.dispose(); super.dispose(); }
 
   void _propose() {
+    if (!topic.isActive) {
+      setState(() => _error = 'مهلت یک‌هفته‌ای رأی‌گیری به پایان رسیده است.');
+      return;
+    }
     final amount = parseTomanAmount(_amountController.text);
     final unitId = widget.unitId ?? '';
     if (unitId.isEmpty) return;
@@ -1833,12 +1862,24 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
           else const Padding(padding: EdgeInsets.only(top: 12), child: Text('هنوز رأی یا پیشنهادی ثبت نشده است.')),
         ]))),
         const SizedBox(height: 12),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('زمان ایجاد: ${_formatPersianDateTime(topic.createdAt)}'),
+          const SizedBox(height: 4),
+          Text('مهلت پاسخگویی (۱ هفته از زمان ایجاد): ${_formatPersianDateTime(topic.deadline)}'),
+          const SizedBox(height: 4),
+          Text('وضعیت: ${topic.isActive ? 'رأی‌گیری فعال است' : 'مهلت رأی‌گیری پایان یافته است'}', style: TextStyle(fontWeight: FontWeight.bold, color: topic.isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error)),
+          if (!topic.isActive) ...[
+            const SizedBox(height: 8),
+            const Text('مهلت یک‌هفته‌ای رأی‌گیری به پایان رسیده است.', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+          ],
+        ]))),
+        const SizedBox(height: 12),
         if (widget.unitId != null && !topic.votesByUnitId.containsKey(widget.unitId!))
           Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Text('پیشنهاد مبلغ جدید', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 10),
-            TextField(controller: _amountController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'مبلغ به تومان', hintText: 'مثلاً ۲٬۵۰۰٬۰۰۰', suffixText: 'تومان', border: OutlineInputBorder())),
+            TextField(controller: _amountController, enabled: topic.isActive, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'مبلغ به تومان', hintText: 'مثلاً ۲٬۵۰۰٬۰۰۰', suffixText: 'تومان', border: OutlineInputBorder())),
             if (_error != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))),
-            const SizedBox(height: 10), FilledButton.icon(onPressed: _propose, icon: const Icon(Icons.add), label: const Text('ثبت پیشنهاد')),
+            const SizedBox(height: 10), FilledButton.icon(onPressed: topic.isActive ? _propose : null, icon: const Icon(Icons.add), label: const Text('ثبت پیشنهاد')),
           ]))),
         const SizedBox(height: 12),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1863,7 +1904,7 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
     final votes = topic.votesFor(p.amount);
     final isApproved = topic.approvedAmount == p.amount;
     final myVote = widget.unitId == null ? null : topic.votesByUnitId[widget.unitId!];
-    final canVote = !widget.isManager && widget.unitId != null && myVote == null;
+    final canVote = topic.isActive && !widget.isManager && widget.unitId != null && myVote == null;
     return RadioListTile<int>(
       contentPadding: EdgeInsets.zero,
       value: p.amount,
@@ -1893,6 +1934,11 @@ class _ResidentChargeCardState extends State<_ResidentChargeCard> {
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [Icon(Icons.payments_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), Expanded(child: Text(topic.title, style: const TextStyle(fontWeight: FontWeight.bold)))]),
       const SizedBox(height: 8), Text(topic.finalizedAmount == null ? 'موضوع فعال است؛ پیشنهاد دهید و رأی بدهید.' : 'شارژ ماهانهٔ واحد شما: ${formatTomanAmount(topic.finalizedAmount!)}'),
+      const SizedBox(height: 8),
+      Text('زمان ایجاد: ${_formatPersianDateTime(topic.createdAt)}', style: const TextStyle(fontSize: 12)),
+      Text('مهلت پاسخگویی (۱ هفته از زمان ایجاد): ${_formatPersianDateTime(topic.deadline)}', style: const TextStyle(fontSize: 12)),
+      Text('وضعیت: ${topic.isActive ? 'رأی‌گیری فعال است' : 'مهلت رأی‌گیری پایان یافته است'}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: topic.isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error)),
+      if (!topic.isActive) const Padding(padding: EdgeInsets.only(top: 6), child: Text('مهلت یک‌هفته‌ای رأی‌گیری به پایان رسیده است.', style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600))),
       const SizedBox(height: 10), OutlinedButton.icon(onPressed: _open, icon: const Icon(Icons.open_in_new), label: const Text('مشاهده و مشارکت')),
     ])));
   }
@@ -2200,13 +2246,18 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     );
     if (!mounted || action == null || action == 'no') return;
     if (action == 'self') {
+      final managerPhone = (pb.authStore.record?.data['phone'] ?? '').toString();
+      if (managerPhone.isNotEmpty && b.hasOccupantWithPhone(managerPhone, excludeKey: key)) {
+        _toast('این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.', error: true);
+        return;
+      }
       if (member != null && !(member.name == widget.managerName && member.role == 'مدیر')) {
         _toast('این واحد در اختیار ${member.name} است؛ برای تغییر جایگاه او از «تغییر واحد» یا «ویرایش عضو» استفاده کنید.', error: true);
         return;
       }
       setState(() {
         b.occupants.removeWhere((_, occupant) => occupant.name == widget.managerName && occupant.role == 'مدیر');
-        b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر');
+        b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر', phone: managerPhone);
       });
       _toast('شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
     } else if (action == 'register') {
@@ -2259,6 +2310,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           final name = nameController.text.trim();
           final phone = _latinDigits(phoneController.text.trim());
           if (!RegExp(r'^09\d{9}$').hasMatch(phone)) { setDialogState(() => phoneError = 'شماره همراه باید ۱۱ رقم و با 09 شروع شود.'); return; }
+          if (b.hasOccupantWithPhone(phone, excludeKey: key)) { setDialogState(() => phoneError = 'این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.'); return; }
           if (name.isNotEmpty) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership, phone: phone, waterDebt: existing?.waterDebt ?? 0, movedInAt: existing?.movedInAt ?? DateTime.now()));
         }, child: const Text('ذخیره'))],
       ),
@@ -2266,6 +2318,10 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     nameController.dispose();
     phoneController.dispose();
     if (result == null || !mounted) return;
+    if (b.hasOccupantWithPhone(result.phone, excludeKey: key)) {
+      _toast('این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.', error: true);
+      return;
+    }
     setState(() => b.occupants[key] = result);
     _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
   }
