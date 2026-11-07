@@ -81,6 +81,7 @@ Widget _initialHome() {
     buildingName: (data['building_name'] ?? '').toString(),
     ownership: (data['ownership'] ?? 'ساکن').toString(),
     showMyBuildings: data['show_my_buildings'] == true,
+    onSwitch: () {},
   );
 }
 
@@ -143,9 +144,9 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('خراسان شمالی', ['سرحد', 'سملقان', 'سنخواست', 'شیروان', 'صفی آباد', 'غلامان', 'فاروج', 'قوشخانه', 'گرمخان', 'گرمه', 'مانه']),
   MapEntry('خوزستان', ['اهواز', 'آبادان', 'آغاجاری', 'امیدیه', 'اندیکا', 'اندیمشک', 'ایذه', 'باغملک', 'باوی', 'بندر امام خمینی', 'بندر ماهشهر', 'بهبهان', 'چمران', 'حمیدیه', 'خرمشهر', 'دزپارت', 'دزفول', 'دشت آزادگان', 'رامشیر', 'رامهرمز', 'سوسنگرد', 'شادگان', 'شوش', 'شوشتر', 'کارون', 'کرخه', 'گتوند', 'لالی', 'مسجد سلیمان', 'هفتگل', 'هندیجان', 'هویزه']),
   MapEntry('زنجان', ['ابهر', 'افشار', 'انگوران', 'ایجرود', 'باغ حلی', 'بزینه رود', 'چورزق', 'حلب', 'خرمدره', 'دوتپه', 'زنجان', 'زنجانرود', 'سجاس رود', 'سلطانیه', 'صائین قلعه', 'طارم', 'قره پشتلو', 'قیدار', 'گیلوان', 'ماهنشان']),
-  MapEntry('سمنان', ['سمنان', 'شاهرود', 'دامغان', 'گرمسار', 'مهدی‌شهر']),
-  MapEntry('سیستان و بلوچستان', ['زاهدان', 'چابهار', 'زابل', 'ایرانشهر', 'سراوان', 'خاش']),
-  MapEntry('فارس', ['شیراز', 'مرودشت', 'جهرم', 'فسا', 'کازرون', 'لارستان']),
+  MapEntry('سمنان', ['دامغان', 'سرخه', 'سمنان', 'شاهرود', 'شهمیرزاد', 'کالپوش', 'کهن آباد', 'گرمسار', 'مهدی شهر', 'میامی', 'هفدر']),
+  MapEntry('سیستان و بلوچستان', ['آشار', 'آهوران', 'ایرانشهر', 'ایرندگان', 'باهوکلات', 'بزمان', 'بم پشت', 'بمپور', 'بنت', 'بیرک', 'پارود', 'پسکوه', 'پشتکوه', 'پلان', 'پیپ', 'پیرسهراب', 'پیشین', 'تفتان', 'تلنگ', 'تیمورآباد', 'جالق', 'جزنیک', 'جلگه چاه هاشم', 'چابهار', 'خاش', 'خمک', 'دامن', 'دشتیاری', 'دلگان', 'راسک', 'ریگ ملک', 'زابل', 'زاهدان', 'زرآباد', 'زهک', 'ساربوک', 'سراوان', 'سرباز', 'سیب و سوران', 'صابری', 'فنوج', 'قرقری', 'قصرقند', 'کاروان', 'کرباسک', 'کلاتان', 'کله گان', 'کنارک', 'کهیر', 'کورین', 'کیشگور', 'گتیج', 'گوهرکوه', 'لادیز', 'لاشار', 'مهرستان', 'مهرگان', 'میرجاوه', 'مینان', 'نازیل', 'نسکند', 'نصرت آباد', 'نیک شهر', 'نیمروز', 'هامون', 'هیدوچ', 'هیرمند']),
+  MapEntry('فارس', ['شیراز', 'آباده', 'ارد', 'ارژن', 'ارسنجان', 'استهبان', 'اسیر', 'اشکنان', 'افرز', 'اقلید', 'اوز', 'ایزدخواست', 'باغ صفا', 'بانش', 'بختگان', 'بنارویه', 'بهمن صغاد', 'بوانات', 'بیدشهر', 'بیرم', 'بیضا', 'پاسارگاد', 'پشتکوه', 'جره و بالاده', 'جنت', 'جهرم', 'جوزار', 'جویم', 'چاه ورز', 'حسن آباد', 'حنا', 'خرامه', 'خرم بید', 'خشت', 'خفر', 'خنج', 'خور', 'خیرگو', 'داراب', 'درودزن', 'دشمن زیاری', 'دهرم', 'راهگان', 'رحمت آباد', 'رستاق', 'رستم', 'رونیز', 'زرقان', 'زرین دشت', 'سپیدان', 'سده', 'سرچهان', 'سروستان', 'سورنا', 'سیاخ دارنگون', 'سیدان', 'سیمکان', 'ششده و قره بلاغ', 'شیبکوه', 'صحرای باغ', 'صدرا', 'طسوج', 'علامرودشت', 'فراشبند', 'فسا', 'فسارود', 'فورگ', 'فیروزآباد', 'قطرویه', 'قیروکارزین', 'کازرون', 'کامفیروز', 'کر', 'کربال', 'کردیان', 'کنار تخته و کمار', 'کوار', 'کوه چنار', 'کوهمره', 'کوهنجان', 'گراش', 'گله دار', 'لار', 'لامرد', 'ماهورمیلاتی', 'محمله', 'مرودشت', 'مزایجان', 'مشهد مرغاب', 'مهر', 'میمند', 'نوبندگان', 'نورآباد ممسنی', 'نی ریز', 'همایجان', 'وراوی']),
   MapEntry('قزوین', ['قزوین', 'تاکستان', 'الوند', 'آبیک', 'بوئین‌زهرا']),
   MapEntry('قم', ['قم']),
   MapEntry('کردستان', ['سنندج', 'سقز', 'مریوان', 'بانه', 'قروه', 'کامیاران']),
@@ -420,7 +421,7 @@ void _goBack() {
       }
 
       if (!mounted) return;
-      setState(() => _step = _LoginStep.success);
+      setState(() => _step = _fromDashboard ? _LoginStep.dashboard : _LoginStep.success);
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -690,7 +691,7 @@ void _goBack() {
         onChanged: _selectedProvince == null ? null : (value) => setState(() => _selectedCity = value),
         validator: (v) => v != null ? null : 'شهر را وارد کنید.'),
       const SizedBox(height: 22),
-      _primaryButton(label: 'ادامه', onPressed: _submitAccount),
+      _primaryButton(label: 'ثبت تغییرات', onPressed: _submitAccount),
       const SizedBox(height: 12),
       Text('شماره همراه تأییدشده: ${_phoneController.text}', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
     ]),
@@ -709,8 +710,6 @@ void _goBack() {
       FilledButton.icon(onPressed: () => _selectRole('مدیر'), icon: const Icon(Icons.manage_accounts_outlined), label: const Text('مدیر')),
       const SizedBox(height: 12),
       OutlinedButton.icon(onPressed: () => _selectRole('ساکن'), icon: const Icon(Icons.people_outline), label: const Text('ساکنین')),
-      const SizedBox(height: 18),
-      Text('نسخهٔ نمایشی است؛ اطلاعات حساب به سرور ارسال یا ذخیره نمی‌شود.', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12, height: 1.7)),
     ]);
   }
 
@@ -743,8 +742,6 @@ void _goBack() {
         icon: const Icon(Icons.apartment_rounded),
         label: const Text('ساختمان تحت مدیریت من'),
       ),
-      const SizedBox(height: 18),
-      Text('نسخهٔ نمایشی است؛ اطلاعات به سرور ارسال یا ذخیره نمی‌شود.', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12, height: 1.7)),
     ]);
   }
 
@@ -1229,7 +1226,7 @@ class DashboardPage extends StatefulWidget {
     required this.buildingName,
     required this.ownership,
     this.showMyBuildings = false,
-    this.onSwitch,
+    required this.onSwitch,
     this.onRoleChanged,
   });
   final String name;
@@ -1237,7 +1234,7 @@ class DashboardPage extends StatefulWidget {
   final String buildingName;
   final String ownership;
   final bool showMyBuildings;
-  final VoidCallback? onSwitch;
+  final VoidCallback onSwitch;
   final ValueChanged<String>? onRoleChanged;
 
   @override
@@ -1510,7 +1507,6 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           if (widget.onSwitch != null)
             IconButton(tooltip: 'ویرایش حساب', icon: const Icon(Icons.tune_rounded), onPressed: widget.onSwitch),
-          IconButton(tooltip: 'خروج از حساب کاربری', icon: const Icon(Icons.logout_rounded), onPressed: _logout),
         ],
       ),
       body: SafeArea(child: body),
@@ -3165,7 +3161,7 @@ class _FeatureItem {
 class _SettingsPage extends StatelessWidget {
   const _SettingsPage({required this.onLogout, required this.onEditAccount});
   final VoidCallback onLogout;
-  final VoidCallback? onEditAccount;
+  final VoidCallback onEditAccount;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -3174,8 +3170,7 @@ class _SettingsPage extends StatelessWidget {
       Text('تنظیمات', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
       const SizedBox(height: 12),
       Card(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        if (onEditAccount != null)
-          ListTile(
+        ListTile(
             leading: const Icon(Icons.manage_accounts_outlined),
             title: const Text('ویرایش حساب کاربری'),
             trailing: const Icon(Icons.chevron_left_rounded),
