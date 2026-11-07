@@ -142,7 +142,7 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('خراسان رضوی', ['بوژگان', 'پائین جام', 'تایباد', 'تربت جام', 'تربت حیدریه', 'جغتای', 'جلگه رخ', 'جلگه زوزن', 'جنت آباد', 'جنگل', 'جوین', 'چاپشلو', 'چناران', 'خلیل آباد', 'خواف', 'خوشاب', 'داورزن', 'درگز', 'رادکان', 'رشتخوار', 'رضویه', 'روداب', 'زاوه', 'زاوین', 'زبرخان', 'سبزوار', 'سرخس', 'سرولایت', 'سلامی', 'سلیمان', 'سنگان', 'سیدآباد', 'شادمهر', 'شامکان', 'شاندیز', 'ششتمد', 'ششطراز', 'شهرآباد', 'صالح آباد', 'طاغنکوه', 'طرقبه', 'عطاملک', 'فرح دشت', 'فریمان', 'فیروزه', 'قاسم آباد', 'قلندر آباد', 'قوچان', 'کاخک', 'کاشمر', 'کدکن', 'کلات', 'کوهسرخ', 'گلبهار', 'گلمکان', 'گناباد', 'لطف آباد', 'مرزداران', 'مشکان', 'ملک آباد', 'مه ولات', 'میان جلگه', 'میان ولایت', 'نصرآباد', 'نوخندان', 'نوده انقلاب', 'نیشابور', 'هزارمسجد', 'هلالی', 'یونسی']),
   MapEntry('خراسان شمالی', ['سرحد', 'سملقان', 'سنخواست', 'شیروان', 'صفی آباد', 'غلامان', 'فاروج', 'قوشخانه', 'گرمخان', 'گرمه', 'مانه']),
   MapEntry('خوزستان', ['اهواز', 'آبادان', 'آغاجاری', 'امیدیه', 'اندیکا', 'اندیمشک', 'ایذه', 'باغملک', 'باوی', 'بندر امام خمینی', 'بندر ماهشهر', 'بهبهان', 'چمران', 'حمیدیه', 'خرمشهر', 'دزپارت', 'دزفول', 'دشت آزادگان', 'رامشیر', 'رامهرمز', 'سوسنگرد', 'شادگان', 'شوش', 'شوشتر', 'کارون', 'کرخه', 'گتوند', 'لالی', 'مسجد سلیمان', 'هفتگل', 'هندیجان', 'هویزه']),
-  MapEntry('زنجان', ['زنجان', 'ابهر', 'خرمدره', 'قیدار', 'سلطانیه']),
+  MapEntry('زنجان', ['ابهر', 'افشار', 'انگوران', 'ایجرود', 'باغ حلی', 'بزینه رود', 'چورزق', 'حلب', 'خرمدره', 'دوتپه', 'زنجان', 'زنجانرود', 'سجاس رود', 'سلطانیه', 'صائین قلعه', 'طارم', 'قره پشتلو', 'قیدار', 'گیلوان', 'ماهنشان']),
   MapEntry('سمنان', ['سمنان', 'شاهرود', 'دامغان', 'گرمسار', 'مهدی‌شهر']),
   MapEntry('سیستان و بلوچستان', ['زاهدان', 'چابهار', 'زابل', 'ایرانشهر', 'سراوان', 'خاش']),
   MapEntry('فارس', ['شیراز', 'مرودشت', 'جهرم', 'فسا', 'کازرون', 'لارستان']),
@@ -280,8 +280,25 @@ void _goBack() {
     if (_isSendingOtp) return;
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) return;
-    
     setState(() => _isSendingOtp = true);
+    unawaited(_sendOtpInBackground(phone, isResend: true));
+  }
+
+  Future<void> _submitPhone() async {
+    if (_isSendingOtp || !(_phoneKey.currentState?.validate() ?? false)) return;
+    _phoneController.text = _latinDigits(_phoneController.text).replaceAll(' ', '').trim();
+    final phone = _phoneController.text;
+    setState(() {
+      _isSendingOtp = true;
+      _step = _LoginStep.otp;
+    });
+    _otpController.clear();
+    _startCountdown();
+    // Do not keep the user waiting for the network before showing the OTP screen.
+    unawaited(_sendOtpInBackground(phone));
+  }
+
+  Future<void> _sendOtpInBackground(String phone, {bool isResend = false}) async {
     try {
       final response = await pb.send<Map<String, dynamic>>(
         '/api/send-otp',
@@ -290,47 +307,27 @@ void _goBack() {
       );
       if (!mounted) return;
       if (response['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isResend
+              ? 'ارسال مجدد کد تأیید ناموفق بود. لطفاً دوباره تلاش کنید.'
+              : 'ارسال کد تأیید ناموفق بود. لطفاً دوباره تلاش کنید.'),
+        ));
+        return;
+      }
+      if (isResend) {
+        _otpController.clear();
+        _startCountdown();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ارسال مجدد کد تأیید ناموفق بود. لطفاً دوباره تلاش کنید.')),
+          const SnackBar(content: Text('کد تأیید مجدداً ارسال شد.')),
         );
-        return;
       }
-      _otpController.clear();
-      _startCountdown();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('کد تأیید مجدداً ارسال شد.')),
-      );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ارسال پیامک انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.')),
-      );
-    } finally {
-      if (mounted) setState(() => _isSendingOtp = false);
-    }
-  }
-
-  Future<void> _submitPhone() async {
-    if (_isSendingOtp || !(_phoneKey.currentState?.validate() ?? false)) return;
-    _phoneController.text = _latinDigits(_phoneController.text).replaceAll(' ', '').trim();
-    setState(() => _isSendingOtp = true);
-    try {
-      final response = await pb.send<Map<String, dynamic>>(
-        '/api/send-otp',
-        method: 'POST',
-        body: {'phone': _phoneController.text},
-      );
-      if (!mounted) return;
-      if (response['success'] != true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ارسال کد تأیید ناموفق بود. لطفاً دوباره تلاش کنید.')));
-        return;
-      }
-      _otpController.clear();
-      setState(() => _step = _LoginStep.otp);
-      _startCountdown();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ارسال پیامک انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isResend
+            ? 'ارسال پیامک انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.'
+            : 'ارسال پیامک انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.'),
+      ));
     } finally {
       if (mounted) setState(() => _isSendingOtp = false);
     }
@@ -487,11 +484,6 @@ void _goBack() {
                 ),
               ),
             ),
-          ),
-          PositionedDirectional(
-            top: 8,
-            end: 12,
-            child: _ThemeToggle(),
           ),
         ]),
       ),
@@ -1342,7 +1334,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final key = building.unitId(floor, unit);
     if (!building.occupants.containsKey(key)) building.assign(floor, unit, member);
     if (mounted) setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; });
-    await _cacheResidentMembership(userId, building, floor, unit);
+    unawaited(_cacheResidentMembership(userId, building, floor, unit));
   }
 
   Future<void> _loadManagerBuildings() async {
@@ -1522,8 +1514,6 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
       body: SafeArea(child: body),
-      floatingActionButton: _ThemeToggle(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() => selectedTab = index),
@@ -3136,11 +3126,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
             ),
           ),
         const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: colors.surfaceVariant, borderRadius: BorderRadius.circular(16)),
-          child: const Text('توجه: داده‌ها فقط در حافظهٔ همین اجرای برنامه نگه داشته می‌شوند.', style: TextStyle(fontSize: 12, height: 1.7)),
-        ),
       ]),
     );
   }
