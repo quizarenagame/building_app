@@ -61,13 +61,13 @@ class BuildingApp extends StatelessWidget {
           cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         themeMode: mode,
-        home: Directionality(textDirection: TextDirection.rtl, child: _initialHome()),
+        home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
       ),
     );
   }
 }
 
-Widget _initialHome() {
+Widget _initialHome(BuildContext context) {
   if (!pb.authStore.isValid) return const LoginFlow();
   final record = pb.authStore.record;
   final data = record?.data ?? const <String, dynamic>{};
@@ -81,7 +81,11 @@ Widget _initialHome() {
     buildingName: (data['building_name'] ?? '').toString(),
     ownership: (data['ownership'] ?? 'ساکن').toString(),
     showMyBuildings: data['show_my_buildings'] == true,
-    onSwitch: () {},
+    onSwitch: () {
+      Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => const Directionality(textDirection: TextDirection.rtl, child: LoginFlow(startAtAccount: true)),
+      ));
+    },
   );
 }
 
@@ -147,10 +151,10 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('سمنان', ['دامغان', 'سرخه', 'سمنان', 'شاهرود', 'شهمیرزاد', 'کالپوش', 'کهن آباد', 'گرمسار', 'مهدی شهر', 'میامی', 'هفدر']),
   MapEntry('سیستان و بلوچستان', ['آشار', 'آهوران', 'ایرانشهر', 'ایرندگان', 'باهوکلات', 'بزمان', 'بم پشت', 'بمپور', 'بنت', 'بیرک', 'پارود', 'پسکوه', 'پشتکوه', 'پلان', 'پیپ', 'پیرسهراب', 'پیشین', 'تفتان', 'تلنگ', 'تیمورآباد', 'جالق', 'جزنیک', 'جلگه چاه هاشم', 'چابهار', 'خاش', 'خمک', 'دامن', 'دشتیاری', 'دلگان', 'راسک', 'ریگ ملک', 'زابل', 'زاهدان', 'زرآباد', 'زهک', 'ساربوک', 'سراوان', 'سرباز', 'سیب و سوران', 'صابری', 'فنوج', 'قرقری', 'قصرقند', 'کاروان', 'کرباسک', 'کلاتان', 'کله گان', 'کنارک', 'کهیر', 'کورین', 'کیشگور', 'گتیج', 'گوهرکوه', 'لادیز', 'لاشار', 'مهرستان', 'مهرگان', 'میرجاوه', 'مینان', 'نازیل', 'نسکند', 'نصرت آباد', 'نیک شهر', 'نیمروز', 'هامون', 'هیدوچ', 'هیرمند']),
   MapEntry('فارس', ['شیراز', 'آباده', 'ارد', 'ارژن', 'ارسنجان', 'استهبان', 'اسیر', 'اشکنان', 'افرز', 'اقلید', 'اوز', 'ایزدخواست', 'باغ صفا', 'بانش', 'بختگان', 'بنارویه', 'بهمن صغاد', 'بوانات', 'بیدشهر', 'بیرم', 'بیضا', 'پاسارگاد', 'پشتکوه', 'جره و بالاده', 'جنت', 'جهرم', 'جوزار', 'جویم', 'چاه ورز', 'حسن آباد', 'حنا', 'خرامه', 'خرم بید', 'خشت', 'خفر', 'خنج', 'خور', 'خیرگو', 'داراب', 'درودزن', 'دشمن زیاری', 'دهرم', 'راهگان', 'رحمت آباد', 'رستاق', 'رستم', 'رونیز', 'زرقان', 'زرین دشت', 'سپیدان', 'سده', 'سرچهان', 'سروستان', 'سورنا', 'سیاخ دارنگون', 'سیدان', 'سیمکان', 'ششده و قره بلاغ', 'شیبکوه', 'صحرای باغ', 'صدرا', 'طسوج', 'علامرودشت', 'فراشبند', 'فسا', 'فسارود', 'فورگ', 'فیروزآباد', 'قطرویه', 'قیروکارزین', 'کازرون', 'کامفیروز', 'کر', 'کربال', 'کردیان', 'کنار تخته و کمار', 'کوار', 'کوه چنار', 'کوهمره', 'کوهنجان', 'گراش', 'گله دار', 'لار', 'لامرد', 'ماهورمیلاتی', 'محمله', 'مرودشت', 'مزایجان', 'مشهد مرغاب', 'مهر', 'میمند', 'نوبندگان', 'نورآباد ممسنی', 'نی ریز', 'همایجان', 'وراوی']),
-  MapEntry('قزوین', ['قزوین', 'تاکستان', 'الوند', 'آبیک', 'بوئین‌زهرا']),
-  MapEntry('قم', ['قم']),
-  MapEntry('کردستان', ['سنندج', 'سقز', 'مریوان', 'بانه', 'قروه', 'کامیاران']),
-  MapEntry('کرمان', ['کرمان', 'سیرجان', 'رفسنجان', 'جیرفت', 'بم', 'زرند']),
+  MapEntry('قزوین', ['آبگرم', 'آبیک', 'آوج', 'اسفرورین', 'اقبالیه', 'الموت', 'الوند', 'بشاریات', 'بوئین زهرا', 'تاکستان', 'خرمدشت', 'دشتابی', 'رامند', 'شال', 'ضیاءآباد', 'طارم', 'قزوین', 'کوهین', 'محمدیه']),
+  MapEntry('قم', ['پردیسان', 'جعفرآباد', 'خلجستان', 'سلفچگان', 'فردو', 'قاهان', 'قم', 'قمرود', 'قنوات', 'کهک']),
+  MapEntry('کردستان', ['سنندج', 'سیروان', 'قروه', 'کامیاران', 'کرانی', 'کرفتو', 'کلاترزان', 'مریوان', 'موچش', 'نمشیر', 'ننور']),
+  MapEntry('کرمان', ['آسمینون', 'ارزوئیه', 'اسفندقه', 'اسماعیلی', 'انار', 'بافت', 'بردسیر', 'بلورد', 'بلوک', 'بم', 'بهرمان', 'پاریز', 'جازموریان', 'جبالبارز', 'جیرفت', 'چاه داد خدا', 'چاه مرید', 'چترود', 'حور', 'خبر', 'درب بهشت', 'دهبکری', 'دهج', 'رابر', 'راور', 'راین', 'رفسنجان', 'رودبار', 'ریگان', 'زرند', 'زیدآباد', 'سیرجان', 'شهداد', 'شهربابک', 'صوغان', 'عنبرآباد', 'فاریاب', 'فردوس', 'فهرج', 'قلعه گنج', 'کرمان', 'کشکوئیه', 'کهنوج', 'کوهبنان', 'کوهساران', 'کیانشهر', 'گلباف', 'گلزار', 'گلستان', 'گنبکی', 'لاله زار', 'ماهان', 'منوجان', 'نرمانشیر', 'نگار', 'نگین کویر', 'هنزا', 'یزدان شهر']),
   MapEntry('کرمانشاه', ['کرمانشاه', 'اسلام‌آباد غرب', 'هرسین', 'کنگاور', 'پاوه', 'جوانرود']),
   MapEntry('کهگیلویه و بویراحمد', ['یاسوج', 'دهدشت', 'گچساران', 'لیکک']),
   MapEntry('گلستان', ['گرگان', 'گنبدکاووس', 'علی‌آباد کتول', 'بندرترکمن', 'آق‌قلا']),
@@ -178,7 +182,8 @@ class _ThemeToggle extends StatelessWidget {
 }
 
 class LoginFlow extends StatefulWidget {
-  const LoginFlow({super.key});
+  const LoginFlow({super.key, this.startAtAccount = false});
+  final bool startAtAccount;
   @override
   State<LoginFlow> createState() => _LoginFlowState();
 }
@@ -210,6 +215,26 @@ class _LoginFlowState extends State<LoginFlow> {
   bool _hidePassword = true;
   bool _hideConfirmPassword = true;
   bool _fromDashboard = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.startAtAccount) {
+      _fromDashboard = true;
+      _step = _LoginStep.account;
+      final record = pb.authStore.record;
+      if (record != null) {
+        _phoneController.text = (record.data['phone'] ?? '').toString();
+        _nameController.text = (record.data['name'] ?? '').toString();
+        _lastNameController.text = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString();
+        final role = (record.data['role'] ?? '').toString();
+        _role = role == 'مدیر' ? 'مدیر' : 'ساکن';
+        _ownership = (record.data['ownership'] ?? 'ساکن').toString();
+        _buildingController.text = (record.data['building_name'] ?? '').toString();
+        _showMyBuildings = record.data['show_my_buildings'] == true;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -1226,7 +1251,7 @@ class DashboardPage extends StatefulWidget {
     required this.buildingName,
     required this.ownership,
     this.showMyBuildings = false,
-    required this.onSwitch,
+    this.onSwitch,
     this.onRoleChanged,
   });
   final String name;
@@ -1234,7 +1259,7 @@ class DashboardPage extends StatefulWidget {
   final String buildingName;
   final String ownership;
   final bool showMyBuildings;
-  final VoidCallback onSwitch;
+  final VoidCallback? onSwitch;
   final ValueChanged<String>? onRoleChanged;
 
   @override
@@ -1482,7 +1507,12 @@ class _DashboardPageState extends State<DashboardPage> {
           onJoined: (building, floor, unit) => setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; }),
         ),
       3 => _FeatureHub(index: 3, isManager: _isManager, building: _joinedBuilding),
-      4 => _SettingsPage(onEditAccount: widget.onSwitch, onLogout: _logout),
+      4 => _SettingsPage(
+          onEditAccount: widget.onSwitch ?? () {},
+          onLogout: _logout,
+          onRoleChange: _showRoleDialog,
+          phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
+        ),
       _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
     };
     return Scaffold(
@@ -1498,13 +1528,7 @@ class _DashboardPageState extends State<DashboardPage> {
               icon: const Icon(Icons.logout_rounded),
               onPressed: () => setState(() { _joinedBuilding = null; _myFloor = null; _myUnit = null; }),
             ),
-          IconButton(
-            tooltip: 'تغییر نقش',
-            icon: _isChangingRole
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.swap_horiz_rounded),
-            onPressed: _isChangingRole ? null : _showRoleDialog,
-          ),
+
           if (widget.onSwitch != null)
             IconButton(tooltip: 'ویرایش حساب', icon: const Icon(Icons.tune_rounded), onPressed: widget.onSwitch),
         ],
@@ -3159,9 +3183,16 @@ class _FeatureItem {
 }
 
 class _SettingsPage extends StatelessWidget {
-  const _SettingsPage({required this.onLogout, required this.onEditAccount});
+  const _SettingsPage({
+    required this.onLogout,
+    required this.onEditAccount,
+    required this.onRoleChange,
+    required this.phoneNumber,
+  });
   final VoidCallback onLogout;
   final VoidCallback onEditAccount;
+  final VoidCallback onRoleChange;
+  final String phoneNumber;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -3171,11 +3202,21 @@ class _SettingsPage extends StatelessWidget {
       const SizedBox(height: 12),
       Card(child: Column(mainAxisSize: MainAxisSize.min, children: [
         ListTile(
-            leading: const Icon(Icons.manage_accounts_outlined),
-            title: const Text('ویرایش حساب کاربری'),
-            trailing: const Icon(Icons.chevron_left_rounded),
-            onTap: onEditAccount,
-          ),
+          leading: const Icon(Icons.phone_outlined),
+          title: Text('شماره همراه: $phoneNumber'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.manage_accounts_outlined),
+          title: const Text('ویرایش حساب کاربری'),
+          trailing: const Icon(Icons.chevron_left_rounded),
+          onTap: onEditAccount,
+        ),
+        ListTile(
+          leading: const Icon(Icons.swap_horiz_rounded),
+          title: const Text('تغییر نقش'),
+          trailing: const Icon(Icons.chevron_left_rounded),
+          onTap: onRoleChange,
+        ),
         ListTile(
           leading: const Icon(Icons.palette_outlined),
           title: const Text('تغییر تم روشن/تاریک'),
