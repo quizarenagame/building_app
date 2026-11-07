@@ -162,11 +162,11 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('گلستان', ['آزادشهر', 'آق قلا', 'القجر ', 'انبارآلوم', 'اینچه برون', 'بندر ترکمن', 'بندر گز', 'تاتار علیا', 'جلین', 'خان ببین', 'دلند', 'دوزین', 'رامیان', 'سرخنکلاته', 'سنگدوین', 'سیجوال', 'سیمین شهر', 'صادق آباد', 'علی آباد کتول', 'فاضل آباد', 'فراغی', 'قرق', 'کردکوی', 'کلاله', 'گالیکش', 'گرگان', 'گلی داغ', 'گمیشان', 'گنبد کاووس', 'مراوه', 'مزرعه کتول', 'مینودشت', 'نگین شهر', 'نوده خاندوز', 'نوکنده', 'ینقاق']),
   MapEntry('گیلان', ['آستارا', 'آستانه اشرفیه ', 'احمدسرگوراب', 'اسالم', 'اطاقور', 'املش', 'بره سر', 'بندرانزلی', 'پره سر', 'پیربازار', 'تالش', 'توتکابن', 'تولم شهر', 'جیرنده', 'چابکسر', 'چاف و چمخاله', 'چوبر', 'حویق', 'خشکبیجار', 'خمام', 'دیلمان', 'رانکوه', 'رحیم آباد', 'رستم آباد', 'رشت', 'رضوانشهر', 'رودبار', 'رودبنه', 'رودسر', 'زیباکنار', 'سنگر', 'سیاهکل', 'شاندرمن', 'شفت', 'شلمان', 'صومعه سرا', 'ضیابر', 'طاهرگوراب', 'فومن', 'کلاچای', 'کوچصفهان', 'کومله', 'کیاشهر', 'گوراب زرمیخ', 'لاهیجان', 'لشت نشا', 'لنگرود', 'لوشان', 'لولمان', 'لوندویل', 'لیسار', 'ماسال', 'ماسوله', 'ماکلوان', 'منجیل', 'واجارگاه']),
   MapEntry('لرستان', ['ازنا', 'اشترینان', 'الشتر', 'الیگودرز', 'بربرود', 'بروجرد', 'بیرانوند', 'پاپی', 'پلدختر', 'جاپلق', 'چگنی', 'خاوه', 'خرم آباد', 'درب گنبد', 'دورود', 'ذلقی', 'رومشکان', 'زاغه', 'ززوماهرو', 'سوری', 'سیلاخور', 'شاهیوند', 'شیروان', 'طرهان', 'فیروزآباد', 'کاکاوند', 'کوهدشت', 'کوهنانی', 'معمولان', 'نورآباد', 'ویسیان']),
-  MapEntry('مازندران', ['ساری', 'بابل', 'آمل', 'قائم‌شهر', 'چالوس', 'تنکابن']),
-  MapEntry('مرکزی', ['اراک', 'ساوه', 'خمین', 'محلات', 'دلیجان', 'شازند']),
-  MapEntry('هرمزگان', ['بندرعباس', 'قشم', 'کیش', 'میناب', 'بندرلنگه']),
-  MapEntry('همدان', ['همدان', 'ملایر', 'نهاوند', 'تویسرکان', 'اسدآباد']),
-  MapEntry('یزد', ['یزد', 'میبد', 'اردکان', 'بافق', 'مهریز', 'تفت']),
+  MapEntry('مازندران', ['آستانه سرا', 'آکند', 'آلاشت', 'آمل', 'ارطه', 'امامزاده عبدالله', 'امیرکلا', 'ایزدشهر', 'بابکان', 'بابل', 'بابلسر', 'بلده', 'بهشهر', 'بهنمیر', 'پایین هولار', 'پل سفید', 'پول', 'تالار پی ', 'تنکابن', 'جویبار', 'چالوس', 'چمستان', 'خلیل شهر', 'خرم آباد', 'خوش رودپی', 'دابودشت', 'دالخانی', 'رامسر', 'رستمکلا', 'رویان', 'رینه', 'زرگرشهر', 'زیرآب', 'ساری', 'سرخرود', 'سلمان شهر', 'سورک', 'شیرگاه', 'شیرود', 'طبقده', 'عباس آباد', 'فرح آباد', 'فریدون کنار', 'فریم', 'قائم شهر', 'کتالم و سادات شهر', 'کجور', 'کلارآباد', 'کلاردشت', 'کلباد', 'کوهستان', 'کوهی خیل', 'کیاسر', 'کیاکلا', 'گتاب', 'گزنک', 'گلوگاه', 'گلوگاه بابل', 'محودآباد', 'مرزن آباد', 'مریزکلا', 'نشتارود', 'نکا', 'نور', 'نوشهر', 'هادی شهر', 'هچیرود', 'هزارجریب', 'یانه سر']),
+  MapEntry('مرکزی', ['آشتیان', 'اراک', 'تفرش', 'خرقان', 'خمین', 'خنجین', 'خنداب', 'دلیجان', 'زالیان', 'زاویه', 'زرندیه', 'ساروق', 'ساوه', 'سربند', 'شازند', 'فرمهین', 'قره چای', 'قره کهریز', 'کمره', 'کمیجان', 'محلات', 'معصومیه', 'مهاجران', 'میلاجرد', 'نوبران']),
+  MapEntry('هرمزگان', ['احمدی', 'بستک', 'بشاگرد', 'بمانی', 'بندرعباس', 'بندرلنگه', 'بند زرک', 'بوموسی', 'بیکاه', 'پارسیان', 'تخت', 'تنب بزرگ', 'تنب کوچک', 'توکهور', 'جاسک', 'جغین', 'جناح', 'حاجی آباد', 'خمیر', 'درگهان', 'رودان', 'رودخانه', 'رویدر', 'سندرک', 'سیری', 'سیریک', 'شمیل', 'شیبکوه', 'شیدوار', 'فارغان', 'فارور', 'فرور', 'فین', 'قشم', 'قلعه قاضی', 'کوخرد هرنگ', 'کوشکنار', 'کیش', 'گافر و پارمون', 'گوهران', 'لارک', 'لاوان', 'لیردف', 'مهران', 'میناب', 'هرمز', 'هندورابی', 'هنگام']),
+  MapEntry('همدان', ['اسدآباد', 'بهار', 'پیرسلیمان', 'پیشخور', 'تویسرکان', 'جوکار', 'خزل', 'درگزین', 'رزن', 'زرین دشت', 'زند', 'سامن', 'سردرود', 'شاهنجرین', 'شراء', 'شیرین سو', 'صالح آباد', 'فامنین', 'قلقل رود', 'کبودرآهنگ', 'گل تپه', 'گیان', 'لالجین', 'ملایر', 'نهاوند', 'همدان']),
+  MapEntry('یزد', ['ابرکوه', 'اردکان', 'اسفیچ', 'اشکذر', 'ایثار', 'بافق', 'بفروئیه', 'بهاباد', 'بهمن', 'تفت', 'چاهک', 'حمیدیا', 'خاتم', 'خرانق', 'خضر آباد', 'زارچ', 'عقدا', 'گاریزات', 'مروست', 'مهریز', 'میبد', 'ندوشن', 'نیر', 'یزد']),
 ];
 
 
@@ -178,7 +178,10 @@ class _ThemeToggle extends StatelessWidget {
     builder: (context, mode, _) => IconButton.filledTonal(
       tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
       icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-      onPressed: () => BuildingApp.toggleTheme(context),
+      onPressed: () {
+        final dark = BuildingApp.isEffectiveDark(context, mode);
+        BuildingApp.themeMode.value = dark ? ThemeMode.light : ThemeMode.dark;
+      },
     ),
   );
 }
@@ -1551,39 +1554,43 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final body = switch (selectedTab) {
-      0 => _currentRole == 'خدماتی'
-          ? _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true)
-          : _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
-      1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding),
-      2 => _currentRole == 'خدماتی'
-          ? _ServiceHome(name: widget.name, specialties: _serviceSpecialties)
-          : _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
-          building: _joinedBuilding,
-          name: widget.name,
-          myFloor: _myFloor,
-          myUnit: _myUnit,
-          ownership: widget.ownership,
-          onJoined: (building, floor, unit) => setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; }),
-        ),
-      3 => _FeatureHub(index: 3, isManager: _isManager, building: _joinedBuilding),
-      4 => _SettingsPage(
-          onEditAccount: widget.onSwitch ?? () {},
-          onLogout: _logout,
-          onRoleChange: _showRoleDialog,
-          onSubscription: () => Navigator.of(context).push(MaterialPageRoute<void>(
-            builder: (_) => _FeaturePage(
-              item: const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'),
-              building: _joinedBuilding,
+    final isServiceRole = _currentRole == 'خدماتی';
+    final body = isServiceRole
+        ? switch (selectedTab) {
+            0 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true),
+            1 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties),
+            2 => _FeatureHub(index: 3, isManager: false, building: _joinedBuilding),
+            3 => _SettingsPage(
+              onEditAccount: widget.onSwitch ?? () {}, onLogout: _logout,
+              onRoleChange: _showRoleDialog,
+              onSubscription: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(
+                item: const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'), building: _joinedBuilding))),
+              phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
+              role: _currentRole, specialties: _serviceSpecialties,
+              onSpecialtiesChanged: _saveServiceSpecialties,
             ),
-          )),
-          phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
-          role: _currentRole,
-          specialties: _serviceSpecialties,
-          onSpecialtiesChanged: _saveServiceSpecialties,
-        ),
-      _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
-    };
+            _ => _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true),
+          }
+        : switch (selectedTab) {
+            0 => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
+            1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding),
+            2 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
+              building: _joinedBuilding, name: widget.name, myFloor: _myFloor, myUnit: _myUnit,
+              ownership: widget.ownership,
+              onJoined: (building, floor, unit) => setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; }),
+            ),
+            3 => _FeatureHub(index: 3, isManager: _isManager, building: _joinedBuilding),
+            4 => _SettingsPage(
+              onEditAccount: widget.onSwitch ?? () {}, onLogout: _logout,
+              onRoleChange: _showRoleDialog,
+              onSubscription: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(
+                item: const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'), building: _joinedBuilding))),
+              phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
+              role: _currentRole, specialties: _serviceSpecialties,
+              onSpecialtiesChanged: _saveServiceSpecialties,
+            ),
+            _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
+          };
     return Scaffold(
       appBar: AppBar(
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1604,13 +1611,20 @@ class _DashboardPageState extends State<DashboardPage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() => selectedTab = index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
-          NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
-          NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
-        ],
+        destinations: isServiceRole
+            ? const [
+                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
+                NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
+                NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
+              ]
+            : const [
+                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
+                NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
+                NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
+                NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
+              ],
       ),
     );
   }
@@ -3258,45 +3272,59 @@ class _ServiceHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    if (showRequestsOnly) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+        children: [
+          Text('درخواست‌های دریافتی', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text('درخواست‌های مدیران و ساکنان ساختمان‌ها', style: TextStyle(color: colors.onSurfaceVariant)),
+          const SizedBox(height: 12),
+          ..._requests.map((request) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [const Icon(Icons.apartment_rounded, color: Colors.teal), const SizedBox(width: 8), Expanded(child: Text(request['block']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text(request['specialty']!), visualDensity: VisualDensity.compact)]),
+                const Divider(height: 18),
+                _requestLine(Icons.location_on_outlined, 'آدرس', request['address']!),
+                _requestLine(Icons.person_outline, 'درخواست‌دهنده', request['requester']!),
+                _requestLine(Icons.phone_outlined, 'شماره تماس', request['phone']!),
+                _requestLine(Icons.handyman_outlined, 'تخصص درخواست‌شده', request['specialty']!),
+                _requestLine(Icons.notes_rounded, 'شرح درخواست', request['description']!),
+                const SizedBox(height: 8),
+                Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: () {}, icon: const Icon(Icons.mark_chat_read_outlined), label: const Text('مشاهدهٔ درخواست'))),
+              ]),
+            ),
+          )),
+        ],
+      );
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       children: [
-        if (!showRequestsOnly) ...[
-          Text('خانهٔ نیروی خدماتی', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text('سلام $name، تخصص‌های ثبت‌شدهٔ شما:', style: TextStyle(color: colors.onSurfaceVariant)),
-          const SizedBox(height: 12),
-          Card(color: colors.primaryContainer, child: Padding(
+        Text('خانهٔ نیروی خدماتی', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text('سلام $name، تخصص‌های ثبت‌شدهٔ شما:', style: TextStyle(color: colors.onSurfaceVariant)),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
             padding: const EdgeInsets.all(16),
             child: specialties.isEmpty
                 ? const Row(children: [Icon(Icons.info_outline), SizedBox(width: 10), Expanded(child: Text('هنوز تخصصی انتخاب نشده است؛ آن‌ها را از بخش تنظیمات اضافه کنید.'))])
-                : Wrap(spacing: 8, runSpacing: 8, children: specialties.map((item) => Chip(avatar: const Icon(Icons.check_circle_outline, size: 18), label: Text(item))).toList()),
-          )),
-        ],
-        Row(children: [
-          Expanded(child: Text(showRequestsOnly ? 'درخواست‌های دریافتی' : 'درخواست‌های تازه', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-          const Icon(Icons.notifications_active_outlined, color: Colors.green),
-        ]),
-        const SizedBox(height: 8),
-        Text('درخواست‌های نمونه از مدیران و ساکنان ساختمان‌ها', style: TextStyle(color: colors.onSurfaceVariant)),
-        const SizedBox(height: 12),
-        ..._requests.map((request) => Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(15),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [const Icon(Icons.apartment_rounded, color: Colors.teal), const SizedBox(width: 8), Expanded(child: Text(request['block']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text(request['specialty']!), visualDensity: VisualDensity.compact)]),
-              const Divider(height: 18),
-              _requestLine(Icons.location_on_outlined, 'آدرس', request['address']!),
-              _requestLine(Icons.person_outline, 'درخواست‌دهنده', request['requester']!),
-              _requestLine(Icons.phone_outlined, 'شماره تماس', request['phone']!),
-              _requestLine(Icons.handyman_outlined, 'تخصص درخواست‌شده', request['specialty']!),
-              _requestLine(Icons.notes_rounded, 'شرح درخواست', request['description']!),
-              const SizedBox(height: 8),
-              Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: () {}, icon: const Icon(Icons.mark_chat_read_outlined), label: const Text('مشاهدهٔ درخواست'))),
-            ]),
+                : Column(
+                    children: [
+                      for (var i = 0; i < specialties.length; i++)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(child: Text('${i + 1}')),
+                          title: Text(specialties[i], style: const TextStyle(fontWeight: FontWeight.w600)),
+                          trailing: const Icon(Icons.check_circle_outline, color: Colors.teal),
+                        ),
+                    ],
+                  ),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -3319,57 +3347,57 @@ class _FeatureItem {
 
 class _SettingsPage extends StatefulWidget {
   const _SettingsPage({
-    required this.onLogout,
-    required this.onEditAccount,
-    required this.onRoleChange,
-    required this.onSubscription,
-    required this.phoneNumber,
-    required this.role,
-    required this.specialties,
-    required this.onSpecialtiesChanged,
+    required this.onLogout, required this.onEditAccount, required this.onRoleChange,
+    required this.onSubscription, required this.phoneNumber, required this.role,
+    required this.specialties, required this.onSpecialtiesChanged,
   });
-  final VoidCallback onLogout;
-  final VoidCallback onEditAccount;
-  final VoidCallback onRoleChange;
-  final VoidCallback onSubscription;
-  final String phoneNumber;
-  final String role;
+  final VoidCallback onLogout, onEditAccount, onRoleChange, onSubscription;
+  final String phoneNumber, role;
   final List<String> specialties;
   final ValueChanged<List<String>> onSpecialtiesChanged;
-
   @override
   State<_SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<_SettingsPage> {
-  static const List<String> _availableSpecialties = <String>[
-    'لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور',
-  ];
-  late List<String> _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = List<String>.of(widget.specialties);
+  void _showSuccess() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: const Row(children: [Icon(Icons.check_circle_rounded, color: Colors.white), SizedBox(width: 10), Expanded(child: Text('تخصص‌های شما با موفقیت ثبت شد'))]),
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      duration: const Duration(seconds: 3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.all(16),
+    ));
   }
 
-  @override
-  void didUpdateWidget(covariant _SettingsPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.specialties != widget.specialties) {
-      _selected = List<String>.of(widget.specialties);
-    }
+  Future<void> _openSpecialties() async {
+    final result = await Navigator.of(context).push<List<String>>(MaterialPageRoute<List<String>>(
+      builder: (_) => _SpecialtySelectionPage(initial: widget.specialties),
+    ));
+    if (!mounted || result == null) return;
+    widget.onSpecialtiesChanged(result);
+    if (mounted) _showSuccess();
   }
 
-  void _toggleSpecialty(String value, bool checked) {
-    setState(() {
-      if (checked) {
-        if (!_selected.contains(value)) _selected.add(value);
-      } else {
-        _selected.remove(value);
-      }
-    });
-    widget.onSpecialtiesChanged(List<String>.of(_selected));
+  void _showSupport() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: const [
+          Text('ارتباط با پشتیبانی', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          SizedBox(height: 14),
+          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.phone_in_talk_outlined), title: Text('تلفن پشتیبانی'), subtitle: Text('۰۲۱-۹۱۰۰۱۲۳۴')),
+          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.email_outlined), title: Text('ایمیل'), subtitle: Text('support@buildingapp.ir')),
+          Text('پاسخ‌گویی در روزهای کاری', style: TextStyle(color: Colors.grey)),
+        ]),
+      )),
+    );
   }
 
   @override
@@ -3379,23 +3407,13 @@ class _SettingsPageState extends State<_SettingsPage> {
       Text('تنظیمات', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
       const SizedBox(height: 12),
       if (widget.role == 'خدماتی') ...[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [Icon(Icons.handyman_outlined), SizedBox(width: 10), Text('تخصص‌های من', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17))]),
-              const SizedBox(height: 4),
-              Text('تخصص‌های قابل ارائه را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              ..._availableSpecialties.map((specialty) => CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(specialty),
-                value: _selected.contains(specialty),
-                onChanged: (value) => _toggleSpecialty(specialty, value ?? false),
-              )),
-            ]),
-          ),
-        ),
+        Card(child: ListTile(
+          leading: const Icon(Icons.handyman_outlined),
+          title: const Text('تخصص‌های من', style: TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(widget.specialties.isEmpty ? 'برای انتخاب تخصص‌ها لمس کنید' : '${widget.specialties.length} تخصص انتخاب شده'),
+          trailing: const Icon(Icons.chevron_left_rounded),
+          onTap: _openSpecialties,
+        )),
         const SizedBox(height: 10),
       ],
       Card(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -3404,9 +3422,42 @@ class _SettingsPageState extends State<_SettingsPage> {
         ListTile(leading: const Icon(Icons.workspace_premium_outlined), title: const Text('خرید اشتراک برنامه'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onSubscription),
         ListTile(leading: const Icon(Icons.swap_horiz_rounded), title: const Text('تغییر نقش'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onRoleChange),
         ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('تغییر تم روشن/تاریک'), trailing: _ThemeToggle()),
+        ListTile(leading: const Icon(Icons.support_agent_outlined), title: const Text('ارتباط با پشتیبانی'), trailing: const Icon(Icons.chevron_left_rounded), onTap: _showSupport),
         ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
       ])),
     ],
+  );
+}
+
+class _SpecialtySelectionPage extends StatefulWidget {
+  const _SpecialtySelectionPage({required this.initial});
+  final List<String> initial;
+  @override
+  State<_SpecialtySelectionPage> createState() => _SpecialtySelectionPageState();
+}
+
+class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
+  static const List<String> _available = ['لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور'];
+  late final Set<String> _selected = Set<String>.of(widget.initial);
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('تخصص‌های من')),
+    body: SafeArea(child: Column(children: [
+      Expanded(child: ListView(padding: const EdgeInsets.all(16), children: [
+        Text('تخصص‌هایی را که ارائه می‌دهید انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 12),
+        Card(child: Column(children: [for (final specialty in _available) CheckboxListTile(
+          controlAffinity: ListTileControlAffinity.leading,
+          title: Text(specialty), value: _selected.contains(specialty),
+          onChanged: (checked) => setState(() { if (checked == true) { _selected.add(specialty); } else { _selected.remove(specialty); } }),
+        )])),
+      ])),
+      SizedBox(width: double.infinity, child: Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), child: FilledButton.icon(
+        onPressed: () => Navigator.of(context).pop(_available.where(_selected.contains).toList()),
+        icon: const Icon(Icons.check_rounded), label: const Text('ثبت تخصص‌ها'),
+      ))),
+    ])),
   );
 }
 
