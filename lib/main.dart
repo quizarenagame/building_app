@@ -129,7 +129,7 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('اردبیل', ['ارشق', 'اسلام آباد', 'اصلاندوز', 'انگوت', 'بران', 'بیله سوار', 'پارس آباد', 'ثمرین', 'خلخال', 'خورش رستم', 'دره رود', 'سبلان', 'سرعین', 'شاهرود', 'عنبران', 'فیروز', 'قشلاق دشت', 'قصابه', 'کوثر', 'کوراییم', 'گرمی', 'مرادلو', 'مشگین شهر', 'موران', 'نمین', 'نیر', 'هیر', 'ویلکیج']),
   MapEntry('اصفهان', ['اصفهان', 'آران و بیدگل', 'ابریشم', 'اردستان', 'اژیه', 'انارک', 'بادرود', 'باغ بهادران', 'برخوار', 'برزک', 'بوئین و میاندشت', 'پادنا', 'پادنا علیا', 'پیربکران', 'تیران', 'جرقویه', 'چادگان', 'چنارود', 'حبیب آباد', 'خمینی شهر', 'خوانسار', 'خور', 'داران', 'دهاقان', 'علویجه', 'رامشه', 'رودشت', 'زنده رود', 'زواره', 'زیبا شهر', 'سمیرم', 'سیستان', 'شاهین شهر', 'شهرضا', 'عسگران', 'فریدونهشر', 'فلاورجان', 'فولادشهر', 'قمصر', 'قهدریجان', 'کاشان', 'کرچمبو', 'موهپایه', 'کویرات', 'گلپایگان', 'لنجان', 'مبارکه', 'مهاباد', 'موگوئی', 'میمه', 'نائین', 'نجف آباد', 'نطنز', 'نیاسر', 'هرند', 'وردشت', 'ورزنه']),
   MapEntry('البرز', ['کرج', 'آسارا', 'اشتهارد', 'پلنگ آباد', 'تنکمان', 'چهارباغ', 'رامجین', 'طالقان', 'فردیس', 'کوهسار', 'گرمدره', 'ماهدشت', 'محمدشهر', 'مشکین دشت', 'نظرآباد', 'هشتگرد']),
-  MapEntry('ایلام', ['ایلام', 'دهلران', 'ایوان', 'آبدانان', 'مهران']),
+  MapEntry('ایلام', ['آبدانان', 'ایلام', 'ایوان', 'بدره', 'بولی', 'جزمان', 'چرداول', 'چوار', 'دره شهر', 'دشت عباس', 'دهلران', 'زاگرس', 'زرنه', 'زرین آباد', 'سراب باغ', 'سراب میمه', 'سیروان', 'سیوان', 'شباب', 'صالح آباد', 'کارزان', 'کلات', 'گچی', 'ماژین', 'ملکشاهی', 'مهران', 'موسیان', 'هلیلان', 'هندمینی']),
   MapEntry('بوشهر', ['بوشهر', 'برازجان', 'گناوه', 'کنگان', 'عسلویه', 'خورموج']),
   MapEntry('تهران', ['تهران', 'ری', 'شمیرانات', 'اسلام‌شهر', 'شهریار', 'ورامین', 'پاکدشت']),
   MapEntry('چهارمحال و بختیاری', ['شهرکرد', 'بروجن', 'فارسان', 'لردگان', 'فرخ‌شهر']),
@@ -969,11 +969,9 @@ Future<void> _syncMemberRecord(_Building building, int floor, int unit, _Member 
   }
   if (targetUserId.isEmpty) return; // Can't create a valid PocketBase user relation.
   final unitKey = building.unitId(floor, unit);
-  // PocketBase's `type` select accepts only the migration values owner/tenant.
-  final memberType = member.ownership.trim() == 'مستأجر' ? 'tenant' : 'owner';
   final requiredBody = <String, dynamic>{
     'status': 'active', 'user': targetUserId, 'unit': unitKey,
-    'type': memberType, 'is_resident': member.role != 'مدیر',
+    'type': member.role, 'is_resident': member.role != 'مدیر',
   };
   final extendedBody = <String, dynamic>{
     ...requiredBody,
@@ -987,23 +985,20 @@ Future<void> _syncMemberRecord(_Building building, int floor, int unit, _Member 
       filter: 'user = "$targetUserId" && unit = "$unitKey"',
     );
     if (matches.items.isNotEmpty) {
-      final existingId = matches.items.first.id;
       try {
-        await pb.collection('members').update(existingId, body: extendedBody);
+        await pb.collection('members').update(matches.items.first.id, body: extendedBody);
       } catch (_) {
-        // Retry only the same record with the schema-compatible core payload.
-        try { await pb.collection('members').update(existingId, body: requiredBody); } catch (_) {}
+        await pb.collection('members').update(matches.items.first.id, body: requiredBody);
       }
-      return;
-    }
-    try {
-      await pb.collection('members').create(body: extendedBody);
-    } catch (_) {
-      // Older schemas can lack optional fields; retain the core payload.
-      try { await pb.collection('members').create(body: requiredBody); } catch (_) {}
+    } else {
+      try {
+        await pb.collection('members').create(body: extendedBody);
+      } catch (_) {
+        await pb.collection('members').create(body: requiredBody);
+      }
     }
   } catch (_) {
-    // Best-effort sync must never interrupt the local membership/UI flow.
+    try { await pb.collection('members').create(body: requiredBody); } catch (_) {}
   }
 }
 
@@ -1260,26 +1255,6 @@ class _DashboardPageState extends State<DashboardPage> {
     if (_isManager && pb.authStore.isValid) {
       _loadManagerBuildings();
     } else if (!_isManager) {
-      _restoreResidentMembership();
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant DashboardPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final roleChanged = oldWidget.role != widget.role;
-    if (roleChanged && _roleOverride != null && _roleOverride != widget.role) {
-      _roleOverride = null;
-    }
-    final parentUpdated = roleChanged ||
-        oldWidget.name != widget.name ||
-        oldWidget.buildingName != widget.buildingName ||
-        oldWidget.ownership != widget.ownership ||
-        oldWidget.showMyBuildings != widget.showMyBuildings;
-    if (!parentUpdated) return;
-    if (_isManager) {
-      if (pb.authStore.isValid) _loadManagerBuildings();
-    } else {
       _restoreResidentMembership();
     }
   }
@@ -1592,26 +1567,18 @@ class _ManagerHomeState extends State<_ManagerHome> {
     final unitsPerFloor = int.parse(_latinDigits(_unitsController.text.trim()));
     final isNew = !AppSharedState.instance.buildings.values.any((item) => item.name.trim().toLowerCase() == name.toLowerCase() && item.address.trim().toLowerCase() == address.toLowerCase());
     final b = AppSharedState.instance.buildingByName(name, address: address);
-    final creatorId = pb.authStore.record?.id;
-    if (isNew || b.createdBy == null) b.createdBy = creatorId ?? widget.managerName;
+    if (isNew || b.createdBy == null) b.createdBy = pb.authStore.record?.id ?? widget.managerName;
     b.address = address;
     if (isNew && b.recordId == null) {
       final code = await _generateUniqueBuildingCode();
-      final numericCode = int.parse(_latinDigits(code));
       b.buildingCode = code;
       try {
-        // Address is required by the current schema; never send a null relation ID.
-        final body = <String, dynamic>{
-          'name': name,
-          'address': address,
-          if (creatorId != null && creatorId.isNotEmpty) 'created_by': creatorId,
-          'building_code': numericCode,
-        };
+        final body = <String, dynamic>{'name': name, 'address': address, 'created_by': pb.authStore.record?.id, 'building_code': code};
         try {
           final record = await pb.collection('buildings').create(body: body);
           b.recordId = record.id;
-          final savedCode = int.tryParse((record.data['building_code'] ?? '').toString());
-          if (savedCode != null) b.buildingCode = savedCode.toString();
+          final savedCode = (record.data['building_code'] ?? '').toString().trim();
+          if (savedCode.isNotEmpty) b.buildingCode = savedCode;
         } on ClientException catch (e) {
           // Older schemas may not yet contain building_code. Retry only when the
           // server explicitly reports that field as invalid/missing.
@@ -1650,10 +1617,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
     final known = AppSharedState.instance.buildings.values.map((b) => b.buildingCode).where((c) => c.isNotEmpty).toSet();
     try {
       final records = await pb.collection('buildings').getFullList(fields: 'building_code', batch: 200);
-      for (final record in records) {
-        final code = int.tryParse((record.data['building_code'] ?? '').toString());
-        if (code != null) known.add(code.toString());
-      }
+      for (final record in records) { final code = (record.data['building_code'] ?? '').toString(); if (code.isNotEmpty) known.add(code); }
     } catch (_) { /* Offline/server schema without the code field: local uniqueness still applies. */ }
     for (var attempt = 0; attempt < 1000; attempt++) {
       final candidate = (100000 + random.nextInt(900000)).toString();
@@ -1733,55 +1697,52 @@ class _ManagerHomeState extends State<_ManagerHome> {
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.8)),
   );
 
-  Widget _myBuildingsList(BuildContext context) {
+  Widget _myBuildingsSection(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final buildings = AppSharedState.instance.buildings.values
         .where((b) => b.createdBy == (pb.authStore.record?.id ?? widget.managerName) ||
             b.createdBy == widget.managerName || b.occupants.values.any((m) => m.name == widget.managerName))
         .toList();
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Text('ساختمان تحت مدیریت من', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        ),
-        if (buildings.isEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text('ساختمانی تحت مدیریت شما ثبت نشده است.', textAlign: TextAlign.center,
-                  style: TextStyle(color: colors.onSurfaceVariant)),
-            ),
-          )
-        else
-          ...buildings.map((b) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Card(
-              child: InkWell(
-                onTap: () => _openBuildingDetail(b),
-                borderRadius: BorderRadius.circular(22),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(children: [
-                    Container(width: 46, height: 46,
-                      decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(14)),
-                      child: Icon(Icons.apartment_rounded, color: colors.primary)),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                    Icon(Icons.chevron_left_rounded, color: colors.onSurfaceVariant),
-                  ]),
-                ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Padding(
+        padding: EdgeInsets.only(bottom: 8, top: 8),
+        child: Text('ساختمان‌های تحت مدیریت و ایجادشده', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+      ),
+      if (buildings.isEmpty)
+        Card(child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Text('ساختمانی تحت مدیریت شما ثبت نشده است.', textAlign: TextAlign.center,
+              style: TextStyle(color: colors.onSurfaceVariant)),
+        ))
+      else
+        ...buildings.map((b) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Card(
+            child: InkWell(
+              onTap: () => _openBuildingDetail(b),
+              borderRadius: BorderRadius.circular(22),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  Container(width: 46, height: 46,
+                    decoration: BoxDecoration(color: colors.primaryContainer, borderRadius: BorderRadius.circular(14)),
+                    child: Icon(Icons.apartment_rounded, color: colors.primary)),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    if (b.address.isNotEmpty) Text(b.address, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
+                  ])),
+                  Icon(Icons.chevron_left_rounded, color: colors.onSurfaceVariant),
+                ]),
               ),
             ),
-          )),
-      ],
-    );
+          ),
+        )),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.showMyBuildings) return _myBuildingsList(context);
     final b = _building;
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1859,8 +1820,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        const SizedBox(height: 16),
+        _myBuildingsSection(context),
+        const SizedBox(height: 8),
         if (b == null)
           Card(
             child: Padding(
@@ -1896,12 +1857,6 @@ class _ManagerHomeState extends State<_ManagerHome> {
           const SizedBox(height: 12),
           _BuildingLayout(building: b, highlightMemberName: widget.managerName),
         ],
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
-          child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ داده‌ها فقط در حافظهٔ همین اجرای برنامه نگه داشته می‌شوند و نمایش اعضای سایر دستگاه‌ها نیازمند اتصال به سرور است.', style: TextStyle(fontSize: 12, height: 1.7)),
-        ),
       ],
     );
   }
@@ -2070,12 +2025,6 @@ class _ResidentHomeState extends State<_ResidentHome> {
         _ResidentChargeCard(building: b, unitId: b.unitId(widget.myFloor!, widget.myUnit!), onChanged: () { if (mounted) setState(() {}); }),
         const SizedBox(height: 12),
         _ResidentPollsCard(building: b, unitId: b.unitId(widget.myFloor!, widget.myUnit!), onChanged: () { if (mounted) setState(() {}); }),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
-          child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ نمایش اعضای سایر دستگاه‌ها فقط در حافظهٔ همین اجرای برنامه است و برای همگام‌سازی واقعی نیازمند سرور می‌باشد.', style: TextStyle(fontSize: 12, height: 1.7)),
-        ),
       ]);
     }
 
@@ -2131,6 +2080,28 @@ class _ResidentHomeState extends State<_ResidentHome> {
           ),
         ),
       ),
+      const SizedBox(height: 8),
+      Builder(builder: (context) {
+        final joined = AppSharedState.instance.buildings.values.where((building) =>
+          building.occupants.values.any((member) => member.name == widget.name && member.role != 'مدیر')
+        ).toList();
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('ساختمان‌های عضو‌شده', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+          if (joined.isEmpty)
+            Card(child: Padding(padding: const EdgeInsets.all(14), child: Text('هنوز عضو ساختمانی نشده‌اید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))))
+          else
+            ...joined.map((building) => Card(
+              margin: const EdgeInsets.only(bottom: 6),
+              child: ListTile(
+                leading: const Icon(Icons.apartment_rounded),
+                title: Text(building.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(building.address.isEmpty ? 'آدرس ثبت نشده' : building.address),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: () => _selectBuilding(building),
+              ),
+            )),
+        ]);
+      }),
       const SizedBox(height: 16),
       if (found != null) ...[
         Text('ساختمان: ${found.name}\nآدرس: ${found.address.isEmpty ? 'ثبت نشده' : found.address}\nکد: ${found.buildingCode.isEmpty ? 'در دسترس نیست' : found.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -2143,12 +2114,6 @@ class _ResidentHomeState extends State<_ResidentHome> {
         const SizedBox(height: 12),
         _ResidentPollsCard(building: found, unitId: null, onChanged: () { if (mounted) setState(() {}); }),
       ],
-      const SizedBox(height: 24),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
-        child: const Text('توجه: این نسخه یک نمونهٔ محلی است؛ اطلاعات فقط در حافظهٔ همین اجرای برنامه ذخیره می‌شود و برای همگام‌سازی بین کاربران واقعی نیازمند اتصال به سرور است.', style: TextStyle(fontSize: 12, height: 1.7)),
-      ),
     ]);
   }
 }
@@ -3191,9 +3156,9 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _subscriptionContent(BuildContext context) {
     final plans = [
-      ('ماهانه', '۲۹۰٬۰۰۰', 'پرداخت ماه‌به‌ماه', Icons.calendar_month_outlined),
-      ('سه‌ماهه', '۷۵۰٬۰۰۰', 'صرفه‌جویی نسبت به پرداخت ماهانه', Icons.date_range_outlined),
-      ('سالانه', '۲٬۷۰۰٬۰۰۰', 'بهترین ارزش؛ معادل ۲۲۵ هزار تومان در ماه', Icons.workspace_premium_outlined),
+      ('ماهانه', '۶۹۸ هزار', 'پرداخت ماه‌به‌ماه', Icons.calendar_month_outlined),
+      ('سه‌ماهه', '۱ میلیون و ۵۵۰ هزار', 'پرداخت برای سه ماه', Icons.date_range_outlined),
+      ('شش‌ماهه', '۳ میلیون و ۸۹۰ هزار', 'پرداخت برای شش ماه', Icons.workspace_premium_outlined),
     ];
     return Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(18)), child: Row(children: [const Icon(Icons.card_giftcard_rounded, size: 32), const SizedBox(width: 12), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('۳ ماه استفادهٔ رایگان', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), Text('بدون هزینه در دورهٔ آزمایشی؛ هر زمان قابل لغو است.')]))])),
