@@ -128,7 +128,7 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('آذربایجان غربی', ['ارس', 'ارومیه', 'اشنویه', 'انزل', 'ایواوغلی', 'باروق', 'بازرگان', 'بکتاش', 'بوکان', 'پلدشت', 'پیرانشهر', 'تخت سلیمان', 'تکاب', 'چالدران', 'چهاربرج', 'حاجیلار', 'خلیفان', 'خوی', 'دشتک', 'ربط', 'سردشت', 'سلماس', 'سیلوانه', 'سیمینه', 'شاهین دژ', 'شوط', 'صفائیه', 'صومای برادوست', 'فیرورق', 'فیروزآباد', 'قره ضیاءالدین', 'قره قوین', 'قطور', 'کشاورز', 'کوهسار', 'لاجان', 'ماکو', 'محمدیار', 'مهاباد', 'میاندوآب', 'نالوس', 'نختالو', 'نقده', 'نوشین شهر', 'وزینه']),
   MapEntry('اردبیل', ['ارشق', 'اسلام آباد', 'اصلاندوز', 'انگوت', 'بران', 'بیله سوار', 'پارس آباد', 'ثمرین', 'خلخال', 'خورش رستم', 'دره رود', 'سبلان', 'سرعین', 'شاهرود', 'عنبران', 'فیروز', 'قشلاق دشت', 'قصابه', 'کوثر', 'کوراییم', 'گرمی', 'مرادلو', 'مشگین شهر', 'موران', 'نمین', 'نیر', 'هیر', 'ویلکیج']),
   MapEntry('اصفهان', ['اصفهان', 'آران و بیدگل', 'ابریشم', 'اردستان', 'اژیه', 'انارک', 'بادرود', 'باغ بهادران', 'برخوار', 'برزک', 'بوئین و میاندشت', 'پادنا', 'پادنا علیا', 'پیربکران', 'تیران', 'جرقویه', 'چادگان', 'چنارود', 'حبیب آباد', 'خمینی شهر', 'خوانسار', 'خور', 'داران', 'دهاقان', 'علویجه', 'رامشه', 'رودشت', 'زنده رود', 'زواره', 'زیبا شهر', 'سمیرم', 'سیستان', 'شاهین شهر', 'شهرضا', 'عسگران', 'فریدونهشر', 'فلاورجان', 'فولادشهر', 'قمصر', 'قهدریجان', 'کاشان', 'کرچمبو', 'موهپایه', 'کویرات', 'گلپایگان', 'لنجان', 'مبارکه', 'مهاباد', 'موگوئی', 'میمه', 'نائین', 'نجف آباد', 'نطنز', 'نیاسر', 'هرند', 'وردشت', 'ورزنه']),
-  MapEntry('البرز', ['کرج', 'فردیس', 'نظرآباد', 'هشتگرد', 'محمدشهر']),
+  MapEntry('البرز', ['کرج', 'آسارا', 'اشتهارد', 'پلنگ آباد', 'تنکمان', 'چهارباغ', 'رامجین', 'طالقان', 'فردیس', 'کوهسار', 'گرمدره', 'ماهدشت', 'محمدشهر', 'مشکین دشت', 'نظرآباد', 'هشتگرد']),
   MapEntry('ایلام', ['ایلام', 'دهلران', 'ایوان', 'آبدانان', 'مهران']),
   MapEntry('بوشهر', ['بوشهر', 'برازجان', 'گناوه', 'کنگان', 'عسلویه', 'خورموج']),
   MapEntry('تهران', ['تهران', 'ری', 'شمیرانات', 'اسلام‌شهر', 'شهریار', 'ورامین', 'پاکدشت']),
@@ -911,65 +911,6 @@ Future<void> _persistBuilding(_Building b) async {
   } catch (_) {
     try { await pb.collection('buildings').update(id, body: {'floors': structure['floors']}); } catch (_) {}
   }
-  await _syncBuildingMembers(b);
-}
-
-/// همگام‌سازی اعضای فعال هر ساختمان با collection اعضا در PocketBase.
-/// رکوردهای حذف‌شده/جابجا‌شده غیرفعال می‌شوند تا تاریخچه از بین نرود.
-Future<void> _syncBuildingMembers(_Building b) async {
-  final buildingId = b.recordId;
-  if (buildingId == null || buildingId.isEmpty || !pb.authStore.isValid) return;
-  try {
-    final currentUser = pb.authStore.record;
-    final currentUserId = currentUser?.id ?? '';
-    final currentPhone = _latinDigits((currentUser?.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
-    final records = await pb.collection('members').getFullList(batch: 200);
-    final related = records.where((r) => (r.data['building'] ?? r.data['building_id'] ?? '').toString() == buildingId).toList();
-    final seen = <String>{};
-    for (final entry in b.occupants.entries) {
-      final parts = entry.key.split('/');
-      if (parts.length != 2) continue;
-      final floor = int.tryParse(parts[0]);
-      final unit = int.tryParse(parts[1]);
-      if (floor == null || unit == null) continue;
-      final member = entry.value;
-      final phone = _latinDigits(member.phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
-      final memberUserId = phone.isNotEmpty && phone == currentPhone ? currentUserId : '';
-      final body = <String, dynamic>{
-        'building': buildingId,
-        'building_name': b.name,
-        'user': memberUserId,
-        'phone': member.phone,
-        'name': member.name,
-        'role': member.role,
-        'ownership': member.ownership,
-        'floor': floor,
-        'unit': unit,
-        'status': 'active',
-      };
-      final existing = related.where((r) {
-        final recordPhone = _latinDigits((r.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
-        return phone.isNotEmpty ? recordPhone == phone :
-          (r.data['floor']?.toString() == floor.toString() && r.data['unit']?.toString() == unit.toString() && (r.data['user'] ?? '').toString() == memberUserId);
-      }).firstOrNull;
-      if (existing == null) {
-        await pb.collection('members').create(body: body);
-      } else {
-        seen.add(existing.id);
-        await pb.collection('members').update(existing.id, body: body);
-      }
-    }
-    for (final record in related) {
-      if (seen.contains(record.id)) continue;
-      final phone = _latinDigits((record.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
-      final stillPresent = b.occupants.values.any((m) => phone.isNotEmpty && _latinDigits(m.phone.replaceAll(RegExp(r'\s+|-'), '')).trim() == phone);
-      if (!stillPresent && (record.data['status'] ?? '').toString() != 'inactive') {
-        await pb.collection('members').update(record.id, body: {'status': 'inactive'});
-      }
-    }
-  } catch (_) {
-    // Keep the durable local building cache usable if members schema/network is unavailable.
-  }
 }
 
 Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
@@ -989,6 +930,81 @@ Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
     _applyBuildingStructure(b, d['floors_data']);
     return b;
   } catch (_) { return null; }
+}
+
+String _cleanMemberPhone(String phone) => _latinDigits(phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
+
+String _residentMembershipKey(String userId) => 'resident_membership_$userId';
+
+Future<void> _cacheResidentMembership(String userId, _Building building, int floor, int unit) async {
+  if (userId.isEmpty) return;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_residentMembershipKey(userId), jsonEncode({
+      'building_id': building.recordId, 'building_name': building.name,
+      'address': building.address, 'building_code': building.buildingCode,
+      'floor': floor, 'unit': unit,
+    }));
+  } catch (_) {}
+}
+
+/// Best-effort member sync. The compact core payload is retried if a deployment
+/// has not yet added the optional building/floor/unit_number fields.
+Future<void> _syncMemberRecord(_Building building, int floor, int unit, _Member member) async {
+  if (!pb.authStore.isValid) return;
+  final current = pb.authStore.record;
+  final phone = _cleanMemberPhone(member.phone);
+  var targetUserId = '';
+  if (current != null && (phone.isEmpty || _cleanMemberPhone((current.data['phone'] ?? '').toString()) == phone)) {
+    targetUserId = current.id;
+  }
+  if (targetUserId.isEmpty && phone.isNotEmpty) {
+    try {
+      final users = await pb.collection('users').getList(
+        page: 1, perPage: 1,
+        filter: 'phone = "${phone.replaceAll('"', '\\"')}"',
+      );
+      if (users.items.isNotEmpty) targetUserId = users.items.first.id;
+    } catch (_) {}
+  }
+  if (targetUserId.isEmpty) return; // Can't create a valid PocketBase user relation.
+  final unitKey = building.unitId(floor, unit);
+  // PocketBase's `type` select accepts only the migration values owner/tenant.
+  final memberType = member.ownership.trim() == 'مستأجر' ? 'tenant' : 'owner';
+  final requiredBody = <String, dynamic>{
+    'status': 'active', 'user': targetUserId, 'unit': unitKey,
+    'type': memberType, 'is_resident': member.role != 'مدیر',
+  };
+  final extendedBody = <String, dynamic>{
+    ...requiredBody,
+    if ((building.recordId ?? '').isNotEmpty) 'building': building.recordId,
+    'building_name': building.name, 'floor': floor, 'unit_number': unit,
+  };
+  try {
+    // Update an existing record for this user's unit instead of generating duplicates.
+    final matches = await pb.collection('members').getList(
+      page: 1, perPage: 50,
+      filter: 'user = "$targetUserId" && unit = "$unitKey"',
+    );
+    if (matches.items.isNotEmpty) {
+      final existingId = matches.items.first.id;
+      try {
+        await pb.collection('members').update(existingId, body: extendedBody);
+      } catch (_) {
+        // Retry only the same record with the schema-compatible core payload.
+        try { await pb.collection('members').update(existingId, body: requiredBody); } catch (_) {}
+      }
+      return;
+    }
+    try {
+      await pb.collection('members').create(body: extendedBody);
+    } catch (_) {
+      // Older schemas can lack optional fields; retain the core payload.
+      try { await pb.collection('members').create(body: requiredBody); } catch (_) {}
+    }
+  } catch (_) {
+    // Best-effort sync must never interrupt the local membership/UI flow.
+  }
 }
 
 class _Member {
@@ -1227,7 +1243,7 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserver {
+class _DashboardPageState extends State<DashboardPage> {
   int selectedTab = 0;
   _Building? _joinedBuilding;
   int? _myFloor;
@@ -1241,66 +1257,103 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    if (pb.authStore.isValid) {
-      if (_isManager) _loadManagerBuildings();
-      _restoreMembership();
+    if (_isManager && pb.authStore.isValid) {
+      _loadManagerBuildings();
+    } else if (!_isManager) {
+      _restoreResidentMembership();
     }
   }
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && pb.authStore.isValid) {
-      if (_isManager) _loadManagerBuildings();
-      _restoreMembership();
+  void didUpdateWidget(covariant DashboardPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final roleChanged = oldWidget.role != widget.role;
+    if (roleChanged && _roleOverride != null && _roleOverride != widget.role) {
+      _roleOverride = null;
+    }
+    final parentUpdated = roleChanged ||
+        oldWidget.name != widget.name ||
+        oldWidget.buildingName != widget.buildingName ||
+        oldWidget.ownership != widget.ownership ||
+        oldWidget.showMyBuildings != widget.showMyBuildings;
+    if (!parentUpdated) return;
+    if (_isManager) {
+      if (pb.authStore.isValid) _loadManagerBuildings();
+    } else {
+      _restoreResidentMembership();
     }
   }
 
-  Future<void> _restoreMembership() async {
-    final user = pb.authStore.record;
-    if (user == null) return;
-    final userId = user.id;
-    final phone = _latinDigits((user.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
+  Future<void> _restoreResidentMembership() async {
+    final userId = pb.authStore.record?.id ?? '';
+    if (userId.isEmpty) return;
+    Map<String, dynamic>? membership;
     try {
-      // Pull the full member list and match locally to tolerate either phone- or user-linked rows.
-      final records = await pb.collection('members').getFullList(batch: 200);
-      final memberships = records.where((r) {
-        final status = (r.data['status'] ?? 'active').toString().toLowerCase();
-        final rowPhone = _latinDigits((r.data['phone'] ?? '').toString().replaceAll(RegExp(r'\s+|-'), '')).trim();
-        final rowUser = (r.data['user'] ?? r.data['user_id'] ?? '').toString();
-        return status == 'active' && ((rowUser.isNotEmpty && rowUser == userId) || (phone.isNotEmpty && rowPhone == phone));
-      }).toList();
-      if (memberships.isEmpty) return;
-      final membership = memberships.last;
-      final buildingId = (membership.data['building'] ?? membership.data['building_id'] ?? '').toString();
-      if (buildingId.isEmpty) return;
-      final record = await pb.collection('buildings').getOne(buildingId);
-      final name = (record.data['name'] ?? '').toString().trim();
-      if (name.isEmpty) return;
-      final building = AppSharedState.instance.buildingByName(name, address: (record.data['address'] ?? '').toString());
-      _applyBuildingRecord(building, record);
-      if (building.floors.isEmpty) {
-        final cache = await _restoreCachedBuilding(_buildingCacheKey(building));
-        if (cache != null) _applyBuildingStructure(building, _buildingStructure(cache));
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_residentMembershipKey(userId));
+      if (raw != null) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) membership = Map<String, dynamic>.from(decoded);
       }
-      final floor = int.tryParse((membership.data['floor'] ?? '').toString());
-      final unit = int.tryParse((membership.data['unit'] ?? '').toString());
-      if (floor == null || unit == null) return;
-      final existing = building.occupantOf(floor, unit);
-      if (existing == null && phone.isNotEmpty) {
-        building.assign(floor, unit, _Member(widget.name, _currentRole, widget.ownership, phone: phone));
-      }
-      if (mounted) setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; });
-      await _persistBuilding(building);
-    } catch (_) {
-      // Offline resume: the local cache already restores the manager's buildings.
+    } catch (_) {}
+
+    // Query the durable member record and let the server copy supersede local cache.
+    if (pb.authStore.isValid) {
+      try {
+        final records = await pb.collection('members').getFullList(
+          filter: 'user = "$userId" && status = "active"', sort: '-created', batch: 200,
+        );
+        if (records.isNotEmpty) {
+          final data = records.first.data;
+          final unitRaw = (data['unit'] ?? '').toString();
+          final parts = unitRaw.split('/');
+          final floor = int.tryParse((data['floor'] ?? (parts.length == 2 ? parts[0] : '')).toString());
+          final unit = int.tryParse((data['unit_number'] ?? (parts.length == 2 ? parts[1] : '')).toString());
+          if (floor != null && unit != null) {
+            membership = {
+              'building_id': data['building'] ?? data['building_id'],
+              'building_name': data['building_name'], 'address': data['address'],
+              'building_code': data['building_code'], 'floor': floor, 'unit': unit,
+            };
+          }
+        }
+      } catch (_) {}
     }
+    if (membership == null) return;
+    final floor = int.tryParse((membership!['floor'] ?? '').toString());
+    final unit = int.tryParse((membership['unit'] ?? '').toString());
+    if (floor == null || unit == null) return;
+    _Building? building;
+    final buildingId = (membership['building_id'] ?? '').toString();
+    final buildingName = (membership['building_name'] ?? '').toString().trim();
+    if (buildingId.isNotEmpty) {
+      for (final candidate in AppSharedState.instance.buildings.values) {
+        if (candidate.recordId == buildingId) { building = candidate; break; }
+      }
+    }
+    if (building == null && buildingName.isNotEmpty) {
+      building = AppSharedState.instance.buildingByName(buildingName, address: (membership['address'] ?? '').toString());
+      if (building.recordId == null && buildingId.isNotEmpty) building.recordId = buildingId;
+      building.buildingCode = (membership['building_code'] ?? building.buildingCode).toString();
+    }
+    // Fetch authoritative building structure if it isn't already known locally.
+    if (building != null && building.floors.isEmpty && building.recordId != null && pb.authStore.isValid) {
+      try {
+        final record = await pb.collection('buildings').getOne(building.recordId!);
+        _applyBuildingRecord(building, record);
+      } catch (_) {}
+    }
+    if (building != null && building.floors.isEmpty) {
+      final cached = await _restoreCachedBuilding(_buildingCacheKey(building));
+      if (cached != null) _applyBuildingStructure(building, _buildingStructure(cached));
+    }
+    if (building == null || !building.floors.containsKey(floor) || !(building.floorUnits[floor] ?? []).contains(unit)) return;
+    final member = _Member(widget.name, 'ساکن', widget.ownership,
+      phone: (pb.authStore.record?.data['phone'] ?? '').toString());
+    final key = building.unitId(floor, unit);
+    if (!building.occupants.containsKey(key)) building.assign(floor, unit, member);
+    if (mounted) setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; });
+    await _cacheResidentMembership(userId, building, floor, unit);
   }
 
   Future<void> _loadManagerBuildings() async {
@@ -1332,9 +1385,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
         await _persistBuilding(building);
         loaded.add(building);
       }
-      final allOwned = AppSharedState.instance.buildings.values.where((b) => b.createdBy == userId).toList();
-      if (mounted && _joinedBuilding == null && (loaded.isNotEmpty || allOwned.isNotEmpty)) {
-        setState(() => _joinedBuilding = loaded.isNotEmpty ? loaded.first : allOwned.first);
+      if (mounted && loaded.isNotEmpty && _joinedBuilding == null) {
+        setState(() => _joinedBuilding = loaded.first);
       }
     } catch (_) {
       // The locally cached buildings above are still available offline.
@@ -1540,18 +1592,26 @@ class _ManagerHomeState extends State<_ManagerHome> {
     final unitsPerFloor = int.parse(_latinDigits(_unitsController.text.trim()));
     final isNew = !AppSharedState.instance.buildings.values.any((item) => item.name.trim().toLowerCase() == name.toLowerCase() && item.address.trim().toLowerCase() == address.toLowerCase());
     final b = AppSharedState.instance.buildingByName(name, address: address);
-    if (isNew || b.createdBy == null) b.createdBy = pb.authStore.record?.id ?? widget.managerName;
+    final creatorId = pb.authStore.record?.id;
+    if (isNew || b.createdBy == null) b.createdBy = creatorId ?? widget.managerName;
     b.address = address;
     if (isNew && b.recordId == null) {
       final code = await _generateUniqueBuildingCode();
+      final numericCode = int.parse(_latinDigits(code));
       b.buildingCode = code;
       try {
-        final body = <String, dynamic>{'name': name, 'address': address, 'created_by': pb.authStore.record?.id, 'building_code': code};
+        // Address is required by the current schema; never send a null relation ID.
+        final body = <String, dynamic>{
+          'name': name,
+          'address': address,
+          if (creatorId != null && creatorId.isNotEmpty) 'created_by': creatorId,
+          'building_code': numericCode,
+        };
         try {
           final record = await pb.collection('buildings').create(body: body);
           b.recordId = record.id;
-          final savedCode = (record.data['building_code'] ?? '').toString().trim();
-          if (savedCode.isNotEmpty) b.buildingCode = savedCode;
+          final savedCode = int.tryParse((record.data['building_code'] ?? '').toString());
+          if (savedCode != null) b.buildingCode = savedCode.toString();
         } on ClientException catch (e) {
           // Older schemas may not yet contain building_code. Retry only when the
           // server explicitly reports that field as invalid/missing.
@@ -1590,7 +1650,10 @@ class _ManagerHomeState extends State<_ManagerHome> {
     final known = AppSharedState.instance.buildings.values.map((b) => b.buildingCode).where((c) => c.isNotEmpty).toSet();
     try {
       final records = await pb.collection('buildings').getFullList(fields: 'building_code', batch: 200);
-      for (final record in records) { final code = (record.data['building_code'] ?? '').toString(); if (code.isNotEmpty) known.add(code); }
+      for (final record in records) {
+        final code = int.tryParse((record.data['building_code'] ?? '').toString());
+        if (code != null) known.add(code.toString());
+      }
     } catch (_) { /* Offline/server schema without the code field: local uniqueness still applies. */ }
     for (var attempt = 0; attempt < 1000; attempt++) {
       final candidate = (100000 + random.nextInt(900000)).toString();
@@ -1934,14 +1997,18 @@ class _ResidentHomeState extends State<_ResidentHome> {
       _toast('واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} قبلاً به ${b.occupantOf(floor, unit)!.name} اختصاص یافته است.', error: true);
       return;
     }
-    final phone = (pb.authStore.record?.data['phone'] ?? '').toString();
-    final err = b.assign(floor, unit, _Member(widget.name, 'ساکن', widget.ownership, phone: phone));
+    final member = _Member(widget.name, 'ساکن', widget.ownership,
+      phone: (pb.authStore.record?.data['phone'] ?? '').toString());
+    final err = b.assign(floor, unit, member);
     if (err != null) {
       _toast(err, error: true);
       return;
     }
     widget.onJoined(b, floor, unit);
+    final userId = pb.authStore.record?.id ?? '';
+    if (userId.isNotEmpty) unawaited(_cacheResidentMembership(userId, b, floor, unit));
     unawaited(_persistBuilding(b));
+    unawaited(_syncMemberRecord(b, floor, unit, member));
     _toast('خوش آمدید! شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} «${b.name}» قرار گرفتید.');
   }
 
@@ -2528,11 +2595,26 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         _toast('این واحد در اختیار ${member.name} است؛ برای تغییر جایگاه او از «تغییر واحد» یا «ویرایش عضو» استفاده کنید.', error: true);
         return;
       }
-      setState(() {
-        b.occupants.removeWhere((_, occupant) => occupant.name == widget.managerName && occupant.role == 'مدیر');
-        b.occupants[key] = _Member(widget.managerName, 'مدیر', 'مدیر', phone: managerPhone);
-      });
+      final managerMember = _Member(widget.managerName, 'مدیر', 'مدیر', phone: managerPhone);
+      final previousManagerKeys = b.occupants.entries
+          .where((entry) => entry.value.name == widget.managerName && entry.value.role == 'مدیر' && entry.key != key)
+          .map((entry) => entry.key).toList();
+      for (final previousKey in previousManagerKeys) { b.occupants.remove(previousKey); }
+      final assignError = b.assign(floor, unit, managerMember);
+      if (assignError != null) {
+        for (final previousKey in previousManagerKeys) {
+          final parts = previousKey.split('/');
+          final oldFloor = int.tryParse(parts.first), oldUnit = int.tryParse(parts.last);
+          if (oldFloor != null && oldUnit != null) {
+            b.occupants[previousKey] = managerMember;
+          }
+        }
+        _toast(assignError, error: true);
+        return;
+      }
       await _persistBuilding(b);
+      await _syncMemberRecord(b, floor, unit, managerMember);
+      if (mounted) setState(() {});
       _toast('شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
     } else if (action == 'register') {
       await _editOrAddMember(key, null);
@@ -2545,11 +2627,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         title: const Text('حذف عضو'), content: Text('عضو «${member.name}» از این واحد حذف شود؟'),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف عضو'))],
       ));
-      if (confirmed == true && mounted) {
-        setState(() => b.occupants.remove(key));
-        await _persistBuilding(b);
-        _toast('عضو از واحد تخلیه شد.');
-      }
+      if (confirmed == true && mounted) { setState(() => b.occupants.remove(key)); _toast('عضو از واحد تخلیه شد.'); }
     }
   }
 
@@ -2600,8 +2678,18 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       _toast('این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.', error: true);
       return;
     }
-    setState(() => b.occupants[key] = result);
+    final parts = key.split('/');
+    final floor = int.tryParse(parts.first), unit = int.tryParse(parts.last);
+    if (floor == null || unit == null) return;
+    if (existing == null) {
+      final assignError = b.assign(floor, unit, result);
+      if (assignError != null) { _toast(assignError, error: true); return; }
+    } else {
+      b.occupants[key] = result;
+    }
     await _persistBuilding(b);
+    await _syncMemberRecord(b, floor, unit, result);
+    if (mounted) setState(() {});
     _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
   }
 
@@ -2624,6 +2712,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     if (destination == null || !mounted) return;
     setState(() { b.occupants.remove(fromKey); b.occupants[destination] = member; });
     await _persistBuilding(b);
+    await _syncMemberRecord(b, int.parse(destination.split('/')[0]), int.parse(destination.split('/')[1]), member);
     _toast('عضو به واحد ${int.parse(destination.split('/')[1]).toPersianDigits()} طبقه ${int.parse(destination.split('/')[0]).toPersianDigits()} منتقل شد.');
   }
 
