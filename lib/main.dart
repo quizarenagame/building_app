@@ -3690,6 +3690,7 @@ class _FeatureHub extends StatelessWidget {
     final items = index == 1
         ? <_FeatureItem>[
             const _FeatureItem('درخواست‌های من', 'ثبت و پیگیری درخواست‌های خدماتی', Icons.handyman_rounded, 'service'),
+            const _FeatureItem('متخصصین', 'لیست افراد خدماتی، تخصص‌ها و شماره تماس', Icons.people_alt_rounded, 'specialists'),
             const _FeatureItem('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
           ]
         : index == 2
@@ -3719,9 +3720,6 @@ class _FeatureHub extends StatelessWidget {
             trailing: const Icon(Icons.chevron_left_rounded),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(item: item, building: building))),
           )),
-        )),
-        Card(color: Theme.of(context).colorScheme.secondaryContainer, child: const Padding(
-          padding: EdgeInsets.all(16), child: Text('مدیریت حساب و امکانات برنامه از تب خانه در دسترس است.', style: TextStyle(height: 1.7)),
         )),
       ],
     );
@@ -3840,22 +3838,27 @@ class _FeaturePageState extends State<_FeaturePage> {
   Widget build(BuildContext context) {
     final kind = widget.item.kind;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.item.title)),
+      appBar: AppBar(title: Text(kind == 'chat'
+          ? 'گفت‌وگوی ساختمان ${widget.building?.name ?? ''}'
+          : widget.item.title)),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
         if (kind == 'service') _requestForm(kind),
         if (kind == 'service') const SizedBox(height: 12),
         if (kind == 'service') _myServiceRequestsSection(),
         if (kind == 'service') const SizedBox(height: 12),
-        Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
-          CircleAvatar(radius: 26, child: Icon(widget.item.icon)), const SizedBox(width: 14),
-          Expanded(child: Text(widget.item.subtitle, style: const TextStyle(height: 1.6))),
-        ]))),
-        const SizedBox(height: 12),
+        if (kind != 'specialists') ...[
+          Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
+            CircleAvatar(radius: 26, child: Icon(widget.item.icon)), const SizedBox(width: 14),
+            Expanded(child: Text(widget.item.subtitle, style: const TextStyle(height: 1.6))),
+          ]))),
+          const SizedBox(height: 12),
+        ],
         if (kind == 'subscription') _subscriptionContent(context),
         if (kind == 'vote') _voteContent(context),
         if (kind == 'evaluation') _evaluationContent(context),
         if (kind == 'water') _waterContent(context),
         if (kind == 'withdraw') _withdrawSummary(context),
+        if (kind == 'specialists') _specialistsContent(context),
         if (kind == 'chat') _chatInterface(context),
         if (_fields.isNotEmpty && kind != 'service') ...[
           const SizedBox(height: 12),
@@ -4140,8 +4143,61 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _unitDebtRow(int unit, int amount) => ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: CircleAvatar(radius: 16, child: Text('$unit')), title: Text('واحد $unit'), subtitle: const Text('شارژ و هزینه‌های مشترک'), trailing: Text('$amount تومان'));
 
+  Widget _specialistsContent(BuildContext context) {
+    // نمونهٔ نمایشی؛ شماره‌ها را می‌توان با اطلاعات ثبت‌شدهٔ ارائه‌دهندگان جایگزین کرد.
+    const providers = <({String name, String specialty, String phone, IconData icon})>[
+      (name: 'علی رضایی', specialty: 'لوله‌کشی و تأسیسات (لوله‌کش)', phone: '09000000001', icon: Icons.plumbing_rounded),
+      (name: 'محمد کریمی', specialty: 'برق‌کاری ساختمان', phone: '09000000002', icon: Icons.electrical_services_rounded),
+      (name: 'حسین احمدی', specialty: 'سرویس و تعمیر آسانسور', phone: '09000000003', icon: Icons.elevator_rounded),
+      (name: 'زهرا محمدی', specialty: 'نظافت مشاعات', phone: '09000000004', icon: Icons.cleaning_services_rounded),
+      (name: 'رضا مرادی', specialty: 'تعمیرات عمومی ساختمان', phone: '09000000005', icon: Icons.handyman_rounded),
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _sectionTitle('فهرست متخصصین', detail: 'برای تماس با ارائه‌دهنده، روی شمارهٔ تلفن بزنید.', icon: Icons.people_alt_rounded),
+      for (final provider in providers)
+        Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            leading: CircleAvatar(radius: 25, child: Icon(provider.icon)),
+            title: Text(provider.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('تخصص: ${provider.specialty}'),
+                const SizedBox(height: 5),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: InkWell(
+                    onTap: () => _contactProvider(context, provider.phone),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.phone_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text(provider.phone, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
+              ]),
+            ),
+            isThreeLine: true,
+          ),
+        ),
+      const Padding(
+        padding: EdgeInsets.only(top: 2),
+        child: Text('اطلاعات تماس بالا نمونه‌ای است و باید با اطلاعات واقعی متخصصین جایگزین شود.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+      ),
+    ]);
+  }
+
+  void _contactProvider(BuildContext context, String phone) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('شماره تماس: $phone')),
+    );
+  }
+
   Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    _sectionTitle('گفت‌وگوی ساختمان', detail: 'پیام‌های گروه و اطلاعیه‌های ساکنان', icon: Icons.forum_outlined),
+    _sectionTitle('گفت‌وگوی ساختمان ${widget.building?.name ?? ''}', detail: 'گفت‌وگوی گروهی و اطلاعیه‌های اعضای این ساختمان', icon: Icons.forum_outlined),
         Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
       const Center(child: Chip(avatar: Icon(Icons.lock_outline, size: 16), label: Text('گفت‌وگوی اعضای ساختمان'))),
       for (final message in _messages) _chatBubble(message),
