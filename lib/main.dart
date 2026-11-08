@@ -1712,6 +1712,27 @@ class _ManagerHomeState extends State<_ManagerHome> {
   late final TextEditingController _nameController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final _createFormKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    final accountData = pb.authStore.record?.data ?? <String, dynamic>{};
+    String accountLocation(List<String> keys, String fallback) {
+      for (final key in keys) {
+        final value = (accountData[key] ?? '').toString().trim();
+        if (value.isNotEmpty) return value;
+      }
+      return fallback;
+    }
+
+    final province = accountLocation(
+      ['province', 'state', 'province_name'], 'اصفهان');
+    final city = accountLocation(
+      ['city', 'town', 'city_name'], 'کاشان');
+    _addressController.text =
+        'استان($province) - شهر($city) - (آدرس تکمیلی توسط کاربر نوشته شود)';
+  }
+
   final _floorController = TextEditingController();
   final _unitsController = TextEditingController();
   bool _continueUnitNumbers = false;
@@ -3689,7 +3710,7 @@ class _FeatureHub extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = index == 1
         ? <_FeatureItem>[
-            const _FeatureItem('درخواست‌های من', 'ثبت و پیگیری درخواست‌های خدماتی', Icons.handyman_rounded, 'service'),
+            const _FeatureItem('درخواست‌های من', '', Icons.handyman_rounded, 'service'),
             const _FeatureItem('متخصصین', 'لیست افراد خدماتی، تخصص‌ها و شماره تماس', Icons.people_alt_rounded, 'specialists'),
             const _FeatureItem('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
           ]
