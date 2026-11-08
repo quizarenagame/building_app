@@ -25,11 +25,16 @@ Future<void> main() async {
 class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
-  static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
+  static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+  static const List<Color> themeColors = [Color(0xFF12A889), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
+  static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
+  static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
+  static const String managerPhone = '09907862453';
+  static const String managerPin = '2731';
 
-  /// بررسی روشن/تاریک مؤثر (ThemeMode.system را هم در نظر می‌گیرد)
+  /// بررسی روشن/تاریک مؤثر (ThemeMode.light را هم در نظر می‌گیرد)
   static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
-    if (mode == ThemeMode.system) {
+    if (mode == ThemeMode.light) {
       return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
     }
     return mode == ThemeMode.dark;
@@ -42,10 +47,13 @@ class BuildingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xFF12A889);
-    return ValueListenableBuilder<ThemeMode>(
+    return ValueListenableBuilder<int>(
+      valueListenable: themeColorIndex,
+      builder: (context, colorIndex, _) => ValueListenableBuilder<ThemeMode>(
       valueListenable: themeMode,
-      builder: (context, mode, _) => MaterialApp(
+      builder: (context, mode, _) {
+        final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
+        return MaterialApp(
         title: 'سامانه مدیریت ساختمان',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -62,6 +70,8 @@ class BuildingApp extends StatelessWidget {
         ),
         themeMode: mode,
         home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
+      );
+      },
       ),
     );
   }
@@ -182,6 +192,33 @@ class _ThemeToggle extends StatelessWidget {
         final dark = BuildingApp.isEffectiveDark(context, mode);
         BuildingApp.themeMode.value = dark ? ThemeMode.light : ThemeMode.dark;
       },
+    ),
+  );
+}
+
+class _ThemeColorSelector extends StatelessWidget {
+  const _ThemeColorSelector();
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    valueListenable: BuildingApp.themeColorIndex,
+    builder: (context, selected, _) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('رنگ برنامه', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 12, runSpacing: 8, children: List.generate(BuildingApp.themeColors.length, (index) => Tooltip(
+          message: BuildingApp.themeNames[index],
+          child: InkWell(
+            onTap: () => BuildingApp.themeColorIndex.value = index,
+            customBorder: const CircleBorder(),
+            child: CircleAvatar(
+              radius: 19,
+              backgroundColor: BuildingApp.themeColors[index],
+              child: selected == index ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
+            ),
+          ),
+        ))),
+      ]),
     ),
   );
 }
@@ -364,10 +401,41 @@ void _goBack() {
     }
   }
 
+  Future<bool> _verifyManagerPin(String phone, String code) async {
+    if (_latinDigits(phone).replaceAll(' ', '') != BuildingApp.managerPhone ||
+        _latinDigits(code) != BuildingApp.managerPin) return false;
+    try {
+      final auth = await pb.collection('users').authWithPassword(phone, BuildingApp.managerPin);
+      final record = auth.record;
+      if (record == null || (record.data['role'] ?? '').toString() != 'مدیر') {
+        pb.authStore.clear();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('این شماره به‌عنوان حساب مدیر ثبت نشده است.')),
+        );
+        return true;
+      }
+      _timer?.cancel();
+      _nameController.text = (record.data['name'] ?? '').toString();
+      _lastNameController.text = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString();
+      if (mounted) setState(() => _step = _LoginStep.dashboard);
+      return true;
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('ورود مستقیم مدیر ناموفق بود؛ رمز حساب PocketBase باید با کد مدیر یکسان باشد.'),
+      ));
+      return true;
+    }
+  }
+
   Future<void> _verifyOtp() async {
   if (_isVerifyingOtp || !(_otpKey.currentState?.validate() ?? false)) return;
   final phone = _phoneController.text.trim();
   final code = _latinDigits(_otpController.text.trim());
+  if (_latinDigits(phone).replaceAll(' ', '') == BuildingApp.managerPhone && code == BuildingApp.managerPin) {
+    setState(() => _isVerifyingOtp = true);
+    try { await _verifyManagerPin(phone, code); } finally { if (mounted) setState(() => _isVerifyingOtp = false); }
+    return;
+  }
   setState(() => _isVerifyingOtp = true);
   try {
     final response = await pb.send<Map<String, dynamic>>(
@@ -638,7 +706,7 @@ void _goBack() {
       const SizedBox(height: 20),
       const Text('کد تأیید را وارد کنید', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 9),
-      Text('کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
+      Text(_latinDigits(_phoneController.text).replaceAll(' ', '') == BuildingApp.managerPhone ? 'برای ورود مدیر، کد ثابت ۴ رقمی را وارد کنید؛ سایر شماره‌ها از کد پیامکی استفاده می‌کنند.' : 'کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
       const SizedBox(height: 15),
       Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی از طریق پیامک برای شمارهٔ شما ارسال می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
       const SizedBox(height: 25),
@@ -785,7 +853,7 @@ void _goBack() {
       FilledButton.icon(
         onPressed: () => setState(() { _showMyBuildings = false; _step = _LoginStep.dashboard; }),
         icon: const Icon(Icons.add_home_work_outlined),
-        label: const Text('ایجاد ساختمان جدید'),
+        label: const Text('ثبت مجموعه جدید'),
       ),
       const SizedBox(height: 12),
       OutlinedButton.icon(
@@ -1668,7 +1736,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
 
   _Building? get _building => widget.building;
 
-  /// ایجاد ساختمان در PocketBase و سپس به‌روزرسانی مدل محلی و طبقات.
+  /// ثبت مجموعه در PocketBase و سپس به‌روزرسانی مدل محلی و طبقات.
   Future<void> _createBuildingWithFloors() async {
     if (!(_createFormKey.currentState?.validate() ?? false)) return;
     final name = _nameController.text.trim();
@@ -1911,7 +1979,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
                 Row(children: [
                   Icon(Icons.apartment_rounded, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 8),
-                  const Text('ایجاد ساختمان و طبقات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text('مشخصات مجموعه', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ]),
                 const SizedBox(height: 6),
                 Text('نام ساختمان، طبقات و تعداد واحدها را در همین یک فرم وارد کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.6)),
@@ -1968,7 +2036,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
                 FilledButton.icon(
                   onPressed: _createBuildingWithFloors,
                   icon: const Icon(Icons.add_business_rounded),
-                  label: const Text('ایجاد ساختمان'),
+                  label: const Text('ثبت مجموعه'),
                 ),
               ]),
             ),
@@ -3345,6 +3413,121 @@ class _FeatureItem {
   final IconData icon;
 }
 
+class _TicketSupportPage extends StatefulWidget {
+  const _TicketSupportPage({required this.userName, required this.phone});
+  final String userName, phone;
+  @override
+  State<_TicketSupportPage> createState() => _TicketSupportPageState();
+}
+
+class _TicketSupportPageState extends State<_TicketSupportPage> {
+  final _subject = TextEditingController();
+  final _message = TextEditingController();
+  final List<Map<String, dynamic>> _tickets = [];
+  bool _loading = true, _sending = false;
+  String get _storageKey => 'support_tickets_${widget.phone}';
+
+  @override
+  void initState() { super.initState(); _loadTickets(); }
+  @override
+  void dispose() { _subject.dispose(); _message.dispose(); super.dispose(); }
+
+  Future<void> _loadTickets() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_storageKey);
+    if (stored != null) {
+      try {
+        final decoded = jsonDecode(stored);
+        if (decoded is List) _tickets.addAll(decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
+      } catch (_) {}
+    }
+    if (pb.authStore.isValid) {
+      try {
+        final remote = await pb.collection('tickets').getList(
+          page: 1, perPage: 100, sort: '-created',
+          filter: 'phone = "${widget.phone.replaceAll('"', '')}"',
+        );
+        final byId = <String, Map<String, dynamic>>{};
+        for (final item in remote.items) { byId[item.id] = {...item.data, 'id': item.id}; }
+        for (final ticket in _tickets) { final id = (ticket['id'] ?? '').toString(); if (id.isNotEmpty) byId.putIfAbsent(id, () => ticket); }
+        _tickets..clear()..addAll(byId.values);
+        await _saveLocal();
+      } catch (_) { /* Collection may not be configured; local records remain available. */ }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _saveLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, jsonEncode(_tickets));
+  }
+
+  Future<void> _submit() async {
+    final subject = _subject.text.trim(), message = _message.text.trim();
+    if (subject.length < 3 || message.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('موضوع و شرح کامل تیکت را وارد کنید.')));
+      return;
+    }
+    setState(() => _sending = true);
+    final body = <String, dynamic>{
+      'subject': subject, 'message': message, 'name': widget.userName,
+      'phone': widget.phone, 'status': 'open',
+      if (pb.authStore.record?.id != null) 'user': pb.authStore.record!.id,
+    };
+    Map<String, dynamic> record = {...body, 'created': DateTime.now().toIso8601String(), 'reply': ''};
+    try {
+      final created = await pb.collection('tickets').create(body: body);
+      record = {...created.data, 'id': created.id};
+    } catch (_) { record['local_only'] = true; }
+    _tickets.insert(0, record);
+    await _saveLocal();
+    _subject.clear(); _message.clear();
+    if (mounted) {
+      setState(() => _sending = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(record['local_only'] == true
+        ? 'تیکت در دستگاه ذخیره شد؛ برای ذخیرهٔ ابری مجموعهٔ tickets را در PocketBase فعال کنید.'
+        : 'تیکت شما برای پشتیبانی ارسال شد.')));
+    }
+  }
+
+  Widget _ticketCard(Map<String, dynamic> ticket) {
+    final reply = (ticket['reply'] ?? ticket['admin_reply'] ?? ticket['response'] ?? '').toString().trim();
+    final status = (ticket['status'] ?? 'open').toString();
+    return Card(margin: const EdgeInsets.only(bottom: 10), child: Padding(
+      padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [Expanded(child: Text((ticket['subject'] ?? 'تیکت پشتیبانی').toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text(status == 'open' ? 'در حال بررسی' : status), visualDensity: VisualDensity.compact)]),
+        const SizedBox(height: 6), Text((ticket['message'] ?? '').toString(), style: const TextStyle(height: 1.6)),
+        if (reply.isNotEmpty) ...[const Divider(height: 22), const Text('پاسخ پشتیبانی', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 5), Text(reply, style: const TextStyle(height: 1.6))]
+        else const Padding(padding: EdgeInsets.only(top: 8), child: Text('هنوز پاسخی ثبت نشده است.', style: TextStyle(color: Colors.grey))),
+      ]),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('تیکت‌های پشتیبانی')),
+    body: _loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(16), children: [
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('ثبت تیکت جدید', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        TextFormField(initialValue: widget.userName, readOnly: true, decoration: const InputDecoration(labelText: 'نام', border: OutlineInputBorder(), prefixIcon: Icon(Icons.person_outline))),
+        const SizedBox(height: 10),
+        TextFormField(initialValue: widget.phone, readOnly: true, decoration: const InputDecoration(labelText: 'شماره همراه', border: OutlineInputBorder(), prefixIcon: Icon(Icons.phone_outlined))),
+        const SizedBox(height: 10),
+        TextField(controller: _subject, maxLength: 100, decoration: const InputDecoration(labelText: 'موضوع', border: OutlineInputBorder(), prefixIcon: Icon(Icons.subject))),
+        const SizedBox(height: 8),
+        TextField(controller: _message, minLines: 3, maxLines: 6, maxLength: 2000, decoration: const InputDecoration(labelText: 'شرح پیام', alignLabelWithHint: true, border: OutlineInputBorder(), prefixIcon: Icon(Icons.message_outlined))),
+        const SizedBox(height: 8),
+        FilledButton.icon(onPressed: _sending ? null : _submit, icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded), label: Text(_sending ? 'در حال ارسال...' : 'ارسال تیکت')),
+      ]))),
+      const SizedBox(height: 14), Text('تیکت‌های ثبت‌شده', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      if (_tickets.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('هنوز تیکتی ثبت نکرده‌اید.')))
+      else ..._tickets.map(_ticketCard),
+    ]),
+  );
+}
+
 class _SettingsPage extends StatefulWidget {
   const _SettingsPage({
     required this.onLogout, required this.onEditAccount, required this.onRoleChange,
@@ -3383,21 +3566,10 @@ class _SettingsPageState extends State<_SettingsPage> {
   }
 
   void _showSupport() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => SafeArea(child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: const [
-          Text('ارتباط با پشتیبانی', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 14),
-          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.phone_in_talk_outlined), title: Text('تلفن پشتیبانی'), subtitle: Text('۰۲۱-۹۱۰۰۱۲۳۴')),
-          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.email_outlined), title: Text('ایمیل'), subtitle: Text('support@buildingapp.ir')),
-          Text('پاسخ‌گویی در روزهای کاری', style: TextStyle(color: Colors.grey)),
-        ]),
-      )),
-    );
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _TicketSupportPage(
+      userName: (pb.authStore.record?.data['name'] ?? '').toString(),
+      phone: widget.phoneNumber,
+    )));
   }
 
   @override
@@ -3421,8 +3593,9 @@ class _SettingsPageState extends State<_SettingsPage> {
         ListTile(leading: const Icon(Icons.manage_accounts_outlined), title: const Text('ویرایش حساب کاربری'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onEditAccount),
         ListTile(leading: const Icon(Icons.workspace_premium_outlined), title: const Text('خرید اشتراک برنامه'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onSubscription),
         ListTile(leading: const Icon(Icons.swap_horiz_rounded), title: const Text('تغییر نقش'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onRoleChange),
-        ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('تغییر تم روشن/تاریک'), trailing: _ThemeToggle()),
-        ListTile(leading: const Icon(Icons.support_agent_outlined), title: const Text('ارتباط با پشتیبانی'), trailing: const Icon(Icons.chevron_left_rounded), onTap: _showSupport),
+        ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('حالت روشن/تاریک'), trailing: _ThemeToggle()),
+        const _ThemeColorSelector(),
+        ListTile(leading: const Icon(Icons.support_agent_outlined), title: const Text('تیکت‌های پشتیبانی'), trailing: const Icon(Icons.chevron_left_rounded), onTap: _showSupport),
         ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
       ])),
     ],
@@ -3503,7 +3676,7 @@ class _FeatureHub extends StatelessWidget {
           )),
         )),
         Card(color: Theme.of(context).colorScheme.secondaryContainer, child: const Padding(
-          padding: EdgeInsets.all(16), child: Text('ساختمان و اعضا\nایجاد ساختمان و طبقات (مدیر) یا جست‌وجو و عضویت در ساختمان (ساکن) از تب «خانه» در دسترس است.', style: TextStyle(height: 1.7)),
+          padding: EdgeInsets.all(16), child: Text('مدیریت حساب و امکانات برنامه از تب خانه در دسترس است.', style: TextStyle(height: 1.7)),
         )),
       ],
     );
