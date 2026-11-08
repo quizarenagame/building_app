@@ -2077,10 +2077,6 @@ class _ManagerHomeState extends State<_ManagerHome> {
           ),
         ),
         _myBuildingsSection(context),
-        const SizedBox(height: 8),
-        if (b != null) ...[
-          _BuildingLayout(building: b, highlightMemberName: widget.managerName),
-        ],
       ],
     );
   }
@@ -3771,9 +3767,6 @@ class _FeaturePageState extends State<_FeaturePage> {
   String? _choice;
   bool _checked = false;
   int _billAmount = 186000;
-  int _selectedService = -1;
-  final Map<int, double> _providerRatings = {0: 4.8, 1: 4.6, 2: 4.9, 3: 4.7};
-  final Set<int> _ratedProviders = {};
   final List<String> _criteria = const [
     'شفافیت مالی و ارائه گزارش',
     'پاسخ‌گویی به درخواست ساکنان',
@@ -3782,18 +3775,7 @@ class _FeaturePageState extends State<_FeaturePage> {
     'نظم و پیگیری امور روزمره',
     'رفتار حرفه‌ای و منصفانه',
   ];
-  final List<String> _providers = const [
-    'لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور',
-  ];
-  final List<String> _providerNames = const [
-    'علی رضایی', 'مهدی کریمی', 'گروه پاک‌زیست', 'فنی‌کاران ایمن',
-  ];
-  final List<String> _providerDetails = const [
-    'تعمیر نشتی، رفع گرفتگی و سرویس پمپ آب',
-    'عیب‌یابی برق، روشنایی و تابلوهای مشاع',
-    'نظافت راه‌پله، پارکینگ و فضاهای عمومی',
-    'بازدید دوره‌ای و تعمیر آسانسورهای مسکونی',
-  ];
+
 
   List<String> get _fields => switch (widget.item.kind) {
     'withdraw' => ['مبلغ درخواستی (تومان)', 'شماره شبا', 'توضیحات برای مدیر سامانه'],
@@ -3843,6 +3825,8 @@ class _FeaturePageState extends State<_FeaturePage> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.item.title)),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
+        if (kind == 'service') _requestForm(kind),
+        if (kind == 'service') const SizedBox(height: 12),
         Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
           CircleAvatar(radius: 26, child: Icon(widget.item.icon)), const SizedBox(width: 14),
           Expanded(child: Text(widget.item.subtitle, style: const TextStyle(height: 1.6))),
@@ -3851,33 +3835,73 @@ class _FeaturePageState extends State<_FeaturePage> {
         if (kind == 'subscription') _subscriptionContent(context),
         if (kind == 'vote') _voteContent(context),
         if (kind == 'evaluation') _evaluationContent(context),
-        if (kind == 'service') _serviceContent(context),
         if (kind == 'water') _waterContent(context),
         if (kind == 'withdraw') _withdrawSummary(context),
         if (kind == 'chat') _chatInterface(context),
-        if (_fields.isNotEmpty) ...[
+        if (_fields.isNotEmpty && kind != 'service') ...[
           const SizedBox(height: 12),
-          Card(child: Padding(padding: const EdgeInsets.all(18), child: Form(key: _formKey, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(kind == 'vote' ? 'پیشنهاد موضوع جدید' : kind == 'withdraw' ? 'ثبت درخواست برداشت' : kind == 'water' ? 'ثبت قبض آب' : kind == 'service' ? 'ثبت درخواست خدمت' : 'ثبت ارزیابی', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 14),
-            ..._fields.map((label) => Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(
-              controller: label == 'شناسه قبض' ? _billIdController : null,
-              keyboardType: label.contains('مبلغ') || label.contains('هزینه') || label.contains('روز') ? TextInputType.number : TextInputType.text,
-              textDirection: label == 'شناسه قبض' ? TextDirection.ltr : TextDirection.rtl,
-              maxLines: label.contains('شرح') || label.contains('توضیحات') ? 3 : 1,
-              decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))),
-              validator: (v) => (v == null || v.trim().isEmpty) && !label.contains('اختیاری') ? 'این مورد را وارد کنید' : null,
-              onSaved: (v) => _values[label] = v?.trim() ?? '',
-            ))),
-            if (kind == 'water') CheckboxListTile(value: _checked, contentPadding: EdgeInsets.zero, title: const Text('تصویر قبض را پیوست کرده‌ام'), onChanged: (v) => setState(() => _checked = v ?? false)),
-            FilledButton.icon(onPressed: _submit, icon: const Icon(Icons.check_circle_outline), label: Text(kind == 'vote' ? 'ثبت پیشنهاد' : kind == 'withdraw' ? 'ارسال برای بررسی' : kind == 'water' ? 'محاسبه و ثبت قبض' : kind == 'service' ? 'ارسال درخواست' : 'ثبت ارزیابی')),
-          ])))),
+          _requestForm(kind),
         ],
         const SizedBox(height: 18),
         Text('اطلاعات این نمونه در همین نشست برنامه نمایش داده می‌شود؛ ثبت نهایی، پرداخت یا همگام‌سازی نیازمند اتصال سرویس سمت سرور است.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, height: 1.6, color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ]),
     );
   }
+
+  Widget _requestForm(String kind) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              kind == 'vote' ? 'پیشنهاد موضوع جدید'
+                  : kind == 'withdraw' ? 'ثبت درخواست برداشت'
+                  : kind == 'water' ? 'ثبت قبض آب'
+                  : kind == 'service' ? 'ثبت درخواست خدمت'
+                  : 'ثبت ارزیابی',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 14),
+            ..._fields.map((label) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TextFormField(
+                controller: label == 'شناسه قبض' ? _billIdController : null,
+                keyboardType: label.contains('مبلغ') || label.contains('هزینه') || label.contains('روز')
+                    ? TextInputType.number : TextInputType.text,
+                textDirection: label == 'شناسه قبض' ? TextDirection.ltr : TextDirection.rtl,
+                maxLines: label.contains('شرح') || label.contains('توضیحات') ? 3 : 1,
+                decoration: InputDecoration(
+                  labelText: label,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty) && !label.contains('اختیاری')
+                    ? 'این مورد را وارد کنید' : null,
+                onSaved: (v) => _values[label] = v?.trim() ?? '',
+              ),
+            )),
+            if (kind == 'water') CheckboxListTile(
+              value: _checked,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('تصویر قبض را پیوست کرده‌ام'),
+              onChanged: (v) => setState(() => _checked = v ?? false),
+            ),
+            FilledButton.icon(
+              onPressed: _submit,
+              icon: const Icon(Icons.check_circle_outline),
+              label: Text(kind == 'vote' ? 'ثبت پیشنهاد'
+                  : kind == 'withdraw' ? 'ارسال برای بررسی'
+                  : kind == 'water' ? 'محاسبه و ثبت قبض'
+                  : kind == 'service' ? 'ارسال درخواست'
+                  : 'ثبت ارزیابی'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   Widget _sectionTitle(String title, {String? detail, IconData icon = Icons.dashboard_customize_outlined}) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
@@ -3952,27 +3976,6 @@ class _FeaturePageState extends State<_FeaturePage> {
     final value = _ratings[criterion] ?? 4;
     return Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(children: [Expanded(child: Text(criterion)), DropdownButton<int>(value: value, items: List.generate(5, (i) => i + 1).map((n) => DropdownMenuItem(value: n, child: Text('$n از ۵'))).toList(), onChanged: (v) => setState(() => _ratings[criterion] = v ?? 4))]));
   }
-
-  Widget _serviceContent(BuildContext context) => Column(children: [
-    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _sectionTitle('پروفایل نیروهای خدماتی', detail: 'مشاهدهٔ تخصص، امتیاز ساکنان و ثبت درخواست.', icon: Icons.engineering_outlined),
-      for (var i = 0; i < _providers.length; i++) _providerCard(i),
-    ]))),
-    if (_selectedService >= 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [const Icon(Icons.assignment_turned_in_outlined), const SizedBox(width: 10), Expanded(child: Text('درخواست «${_providers[_selectedService]}» آمادهٔ ثبت است.'))]))),
-  ]);
-
-  Widget _providerCard(int i) {
-    final rating = _providerRatings[i] ?? 4.5;
-    return Card(child: Padding(padding: const EdgeInsets.all(13), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [CircleAvatar(child: Icon(i == 2 ? Icons.cleaning_services_outlined : Icons.person_outline)), const SizedBox(width: 11), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_providers[i], style: const TextStyle(fontWeight: FontWeight.bold)), Text(_providerNames[i], style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))])), Text('★ ${rating.toStringAsFixed(1)}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold))]),
-      Padding(padding: const EdgeInsets.only(top: 9, bottom: 8), child: Text(_providerDetails[i], style: const TextStyle(height: 1.4))),
-      Row(children: [const Icon(Icons.verified_outlined, size: 17), const SizedBox(width: 5), const Expanded(child: Text('پروفایل تأییدشده • پاسخ‌گو در ساعات کاری', style: TextStyle(fontSize: 11))), TextButton.icon(onPressed: () { setState(() => _selectedService = i); _message('برای ثبت نهایی، فرم درخواست را تکمیل کنید.'); }, icon: const Icon(Icons.send_outlined, size: 17), label: const Text('درخواست'))]),
-      if (_ratedProviders.contains(i)) const Text('از ثبت امتیاز شما سپاسگزاریم.', style: TextStyle(fontSize: 12)),
-      if (!_ratedProviders.contains(i)) Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 2, children: [const Text('امتیاز شما:'), for (var star = 1; star <= 5; star++) IconButton(visualDensity: VisualDensity.compact, onPressed: () => _rateProvider(i, star), icon: Icon(Icons.star, color: star <= rating.round() ? Colors.amber : Colors.grey, size: 20))]),
-    ])));
-  }
-
-  void _rateProvider(int index, int stars) { final old = _providerRatings[index] ?? 4.5; setState(() { _providerRatings[index] = ((old + stars) / 2 * 10).round() / 10; _ratedProviders.add(index); }); }
 
   Widget _waterContent(BuildContext context) {
     final usageSum = _meters.fold<int>(0, (sum, m) => sum + m.usage);
@@ -4091,7 +4094,7 @@ class _FeaturePageState extends State<_FeaturePage> {
     } else if (kind == 'vote') {
       _message('پیشنهاد «${_values['عنوان موضوع رأی‌گیری'] ?? ''}» در فهرست بررسی قرار گرفت.');
     } else if (kind == 'service') {
-      _message('درخواست خدمت برای ${_selectedService >= 0 ? _providers[_selectedService] : 'ارائه‌دهنده'} ثبت شد.');
+      _message('درخواست خدمت شما ثبت شد.');
     } else {
       _message('ارزیابی شما با موفقیت ثبت شد.');
     }
