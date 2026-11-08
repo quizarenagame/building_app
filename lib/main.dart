@@ -34,7 +34,7 @@ class BuildingApp extends StatelessWidget {
 
   /// بررسی روشن/تاریک مؤثر (ThemeMode.light را هم در نظر می‌گیرد)
   static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
-    if (mode == ThemeMode.light) {
+    if (mode == ThemeMode.system) {
       return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
     }
     return mode == ThemeMode.dark;
@@ -188,10 +188,7 @@ class _ThemeToggle extends StatelessWidget {
     builder: (context, mode, _) => IconButton.filledTonal(
       tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
       icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-      onPressed: () {
-        final dark = BuildingApp.isEffectiveDark(context, mode);
-        BuildingApp.themeMode.value = dark ? ThemeMode.light : ThemeMode.dark;
-      },
+      onPressed: () => BuildingApp.toggleTheme(context),
     ),
   );
 }
@@ -1359,7 +1356,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  int selectedTab = 0;
+  int selectedTab = 2;
   _Building? _joinedBuilding;
   int? _myFloor;
   int? _myUnit;
@@ -1569,7 +1566,7 @@ class _DashboardPageState extends State<DashboardPage> {
       pb.authStore.save(token, updatedRecord);
       setState(() {
         _roleOverride = newRole;
-        selectedTab = 0;
+        selectedTab = 2;
       });
       widget.onRoleChanged?.call(newRole);
       _toast('نقش شما به «$newRole» تغییر کرد.');
@@ -1624,9 +1621,10 @@ class _DashboardPageState extends State<DashboardPage> {
     final body = isServiceRole
         ? switch (selectedTab) {
             0 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true),
-            1 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties),
-            2 => _FeatureHub(index: 3, isManager: false, building: _joinedBuilding),
-            3 => _SettingsPage(
+            1 => _FeatureHub(index: 2, isManager: false, building: _joinedBuilding),
+            2 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties),
+            3 => _FeatureHub(index: 3, isManager: false, building: _joinedBuilding),
+            4 => _SettingsPage(
               onEditAccount: widget.onSwitch ?? () {}, onLogout: _logout,
               onRoleChange: _showRoleDialog,
               onSubscription: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(
@@ -1680,6 +1678,7 @@ class _DashboardPageState extends State<DashboardPage> {
         destinations: isServiceRole
             ? const [
                 NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
+                NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
                 NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
                 NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
                 NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
@@ -1769,7 +1768,6 @@ class _ManagerHomeState extends State<_ManagerHome> {
             rethrow;
           }
         }
-        _toast('ساختمان در پاکت‌بیس ذخیره شد. کد ساختمان: ${b.buildingCode.toPersianDigits()}');
       } catch (e) {
         _toast('ثبت در پاکت‌بیس انجام نشد؛ اطلاعات در حافظهٔ برنامه حفظ شد. $e', error: true);
       }
@@ -2764,20 +2762,7 @@ class _BuildingLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (building.floors.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(children: [
-            Icon(Icons.calendar_view_day_outlined, size: 38, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            const SizedBox(height: 8),
-            const Text('هنوز طبقه‌ای اضافه نشده است', textAlign: TextAlign.center),
-            const SizedBox(height: 4),
-            Text(onUnitTap == null ? 'از بخش «افزودن طبقه» استفاده کنید.' : 'مدیر این ساختمان هنوز طبقه‌ای نساخته است.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
-          ]),
-        ),
-      );
-    }
+    if (building.floors.isEmpty) return const SizedBox.shrink();
     final sortedFloors = building.floors.keys.toList()..sort((a, b) => b.compareTo(a));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3297,13 +3282,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         const SizedBox(height: 14),
         OutlinedButton.icon(onPressed: _addFloor, icon: const Icon(Icons.add_rounded), label: const Text('افزودن طبقه جدید')),
         const SizedBox(height: 12),
-        if (b.floors.isEmpty)
-          Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-            Icon(Icons.calendar_view_day_outlined, size: 38, color: colors.onSurfaceVariant),
-            const SizedBox(height: 8),
-            const Text('هنوز طبقه‌ای اضافه نشده است', textAlign: TextAlign.center),
-          ])))
-        else
+        if (b.floors.isNotEmpty)
           _BuildingLayout(
             building: b,
             highlightMemberName: widget.managerName,
@@ -3615,7 +3594,7 @@ class _SettingsPageState extends State<_SettingsPage> {
         ListTile(leading: const Icon(Icons.manage_accounts_outlined), title: const Text('ویرایش حساب کاربری'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onEditAccount),
         ListTile(leading: const Icon(Icons.workspace_premium_outlined), title: const Text('خرید اشتراک برنامه'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onSubscription),
         ListTile(leading: const Icon(Icons.swap_horiz_rounded), title: const Text('تغییر نقش'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onRoleChange),
-        ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('حالت روشن/تاریک'), trailing: _ThemeToggle()),
+        ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('حالت روشن/تاریک'), trailing: _ThemeToggle(), onTap: () => BuildingApp.toggleTheme(context)),
         const _ThemeColorSelector(),
         ListTile(leading: const Icon(Icons.support_agent_outlined), title: const Text('تیکت‌های پشتیبانی'), trailing: const Icon(Icons.chevron_left_rounded), onTap: _showSupport),
         ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
