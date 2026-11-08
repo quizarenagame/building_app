@@ -1566,7 +1566,7 @@ class _DashboardPageState extends State<DashboardPage> {
               onSubscription: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(
                 item: const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'), building: _joinedBuilding))),
               phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
-              role: _currentRole, specialties: _serviceSpecialties,
+              name: widget.name, role: _currentRole, specialties: _serviceSpecialties,
               onSpecialtiesChanged: _saveServiceSpecialties,
             ),
             _ => _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true),
@@ -1586,7 +1586,7 @@ class _DashboardPageState extends State<DashboardPage> {
               onSubscription: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(
                 item: const _FeatureItem('اشتراک برنامه', 'آزمایش رایگان سه‌ماهه و انتخاب طرح', Icons.workspace_premium_rounded, 'subscription'), building: _joinedBuilding))),
               phoneNumber: (pb.authStore.record?.data['phone'] ?? 'نامشخص').toString(),
-              role: _currentRole, specialties: _serviceSpecialties,
+              name: widget.name, role: _currentRole, specialties: _serviceSpecialties,
               onSpecialtiesChanged: _saveServiceSpecialties,
             ),
             _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
@@ -3348,11 +3348,11 @@ class _FeatureItem {
 class _SettingsPage extends StatefulWidget {
   const _SettingsPage({
     required this.onLogout, required this.onEditAccount, required this.onRoleChange,
-    required this.onSubscription, required this.phoneNumber, required this.role,
+    required this.onSubscription, required this.phoneNumber, required this.name, required this.role,
     required this.specialties, required this.onSpecialtiesChanged,
   });
   final VoidCallback onLogout, onEditAccount, onRoleChange, onSubscription;
-  final String phoneNumber, role;
+  final String phoneNumber, name, role;
   final List<String> specialties;
   final ValueChanged<List<String>> onSpecialtiesChanged;
   @override
@@ -3383,21 +3383,13 @@ class _SettingsPageState extends State<_SettingsPage> {
   }
 
   void _showSupport() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => SafeArea(child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: const [
-          Text('ارتباط با پشتیبانی', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 14),
-          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.phone_in_talk_outlined), title: Text('تلفن پشتیبانی'), subtitle: Text('۰۲۱-۹۱۰۰۱۲۳۴')),
-          ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.email_outlined), title: Text('ایمیل'), subtitle: Text('support@buildingapp.ir')),
-          Text('پاسخ‌گویی در روزهای کاری', style: TextStyle(color: Colors.grey)),
-        ]),
-      )),
-    );
+    Navigator.of(context).push<void>(MaterialPageRoute<void>(
+      builder: (_) => _SupportTicketsPage(
+        name: widget.name,
+        phoneNumber: widget.phoneNumber,
+        role: widget.role,
+      ),
+    ));
   }
 
   @override
@@ -3426,6 +3418,221 @@ class _SettingsPageState extends State<_SettingsPage> {
         ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
       ])),
     ],
+  );
+}
+
+class _SupportTicketsPage extends StatefulWidget {
+  const _SupportTicketsPage({required this.name, required this.phoneNumber, required this.role});
+  final String name, phoneNumber, role;
+
+  @override
+  State<_SupportTicketsPage> createState() => _SupportTicketsPageState();
+}
+
+class _SupportTicketsPageState extends State<_SupportTicketsPage> with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final _formKey = GlobalKey<FormState>();
+  final _subjectController = TextEditingController();
+  final _messageController = TextEditingController();
+  late Future<List<dynamic>> _ticketsFuture;
+  bool _isSubmitting = false;
+
+  String get _userName {
+    final value = (pb.authStore.record?.data['name'] ?? '').toString().trim();
+    if (value.isNotEmpty) return value;
+    final fallback = widget.name.trim();
+    return fallback.isNotEmpty ? fallback : 'کاربر';
+  }
+
+  String get _userPhone => (pb.authStore.record?.data['phone'] ?? widget.phoneNumber).toString();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _ticketsFuture = _fetchTickets();
+  }
+
+  Future<List<dynamic>> _fetchTickets() async {
+    final userId = pb.authStore.record?.id ?? '';
+    final result = await pb.collection('tickets').getList(
+      filter: 'user = "$userId"',
+      sort: '-created',
+    );
+    return result.items;
+  }
+
+  Future<void> _refreshTickets() async {
+    final future = _fetchTickets();
+    setState(() => _ticketsFuture = future);
+    await future;
+  }
+
+  Future<void> _submitTicket() async {
+    if (!_formKey.currentState!.validate() || _isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await pb.collection('tickets').create(body: {
+        'user': pb.authStore.record?.id ?? '',
+        'name': _userName,
+        'phone': _userPhone,
+        'role': widget.role,
+        'subject': _subjectController.text.trim(),
+        'message': _messageController.text.trim(),
+        'status': 'open',
+        'admin_reply': '',
+      });
+      if (!mounted) return;
+      _subjectController.clear();
+      _messageController.clear();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('تیکت شما با موفقیت ارسال شد و در اسرع وقت پاسخ داده خواهد شد'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ));
+      setState(() => _ticketsFuture = _fetchTickets());
+      _tabController.animateTo(1);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('ارسال تیکت انجام نشد. لطفاً دوباره تلاش کنید. (${error.toString()})'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _subjectController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Widget _profileTile(IconData icon, String title, String value) => Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.55),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: Row(children: [
+      Icon(icon, color: Theme.of(context).colorScheme.primary),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 3),
+        Text(value.isEmpty ? 'ثبت نشده' : value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ])),
+      Icon(Icons.lock_outline_rounded, size: 17, color: Theme.of(context).colorScheme.onSurfaceVariant),
+    ]),
+  );
+
+  Widget _newTicketTab() => Form(
+    key: _formKey,
+    child: ListView(padding: const EdgeInsets.all(16), children: [
+      Text('اطلاعات شما', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 12),
+      _profileTile(Icons.person_outline_rounded, 'نام و نام خانوادگی', _userName),
+      _profileTile(Icons.phone_android_rounded, 'شماره همراه', _userPhone),
+      _profileTile(Icons.badge_outlined, 'نقش کاربر', widget.role),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _subjectController,
+        textInputAction: TextInputAction.next,
+        decoration: const InputDecoration(labelText: 'موضوع تیکت', hintText: 'موضوع درخواست خود را وارد کنید', prefixIcon: Icon(Icons.subject_rounded), border: OutlineInputBorder(), filled: true),
+        validator: (value) => value == null || value.trim().isEmpty ? 'موضوع تیکت را وارد کنید' : null,
+      ),
+      const SizedBox(height: 14),
+      TextFormField(
+        controller: _messageController,
+        minLines: 5,
+        maxLines: 8,
+        keyboardType: TextInputType.multiline,
+        decoration: const InputDecoration(labelText: 'متن پیام / شرح مشکل', hintText: 'شرح درخواست یا مشکل خود را بنویسید', alignLabelWithHint: true, prefixIcon: Icon(Icons.message_outlined), border: OutlineInputBorder(), filled: true),
+        validator: (value) => value == null || value.trim().isEmpty ? 'متن پیام را وارد کنید' : null,
+      ),
+      const SizedBox(height: 18),
+      SizedBox(height: 52, child: FilledButton.icon(
+        onPressed: _isSubmitting ? null : _submitTicket,
+        icon: _isSubmitting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send_rounded),
+        label: Text(_isSubmitting ? 'در حال ارسال...' : 'ارسال تیکت'),
+      )),
+    ]),
+  );
+
+  Widget _ticketCard(dynamic ticket) {
+    final data = ticket.data as Map<String, dynamic>;
+    final subject = (data['subject'] ?? 'بدون موضوع').toString();
+    final message = (data['message'] ?? '').toString();
+    final reply = (data['admin_reply'] ?? '').toString().trim();
+    final hasReply = reply.isNotEmpty;
+    final color = hasReply ? Colors.green : Colors.orange;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(30)),
+            child: Text(hasReply ? 'پاسخ داده شده' : 'در انتظار بررسی', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+        if (message.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(message, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.5)),
+        ],
+        if (hasReply) ...[
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.08), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.25))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Row(children: [Icon(Icons.support_agent_rounded, color: Colors.blue, size: 20), SizedBox(width: 7), Text('پاسخ پشتیبانی', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))]),
+              const SizedBox(height: 7),
+              Text(reply, style: const TextStyle(height: 1.5)),
+            ]),
+          ),
+        ],
+      ])),
+    );
+  }
+
+  Widget _myTicketsTab() => FutureBuilder<List<dynamic>>(
+    future: _ticketsFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+      if (snapshot.hasError) return RefreshIndicator(
+        onRefresh: _refreshTickets,
+        child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [SizedBox(height: 220, child: Center(child: Text('دریافت تیکت‌ها با خطا مواجه شد. برای تلاش مجدد صفحه را به پایین بکشید.\n${snapshot.error}', textAlign: TextAlign.center))) ]),
+      );
+      final tickets = snapshot.data ?? const <dynamic>[];
+      if (tickets.isEmpty) return RefreshIndicator(
+        onRefresh: _refreshTickets,
+        child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 250, child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.inbox_outlined, size: 48, color: Colors.grey), SizedBox(height: 12), Text('هنوز تیکتی ثبت نکرده‌اید')])))]),
+      );
+      return RefreshIndicator(
+        onRefresh: _refreshTickets,
+        child: ListView.builder(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(16), itemCount: tickets.length, itemBuilder: (context, index) => _ticketCard(tickets[index])),
+      );
+    },
+  );
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('تیکت‌های پشتیبانی'),
+      bottom: TabBar(controller: _tabController, tabs: const [Tab(text: 'ثبت تیکت جدید', icon: Icon(Icons.add_comment_outlined)), Tab(text: 'تیکت‌های من', icon: Icon(Icons.confirmation_number_outlined))]),
+    ),
+    body: TabBarView(controller: _tabController, children: [_newTicketTab(), _myTicketsTab()]),
   );
 }
 
