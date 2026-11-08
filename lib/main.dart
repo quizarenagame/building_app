@@ -1356,7 +1356,8 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  int selectedTab = 2;
+  static int _savedSelectedTab = 2;
+  int selectedTab = _savedSelectedTab;
   _Building? _joinedBuilding;
   int? _myFloor;
   int? _myUnit;
@@ -1567,6 +1568,7 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         _roleOverride = newRole;
         selectedTab = 2;
+        _savedSelectedTab = selectedTab;
       });
       widget.onRoleChanged?.call(newRole);
       _toast('نقش شما به «$newRole» تغییر کرد.');
@@ -1674,7 +1676,7 @@ class _DashboardPageState extends State<DashboardPage> {
       body: SafeArea(child: body),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedTab,
-        onDestinationSelected: (index) => setState(() => selectedTab = index),
+        onDestinationSelected: (index) => setState(() { selectedTab = index; _savedSelectedTab = index; }),
         destinations: isServiceRole
             ? const [
                 NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
@@ -1919,9 +1921,18 @@ class _ManagerHomeState extends State<_ManagerHome> {
 
   Widget _myBuildingsSection(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final seenRecordIds = <String>{};
+    final seenNameAddresses = <String>{};
     final buildings = AppSharedState.instance.buildings.values
         .where((b) => b.createdBy == (pb.authStore.record?.id ?? widget.managerName) ||
             b.createdBy == widget.managerName || b.occupants.values.any((m) => m.name == widget.managerName))
+        .where((b) {
+          final recordId = b.recordId?.trim() ?? '';
+          final nameAddress = '${b.name.trim().toLowerCase()}|${b.address.trim().toLowerCase()}';
+          final isUniqueById = recordId.isEmpty || seenRecordIds.add(recordId);
+          final isUniqueByNameAddress = seenNameAddresses.add(nameAddress);
+          return isUniqueById && isUniqueByNameAddress;
+        })
         .toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const Padding(
@@ -3434,28 +3445,42 @@ class _TicketSupportPageState extends State<_TicketSupportPage> {
   void dispose() { _subject.dispose(); _message.dispose(); super.dispose(); }
 
   Future<void> _loadTickets() async {
+    final loadedLocal = <Map<String, dynamic>>[];
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(_storageKey);
     if (stored != null) {
       try {
         final decoded = jsonDecode(stored);
-        if (decoded is List) _tickets.addAll(decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
+        if (decoded is List) loadedLocal.addAll(decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)));
       } catch (_) {}
     }
+
+    final byId = <String, Map<String, dynamic>>{};
     if (pb.authStore.isValid) {
       try {
         final remote = await pb.collection('tickets').getList(
           page: 1, perPage: 100, sort: '-created',
           filter: 'phone = "${widget.phone.replaceAll('"', '')}"',
         );
-        final byId = <String, Map<String, dynamic>>{};
         for (final item in remote.items) { byId[item.id] = {...item.data, 'id': item.id}; }
-        for (final ticket in _tickets) { final id = (ticket['id'] ?? '').toString(); if (id.isNotEmpty) byId.putIfAbsent(id, () => ticket); }
-        _tickets..clear()..addAll(byId.values);
-        await _saveLocal();
       } catch (_) { /* Collection may not be configured; local records remain available. */ }
     }
-    if (mounted) setState(() => _loading = false);
+    final localWithoutId = <Map<String, dynamic>>[];
+    for (final ticket in loadedLocal) {
+      final id = (ticket['id'] ?? '').toString();
+      if (id.isNotEmpty) {
+        byId.putIfAbsent(id, () => ticket);
+      } else if (!localWithoutId.any((item) => jsonEncode(item) == jsonEncode(ticket))) {
+        localWithoutId.add(ticket);
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _tickets..clear()..addAll(byId.values)..addAll(localWithoutId);
+        _loading = false;
+      });
+      await _saveLocal();
+    }
   }
 
   Future<void> _saveLocal() async {
@@ -3507,7 +3532,9 @@ class _TicketSupportPageState extends State<_TicketSupportPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('تیکت‌های پشتیبانی')),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(16), children: [
+    body: _loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(
+      onRefresh: _loadTickets,
+      child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(16), children: [
       Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('ثبت تیکت جدید', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
@@ -3525,7 +3552,7 @@ class _TicketSupportPageState extends State<_TicketSupportPage> {
       const SizedBox(height: 8),
       if (_tickets.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('هنوز تیکتی ثبت نکرده‌اید.')))
       else ..._tickets.map(_ticketCard),
-    ]),
+    ])),
   );
 }
 
