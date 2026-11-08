@@ -2078,20 +2078,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
         ),
         _myBuildingsSection(context),
         const SizedBox(height: 8),
-        if (b == null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(children: [
-                Icon(Icons.foundation_outlined, size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(height: 8),
-                const Text('هنوز ساختمانی ایجاد نشده است', textAlign: TextAlign.center),
-                const SizedBox(height: 4),
-                Text('ابتدا نام ساختمان را وارد و ایجاد کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
-              ]),
-            ),
-          )
-        else ...[
+        if (b != null) ...[
           InkWell(
             onTap: () => _openBuildingDetail(b),
             borderRadius: BorderRadius.circular(22),
