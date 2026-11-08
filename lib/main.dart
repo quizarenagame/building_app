@@ -1679,14 +1679,14 @@ class _DashboardPageState extends State<DashboardPage> {
         onDestinationSelected: (index) => setState(() { selectedTab = index; _savedSelectedTab = index; }),
         destinations: isServiceRole
             ? const [
-                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
+                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
                 NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
                 NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
                 NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
                 NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
               ]
             : const [
-                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'درخواست‌ها'),
+                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
                 NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
                 NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
                 NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
@@ -3689,7 +3689,7 @@ class _FeatureHub extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = index == 1
         ? <_FeatureItem>[
-            const _FeatureItem('خدمات و نیروهای خدماتی', 'ثبت تخصص، مشاهدهٔ درخواست‌ها و ارزیابی خدمات', Icons.handyman_rounded, 'service'),
+            const _FeatureItem('درخواست‌های من', 'ثبت و پیگیری درخواست‌های خدماتی', Icons.handyman_rounded, 'service'),
             const _FeatureItem('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
           ]
         : index == 2
@@ -3704,7 +3704,7 @@ class _FeatureHub extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
-        Text(index == 1 ? 'درخواست‌ها و ارتباط' : index == 2 ? 'رأی‌گیری و ارزیابی' : 'امور مالی',
+        Text(index == 1 ? 'خدمات و ارتباط' : index == 2 ? 'رأی‌گیری و ارزیابی' : 'امور مالی',
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
@@ -3761,10 +3761,13 @@ class _FeaturePageState extends State<_FeaturePage> {
     {'text': 'ممنون، زمان‌بندی را بررسی می‌کنم.', 'mine': 'true', 'name': 'شما'},
   ];
   final List<String> _withdrawals = [];
+  final List<Map<String, String>> _myServiceRequests = [];
   final TextEditingController _chatController = TextEditingController();
   final TextEditingController _billIdController = TextEditingController();
   late final List<_MeterReading> _meters;
   String? _choice;
+  String? _selectedServiceSpecialty;
+  bool _serviceFeeFlexible = false;
   bool _checked = false;
   int _billAmount = 186000;
   final List<String> _criteria = const [
@@ -3783,9 +3786,23 @@ class _FeaturePageState extends State<_FeaturePage> {
     'subscription' => [],
     'vote' => ['عنوان موضوع رأی‌گیری', 'شرح پیشنهاد', 'هزینهٔ اجرای تصمیم (تومان)', 'مدت رأی‌گیری (روز)'],
     'evaluation' => ['توضیحات (اختیاری)'],
-    'service' => ['شرح درخواست', 'زمان پیشنهادی', 'شماره تماس'],
+    'service' => [],
     _ => [],
   };
+
+  List<String> get _registeredServiceSpecialties {
+    const defaults = <String>[
+      'لوله‌کشی و تأسیسات',
+      'برق‌کاری ساختمان',
+      'نظافت مشاعات',
+      'سرویس آسانسور',
+    ];
+    final raw = pb.authStore.record?.data['service_specialties'];
+    final registered = raw is List
+        ? raw.map((value) => value.toString().trim()).where((value) => value.isNotEmpty)
+        : <String>[];
+    return <String>{...defaults, ...registered}.toList();
+  }
 
   @override
   void initState() {
@@ -3827,6 +3844,8 @@ class _FeaturePageState extends State<_FeaturePage> {
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
         if (kind == 'service') _requestForm(kind),
         if (kind == 'service') const SizedBox(height: 12),
+        if (kind == 'service') _myServiceRequestsSection(),
+        if (kind == 'service') const SizedBox(height: 12),
         Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
           CircleAvatar(radius: 26, child: Icon(widget.item.icon)), const SizedBox(width: 14),
           Expanded(child: Text(widget.item.subtitle, style: const TextStyle(height: 1.6))),
@@ -3842,8 +3861,6 @@ class _FeaturePageState extends State<_FeaturePage> {
           const SizedBox(height: 12),
           _requestForm(kind),
         ],
-        const SizedBox(height: 18),
-        Text('اطلاعات این نمونه در همین نشست برنامه نمایش داده می‌شود؛ ثبت نهایی، پرداخت یا همگام‌سازی نیازمند اتصال سرویس سمت سرور است.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, height: 1.6, color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ]),
     );
   }
@@ -3865,7 +3882,75 @@ class _FeaturePageState extends State<_FeaturePage> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 14),
-            ..._fields.map((label) => Padding(
+            if (kind == 'service') ...[
+              DropdownButtonFormField<String>(
+                value: _registeredServiceSpecialties.contains(_selectedServiceSpecialty)
+                    ? _selectedServiceSpecialty
+                    : _registeredServiceSpecialties.first,
+                decoration: InputDecoration(
+                  labelText: 'تخصص درخواستی',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                items: _registeredServiceSpecialties
+                    .map((specialty) => DropdownMenuItem<String>(value: specialty, child: Text(specialty)))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedServiceSpecialty = value),
+                onSaved: (value) => _values['تخصص درخواستی'] = value ?? _registeredServiceSpecialties.first,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: (pb.authStore.record?.data['phone'] ?? '').toString(),
+                readOnly: true,
+                keyboardType: TextInputType.phone,
+                textDirection: TextDirection.ltr,
+                decoration: InputDecoration(
+                  labelText: 'شماره تماس',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty ? 'شماره تماس در حساب کاربری ثبت نشده است' : null,
+                onSaved: (value) => _values['شماره تماس'] = value?.trim() ?? '',
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: (widget.building?.address ?? pb.authStore.record?.data['address'] ?? '').toString(),
+                readOnly: true,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'آدرس',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty ? 'آدرس در حساب کاربری یا ساختمان ثبت نشده است' : null,
+                onSaved: (value) => _values['آدرس'] = value?.trim() ?? '',
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'شرح درخواست',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty ? 'شرح درخواست را وارد کنید' : null,
+                onSaved: (value) => _values['شرح درخواست'] = value?.trim() ?? '',
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                keyboardType: TextInputType.number,
+                textDirection: TextDirection.rtl,
+                decoration: InputDecoration(
+                  labelText: 'دستمزد پیشنهادی',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                validator: (value) => !_serviceFeeFlexible && (value == null || value.trim().isEmpty)
+                    ? 'دستمزد پیشنهادی را وارد کنید یا گزینهٔ قابل انتخاب را فعال کنید' : null,
+                onSaved: (value) => _values['دستمزد پیشنهادی'] = value?.trim() ?? '',
+              ),
+              CheckboxListTile(
+                value: _serviceFeeFlexible,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('قابل انتخاب (بنا به تشخیص متخصص)'),
+                onChanged: (value) => setState(() => _serviceFeeFlexible = value ?? false),
+              ),
+            ] else ..._fields.map((label) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: TextFormField(
                 controller: label == 'شناسه قبض' ? _billIdController : null,
@@ -3899,6 +3984,37 @@ class _FeaturePageState extends State<_FeaturePage> {
             ),
           ],
         ),
+      ),
+    ),
+  );
+
+  Widget _myServiceRequestsSection() => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _sectionTitle('درخواست‌های من', detail: 'درخواست‌های ثبت‌شده'),
+          if (_myServiceRequests.isEmpty)
+            const Text('هنوز درخواستی ثبت نشده است.', style: TextStyle(height: 1.5))
+          else
+            for (final request in _myServiceRequests)
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: const Icon(Icons.handyman_outlined),
+                  title: Text(request['شرح درخواست'] ?? 'درخواست خدمت'),
+                  subtitle: Text(
+                    'تخصص: ${request['تخصص درخواستی'] ?? 'لوله‌کشی و تأسیسات'}\n'
+                    'شماره تماس: ${request['شماره تماس'] ?? '—'}\n'
+                    'آدرس: ${request['آدرس'] ?? '—'}\n'
+                    'دستمزد: ${request['قابل انتخاب (بنا به تشخیص متخصص)'] == 'true' ? 'بنا به تشخیص متخصص' : (request['دستمزد پیشنهادی'] ?? '—')}',
+                  ),
+                  isThreeLine: true,
+                  trailing: Chip(label: Text(request['وضعیت'] ?? 'در انتظار بررسی')),
+                ),
+              ),
+        ],
       ),
     ),
   );
@@ -4094,6 +4210,13 @@ class _FeaturePageState extends State<_FeaturePage> {
     } else if (kind == 'vote') {
       _message('پیشنهاد «${_values['عنوان موضوع رأی‌گیری'] ?? ''}» در فهرست بررسی قرار گرفت.');
     } else if (kind == 'service') {
+      final request = <String, String>{
+        ..._values,
+        'تخصص درخواستی': _values['تخصص درخواستی'] ?? _registeredServiceSpecialties.first,
+        'قابل انتخاب (بنا به تشخیص متخصص)': _serviceFeeFlexible.toString(),
+        'وضعیت': 'در انتظار بررسی',
+      };
+      setState(() => _myServiceRequests.add(request));
       _message('درخواست خدمت شما ثبت شد.');
     } else {
       _message('ارزیابی شما با موفقیت ثبت شد.');
