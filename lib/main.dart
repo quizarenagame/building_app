@@ -1708,29 +1708,47 @@ class _ManagerHome extends StatefulWidget {
   State<_ManagerHome> createState() => _ManagerHomeState();
 }
 
+class _AddressPrefixFormatter extends TextInputFormatter {
+  _AddressPrefixFormatter(this.prefix);
+  final String prefix;
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    // Reject edits that remove or alter the fixed account-location prefix.
+    return newValue.text.startsWith(prefix) ? newValue : oldValue;
+  }
+}
+
 class _ManagerHomeState extends State<_ManagerHome> {
   late final TextEditingController _nameController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  late String _addressPrefix;
   final _createFormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
     final accountData = pb.authStore.record?.data ?? <String, dynamic>{};
+    final profileData = accountData['profile'] is Map
+        ? Map<String, dynamic>.from(accountData['profile'] as Map)
+        : <String, dynamic>{};
     String accountLocation(List<String> keys, String fallback) {
       for (final key in keys) {
-        final value = (accountData[key] ?? '').toString().trim();
-        if (value.isNotEmpty) return value;
+        final directValue = (accountData[key] ?? '').toString().trim();
+        if (directValue.isNotEmpty) return directValue;
+        final profileValue = (profileData[key] ?? '').toString().trim();
+        if (profileValue.isNotEmpty) return profileValue;
       }
       return fallback;
     }
 
     final province = accountLocation(
-      ['province', 'state', 'province_name'], 'اصفهان');
+        ['province', 'state', 'province_name'], 'استان ثبت‌نشده');
     final city = accountLocation(
-      ['city', 'town', 'city_name'], 'کاشان');
-    _addressController.text =
-        'استان($province) - شهر($city) - (آدرس تکمیلی توسط کاربر نوشته شود)';
+        ['city', 'town', 'city_name'], 'شهر ثبت‌نشده');
+    _addressPrefix = '$province - $city - ';
+    _addressController.text = _addressPrefix;
   }
 
   final _floorController = TextEditingController();
@@ -2027,6 +2045,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
+                  inputFormatters: [_AddressPrefixFormatter(_addressPrefix)],
                   decoration: _deco(context, 'آدرس کامل و الزامی ساختمان', Icons.place_outlined),
                   maxLines: 2,
                   validator: (v) => (v?.trim().length ?? 0) >= 5 ? null : 'آدرس ساختمان را کامل و الزامی وارد کنید.',
@@ -3306,6 +3325,31 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           child: InkWell(
             borderRadius: BorderRadius.circular(22),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => _FeaturePage(
+                item: const _FeatureItem('گفت‌وگوی ساختمان', 'گفت‌وگوی عمومی اعضای ساختمان', Icons.forum_rounded, 'chat'),
+                building: b,
+              ),
+            )),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                Icon(Icons.forum_outlined, color: colors.primary),
+                const SizedBox(width: 12),
+                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('گفت‌وگوی ساختمان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  SizedBox(height: 4),
+                  Text('ورود به گفت‌وگوی عمومی اعضای این ساختمان'),
+                ])),
+                const Icon(Icons.chevron_left_rounded),
+              ]),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Card(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
               builder: (_) => _BuildingManagementMenuPage(
                 building: b,
                 onCreatePoll: _createPoll,
@@ -3712,7 +3756,6 @@ class _FeatureHub extends StatelessWidget {
         ? <_FeatureItem>[
             const _FeatureItem('درخواست‌های من', '', Icons.handyman_rounded, 'service'),
             const _FeatureItem('متخصصین', 'لیست افراد خدماتی، تخصص‌ها و شماره تماس', Icons.people_alt_rounded, 'specialists'),
-            const _FeatureItem('گفت‌وگوی ساختمان', 'ارتباط با ساکنان و مدیر ساختمان', Icons.forum_rounded, 'chat'),
           ]
         : index == 2
             ? <_FeatureItem>[
@@ -3784,6 +3827,7 @@ class _FeaturePageState extends State<_FeaturePage> {
   final TextEditingController _chatController = TextEditingController();
   final TextEditingController _billIdController = TextEditingController();
   late final List<_MeterReading> _meters;
+  late final Future<List<dynamic>> _specialistsFuture;
   String? _choice;
   String? _selectedServiceSpecialty;
   bool _serviceFeeFlexible = false;
@@ -3826,6 +3870,9 @@ class _FeaturePageState extends State<_FeaturePage> {
   @override
   void initState() {
     super.initState();
+    _specialistsFuture = pb.collection('users')
+        .getList(perPage: 100, filter: 'role = "خدماتی"')
+        .then((result) => result.items.cast<dynamic>());
     final units = <String>[];
     final building = widget.building;
     if (building != null) {
@@ -3867,7 +3914,7 @@ class _FeaturePageState extends State<_FeaturePage> {
         if (kind == 'service') const SizedBox(height: 12),
         if (kind == 'service') _myServiceRequestsSection(),
         if (kind == 'service') const SizedBox(height: 12),
-        if (kind != 'specialists') ...[
+        if (kind != 'specialists' && kind != 'service') ...[
           Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [
             CircleAvatar(radius: 26, child: Icon(widget.item.icon)), const SizedBox(width: 14),
             Expanded(child: Text(widget.item.subtitle, style: const TextStyle(height: 1.6))),
@@ -4165,50 +4212,86 @@ class _FeaturePageState extends State<_FeaturePage> {
   Widget _unitDebtRow(int unit, int amount) => ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: CircleAvatar(radius: 16, child: Text('$unit')), title: Text('واحد $unit'), subtitle: const Text('شارژ و هزینه‌های مشترک'), trailing: Text('$amount تومان'));
 
   Widget _specialistsContent(BuildContext context) {
-    // نمونهٔ نمایشی؛ شماره‌ها را می‌توان با اطلاعات ثبت‌شدهٔ ارائه‌دهندگان جایگزین کرد.
-    const providers = <({String name, String specialty, String phone, IconData icon})>[
-      (name: 'علی رضایی', specialty: 'لوله‌کشی و تأسیسات (لوله‌کش)', phone: '09000000001', icon: Icons.plumbing_rounded),
-      (name: 'محمد کریمی', specialty: 'برق‌کاری ساختمان', phone: '09000000002', icon: Icons.electrical_services_rounded),
-      (name: 'حسین احمدی', specialty: 'سرویس و تعمیر آسانسور', phone: '09000000003', icon: Icons.elevator_rounded),
-      (name: 'زهرا محمدی', specialty: 'نظافت مشاعات', phone: '09000000004', icon: Icons.cleaning_services_rounded),
-      (name: 'رضا مرادی', specialty: 'تعمیرات عمومی ساختمان', phone: '09000000005', icon: Icons.handyman_rounded),
-    ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _sectionTitle('فهرست متخصصین', detail: 'برای تماس با ارائه‌دهنده، روی شمارهٔ تلفن بزنید.', icon: Icons.people_alt_rounded),
-      for (final provider in providers)
-        Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          clipBehavior: Clip.antiAlias,
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            leading: CircleAvatar(radius: 25, child: Icon(provider.icon)),
-            title: Text(provider.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('تخصص: ${provider.specialty}'),
-                const SizedBox(height: 5),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: InkWell(
-                    onTap: () => _contactProvider(context, provider.phone),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.phone_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(width: 6),
-                      Text(provider.phone, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ),
-              ]),
-            ),
-            isThreeLine: true,
-          ),
-        ),
-      const Padding(
-        padding: EdgeInsets.only(top: 2),
-        child: Text('اطلاعات تماس بالا نمونه‌ای است و باید با اطلاعات واقعی متخصصین جایگزین شود.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+      _sectionTitle('فهرست متخصصین', detail: 'نام، تخصص و شماره تماس کاربران خدماتی ثبت‌شده در سامانه.', icon: Icons.people_alt_rounded),
+      FutureBuilder<List<dynamic>>(
+        future: _specialistsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.all(28),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasError) {
+            return Card(child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('بارگذاری فهرست متخصصین با خطا روبه‌رو شد. اتصال شبکه و دسترسی PocketBase را بررسی کنید.
+${snapshot.error}'),
+            ));
+          }
+          final users = snapshot.data ?? const <dynamic>[];
+          if (users.isEmpty) {
+            return const Card(child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('هنوز کاربر خدماتی ثبت‌شده‌ای در سامانه وجود ندارد.'),
+            ));
+          }
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            for (final user in users)
+              _serviceProviderCard(context, user.data),
+          ]);
+        },
       ),
     ]);
+  }
+
+  Widget _serviceProviderCard(BuildContext context, Map<String, dynamic> data) {
+    final firstName = (data['name'] ?? '').toString().trim();
+    final lastName = (data['last_name'] ?? data['lastname'] ?? '').toString().trim();
+    final fullName = [firstName, lastName].where((part) => part.isNotEmpty).join(' ');
+    final name = fullName.isNotEmpty
+        ? fullName
+        : (data['full_name'] ?? data['username'] ?? 'کاربر خدماتی').toString();
+    final rawSpecialties = data['service_specialties'];
+    final specialties = rawSpecialties is List
+        ? rawSpecialties.map((value) => value.toString().trim()).where((value) => value.isNotEmpty).toList()
+        : rawSpecialties == null || rawSpecialties.toString().trim().isEmpty
+            ? <String>[]
+            : rawSpecialties.toString().split(RegExp(r'[,،]')).map((value) => value.trim()).where((value) => value.isNotEmpty).toList();
+    final phone = (data['phone'] ?? '').toString().trim();
+    final specialtyLabel = specialties.isEmpty ? 'تخصص ثبت نشده' : specialties.join('، ');
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        leading: const CircleAvatar(radius: 25, child: Icon(Icons.handyman_rounded)),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('تخصص: $specialtyLabel'),
+            const SizedBox(height: 5),
+            if (phone.isNotEmpty)
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: InkWell(
+                  onTap: () => _contactProvider(context, phone),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.phone_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(phone, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              )
+            else
+              const Text('شماره تماس ثبت نشده'),
+          ]),
+        ),
+        isThreeLine: true,
+      ),
+    );
   }
 
   void _contactProvider(BuildContext context, String phone) {
