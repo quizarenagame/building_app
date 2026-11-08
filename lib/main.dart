@@ -953,7 +953,7 @@ void _applyBuildingStructure(_Building b, dynamic raw) {
       final floor = int.tryParse(entry.key.toString());
       final unitsRaw = entry.value;
       if (floor == null || !b.floors.containsKey(floor) || unitsRaw is! List) continue;
-      final units = unitsRaw.map((v) => int.tryParse(v.toString())).whereType<int>().where((v) => v > 0).toList();
+      final units = unitsRaw.map((v) => v.toString().trim()).where((v) => v.isNotEmpty).toList();
       if (units.isNotEmpty) b.updateFloorUnits(floor, units);
     }
   }
@@ -1048,7 +1048,7 @@ Future<void> _cacheResidentMembership(String userId, _Building building, int flo
 
 /// Best-effort member sync. The compact core payload is retried if a deployment
 /// has not yet added the optional building/floor/unit_number fields.
-Future<void> _syncMemberRecord(_Building building, int floor, int unit, _Member member) async {
+Future<void> _syncMemberRecord(_Building building, int floor, dynamic unit, _Member member) async {
   if (!pb.authStore.isValid) return;
   final current = pb.authStore.record;
   final phone = _cleanMemberPhone(member.phone);
@@ -1074,7 +1074,7 @@ Future<void> _syncMemberRecord(_Building building, int floor, int unit, _Member 
   final extendedBody = <String, dynamic>{
     ...requiredBody,
     if ((building.recordId ?? '').isNotEmpty) 'building': building.recordId,
-    'building_name': building.name, 'floor': floor, 'unit_number': unit,
+    'building_name': building.name, 'floor': floor, 'unit_number': unit.toString(),
   };
   try {
     // Update an existing record for this user's unit instead of generating duplicates.
@@ -1202,7 +1202,7 @@ class _Building {
   /// هر طبقه: شماره طبقه -> تعداد واحدها
   final Map<int, int> floors = {};
   /// شماره واحدهای واقعی هر طبقه؛ امکان شماره‌گذاری پیوسته بین طبقات.
-  final Map<int, List<int>> floorUnits = {};
+  final Map<int, List<String>> floorUnits = {};
   /// واحد اشغال‌شده: "طبقه/واحد" -> عضو
   final Map<String, _Member> occupants = {};
   _ChargeSettingTopic? chargeSettingTopic;
@@ -1230,10 +1230,10 @@ class _Building {
     }
   }
   int? get monthlyCharge => chargeSettingTopic?.approvedAmount;
-  String unitId(int floor, int unit) => '$floor/$unit';
+  String unitId(int floor, dynamic unit) => '$floor/${unit.toString()}';
 
-  bool isOccupied(int floor, int unit) => occupants.containsKey('$floor/$unit');
-  _Member? occupantOf(int floor, int unit) => occupants['$floor/$unit'];
+  bool isOccupied(int floor, dynamic unit) => occupants.containsKey(unitId(floor, unit));
+  _Member? occupantOf(int floor, dynamic unit) => occupants[unitId(floor, unit)];
 
   bool hasOccupantWithPhone(String phone, {String? excludeKey}) {
     final clean = _latinDigits(phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
@@ -1246,8 +1246,8 @@ class _Building {
     return false;
   }
 
-  String? assign(int floor, int unit, _Member member) {
-    final key = '$floor/$unit';
+  String? assign(int floor, dynamic unit, _Member member) {
+    final key = unitId(floor, unit);
     if (occupants.containsKey(key)) return 'این واحد قبلاً به ${occupants[key]!.name} اختصاص یافته است.';
     if (member.phone.isNotEmpty && hasOccupantWithPhone(member.phone, excludeKey: key)) {
       return 'کاربری با این شماره تماس قبلاً در واحد دیگری ثبت شده است و امکان اشغال بیش از یک واحد وجود ندارد.';
@@ -1256,12 +1256,33 @@ class _Building {
     return null;
   }
 
-  bool addFloor(int floor, int units, {bool continueNumbering = false}) {
+  bool addFloor(int floor, int units, {bool continueNumbering = false, String namingPattern = 'standard'}) {
     if (floors.containsKey(floor) || units < 1) return false;
-    final previousMax = floorUnits.values.expand((values) => values).fold<int>(0, (max, value) => value > max ? value : max);
+    final previousMax = floorUnits.values.expand((values) => values).fold<int>(0, (max, value) {
+      final n = int.tryParse(value);
+      return n != null && n > max ? n : max;
+    });
     final first = continueNumbering ? previousMax + 1 : 1;
+    final names = <String>[];
+    for (var index = 0; index < units; index++) {
+      final number = (continueNumbering ? first + index : index + 1).toString();
+      switch (namingPattern) {
+        case 'east_west':
+          names.add('${(index ~/ 2) + 1} ${index.isEven ? 'شرقی' : 'غربی'}');
+          break;
+        case 'north_south':
+          names.add('${(index ~/ 2) + 1} ${index.isEven ? 'جنوبی' : 'شمالی'}');
+          break;
+        case 'letter_number':
+          final letter = String.fromCharCode(65 + (index % 26));
+          names.add('$letter$floor');
+          break;
+        default:
+          names.add(number);
+      }
+    }
     floors[floor] = units;
-    floorUnits[floor] = List<int>.generate(units, (index) => first + index);
+    floorUnits[floor] = names;
     return true;
   }
 
@@ -1280,7 +1301,7 @@ class _Building {
   }
 
   /// به‌روزرسانی شمارهٔ واحدهای یک طبقه با فهرست جدید.
-  bool updateFloorUnits(int floor, List<int> newUnits) {
+  bool updateFloorUnits(int floor, List<String> newUnits) {
     if (!floors.containsKey(floor) || newUnits.isEmpty) return false;
     final distinct = newUnits.toSet().toList();
     floorUnits[floor] = distinct;
@@ -1292,18 +1313,18 @@ class _Building {
   /// اشغال‌ها تا حد امکان حفظ می‌شوند.
   bool updateUnits(int floor, int newCount) {
     if (!floors.containsKey(floor) || newCount < 1) return false;
-    final current = floorUnits[floor] ?? List<int>.generate(floors[floor]!, (i) => i + 1);
+    final current = floorUnits[floor] ?? List<String>.generate(floors[floor]!, (i) => '${i + 1}');
     final keep = current.take(newCount).toList();
-    var next = keep.isEmpty ? 1 : keep.reduce((a, b) => a > b ? a : b) + 1;
+    var next = keep.map((v) => int.tryParse(v)).whereType<int>().fold<int>(0, (m, v) => v > m ? v : m) + 1;
     while (keep.length < newCount) {
-      while (floorUnits.values.expand((v) => v).contains(next) || keep.contains(next)) next++;
-      keep.add(next);
+      while (floorUnits.values.expand((v) => v).contains('$next') || keep.contains('$next')) next++;
+      keep.add('$next');
       next++;
     }
     // حذف اشغال واحدهایی که دیگر وجود ندارند
     occupants.removeWhere((key, _) {
       final parts = key.split('/');
-      return parts.length == 2 && int.tryParse(parts[0]) == floor && !keep.contains(int.tryParse(parts[1]));
+      return parts.length == 2 && int.tryParse(parts[0]) == floor && !keep.contains(parts[1]);
     });
     floorUnits[floor] = keep;
     floors[floor] = keep.length;
@@ -1693,6 +1714,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
   final _floorController = TextEditingController();
   final _unitsController = TextEditingController();
   bool _continueUnitNumbers = false;
+  String _unitNamingPattern = 'standard';
+  bool _isGroundPilot = false;
 
   @override
   void dispose() {
@@ -1725,9 +1748,9 @@ class _ManagerHomeState extends State<_ManagerHome> {
     if (isNew || b.createdBy == null) b.createdBy = pb.authStore.record?.id ?? widget.managerName;
     b.address = address;
     if (isNew && b.recordId == null) {
-      final code = await _generateUniqueBuildingCode();
-      b.buildingCode = code;
       try {
+        final code = await _generateUniqueBuildingCode();
+        b.buildingCode = code;
         final body = <String, dynamic>{'name': name, 'address': address, 'created_by': pb.authStore.record?.id, 'building_code': code};
         try {
           final record = await pb.collection('buildings').create(body: body);
@@ -1758,9 +1781,14 @@ class _ManagerHomeState extends State<_ManagerHome> {
       _toast('ساختمان «${b.name}» از قبل ساخته شده است؛ با کلیک روی نام آن وارد شوید.');
       return;
     }
+    if (_isGroundPilot && !b.floors.containsKey(0)) {
+      b.floors[0] = 0;
+      b.floorUnits[0] = <String>[];
+    }
     for (var i = 0; i < floorCount; i++) {
       final floorNumber = (b.floors.keys.fold<int>(0, (m, f) => f > m ? f : m)) + 1;
-      if (!b.addFloor(floorNumber, unitsPerFloor, continueNumbering: _continueUnitNumbers)) break;
+      if (!b.addFloor(floorNumber, unitsPerFloor,
+          continueNumbering: _continueUnitNumbers, namingPattern: _unitNamingPattern)) break;
     }
     await _persistBuilding(b);
     widget.onBuildingChanged(b);
@@ -1996,11 +2024,31 @@ class _ManagerHomeState extends State<_ManagerHome> {
                       decoration: _deco(context, 'واحد در هر طبقه', Icons.door_sliding_outlined),
                       validator: (v) {
                         final n = int.tryParse(_latinDigits((v ?? '').trim()));
-                        return (n != null && n >= 1 && n <= 50) ? null : 'بین ۱ تا ۵۰';
+                        if (n == null || n < 1 || n > 50) return 'بین ۱ تا ۵۰';
+                        return null;
                       },
                     ),
                   ),
                 ]),
+                const SizedBox(height: 8),
+                const Text('وضعیت همکف', style: TextStyle(fontWeight: FontWeight.w600)),
+                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: true, groupValue: _isGroundPilot,
+                  onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
+                  title: const Text('همکف پیلوت است (بدون واحد)')),
+                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: false, groupValue: _isGroundPilot,
+                  onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
+                  title: const Text('همکف دارای واحد مسکونی است')),
+                DropdownButtonFormField<String>(
+                  value: _unitNamingPattern,
+                  decoration: const InputDecoration(labelText: 'الگوی نام‌گذاری واحدها'),
+                  items: const [
+                    DropdownMenuItem(value: 'standard', child: Text('استاندارد (عددی: ۱، ۲، ...)')),
+                    DropdownMenuItem(value: 'east_west', child: Text('شرقی/غربی (۱ شرقی، ۱ غربی، ...)')),
+                    DropdownMenuItem(value: 'north_south', child: Text('شمالی/جنوبی (۱ جنوبی، ۱ شمالی، ...)')),
+                    DropdownMenuItem(value: 'letter_number', child: Text('حرف و عدد (A1, B1, ...)')),
+                  ],
+                  onChanged: (value) { if (value != null) setState(() => _unitNamingPattern = value); },
+                ),
                 const SizedBox(height: 8),
                 const Text('شماره‌گذاری واحدها', style: TextStyle(fontWeight: FontWeight.w600)),
                 RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: false, groupValue: _continueUnitNumbers,
@@ -2282,9 +2330,9 @@ class _ResidentHomeState extends State<_ResidentHome> {
     setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
   }
 
-  void _joinUnit(_Building b, int floor, int unit) {
+  void _joinUnit(_Building b, int floor, dynamic unit) {
     if (b.isOccupied(floor, unit)) {
-      _toast('واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} قبلاً به ${b.occupantOf(floor, unit)!.name} اختصاص یافته است.', error: true);
+      _toast('واحد ${unit.toString().toPersianDigits()} طبقه ${floor.toPersianDigits()} قبلاً به ${b.occupantOf(floor, unit)!.name} اختصاص یافته است.', error: true);
       return;
     }
     final member = _Member(widget.name, 'ساکن', widget.ownership,
@@ -2300,14 +2348,14 @@ class _ResidentHomeState extends State<_ResidentHome> {
     if (userId.isNotEmpty) unawaited(_cacheResidentMembership(userId, b, floor, unit));
     unawaited(_persistBuilding(b));
     unawaited(_syncMemberRecord(b, floor, unit, member));
-    _toast('خوش آمدید! شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} «${b.name}» قرار گرفتید.');
+    _toast('خوش آمدید! شما در واحد ${unit.toString().toPersianDigits()} طبقه ${floor.toPersianDigits()} «${b.name}» قرار گرفتید.');
   }
 
-  Future<void> _showResidentUnit(_Building building, int floor, int unit) async {
+  Future<void> _showResidentUnit(_Building building, int floor, dynamic unit) async {
     final member = building.occupantOf(floor, unit);
     if (member == null) {
       final join = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-        title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+        title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
         content: const Text('وضعیت واحد: خالی\nبرای سکونت در این واحد ثبت‌نام می‌کنید؟'),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('بستن')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('انتخاب این واحد'))],
       ));
@@ -2315,7 +2363,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
       return;
     }
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: Text('اطلاعات واحد ${unit.toPersianDigits()}'),
+      title: Text('اطلاعات واحد ${unit.toString().toPersianDigits()}'),
       content: _MemberInfoContent(building: building, member: member, unitId: building.unitId(floor, unit)),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))],
     ));
@@ -2710,7 +2758,7 @@ class _ResidentPollsCardState extends State<_ResidentPollsCard> {
 class _BuildingLayout extends StatelessWidget {
   const _BuildingLayout({required this.building, this.onUnitTap, this.highlightMemberName, this.onFloorActions});
   final _Building building;
-  final void Function(int floor, int unit)? onUnitTap;
+  final void Function(int floor, dynamic unit)? onUnitTap;
   final String? highlightMemberName;
   final void Function(int floor)? onFloorActions;
 
@@ -2760,7 +2808,7 @@ class _BuildingLayout extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (final unit in (building.floorUnits[floor] ?? List<int>.generate(building.floors[floor]!, (i) => i + 1)))
+                    for (final unit in (building.floorUnits[floor] ?? List<String>.generate(building.floors[floor]!, (i) => '${i + 1}')))
                       _UnitTile(
                         building: building,
                         floor: floor,
@@ -2784,7 +2832,7 @@ class _UnitTile extends StatelessWidget {
   const _UnitTile({required this.building, required this.floor, required this.unit, required this.onTap, required this.highlightMemberName});
   final _Building building;
   final int floor;
-  final int unit;
+  final dynamic unit;
   final VoidCallback? onTap;
   final String? highlightMemberName;
 
@@ -2816,7 +2864,7 @@ class _UnitTile extends StatelessWidget {
           Row(children: [
             Icon(occupied ? Icons.meeting_room_rounded : Icons.meeting_room_outlined, size: 18, color: occupied ? colors.primary : colors.onSurfaceVariant),
             const SizedBox(width: 6),
-            Expanded(child: Text('واحد ${unit.toPersianDigits()}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+            Expanded(child: Text('واحد ${unit.toString().toPersianDigits()}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
           ]),
           const SizedBox(height: 6),
           const SizedBox(height: 5),
@@ -2886,15 +2934,15 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     ));
   }
 
-  String _unitKey(int floor, int unit) => b.unitId(floor, unit);
+  String _unitKey(int floor, dynamic unit) => b.unitId(floor, unit);
 
-  Future<void> _onManagerUnitTap(int floor, int unit) async {
+  Future<void> _onManagerUnitTap(int floor, dynamic unit) async {
     final key = _unitKey(floor, unit);
     final member = b.occupants[key];
     final action = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('واحد ${unit.toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+        title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
         content: member == null
             ? const Text('این واحد خالی است. آیا می‌خواهید در این واحد مستقر شوید یا ساکن ثبت کنید؟')
             : SingleChildScrollView(child: _MemberInfoContent(building: b, member: member, unitId: key)),
@@ -2930,8 +2978,8 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       if (assignError != null) {
         for (final previousKey in previousManagerKeys) {
           final parts = previousKey.split('/');
-          final oldFloor = int.tryParse(parts.first), oldUnit = int.tryParse(parts.last);
-          if (oldFloor != null && oldUnit != null) {
+          final oldFloor = int.tryParse(parts.first);
+          if (oldFloor != null && parts.length > 1) {
             b.occupants[previousKey] = managerMember;
           }
         }
@@ -2941,7 +2989,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       await _persistBuilding(b);
       await _syncMemberRecord(b, floor, unit, managerMember);
       if (mounted) setState(() {});
-      _toast('شما در واحد ${unit.toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
+      _toast('شما در واحد ${unit.toString().toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
     } else if (action == 'register') {
       await _editOrAddMember(key, null);
     } else if (member != null && action == 'edit') {
@@ -3005,8 +3053,9 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       return;
     }
     final parts = key.split('/');
-    final floor = int.tryParse(parts.first), unit = int.tryParse(parts.last);
-    if (floor == null || unit == null) return;
+    final floor = int.tryParse(parts.first);
+    final unit = parts.length > 1 ? parts.sublist(1).join('/') : '';
+    if (floor == null || unit.isEmpty) return;
     if (existing == null) {
       final assignError = b.assign(floor, unit, result);
       if (assignError != null) { _toast(assignError, error: true); return; }
@@ -3031,14 +3080,14 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final destination = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
       title: Text('انتقال ${member.name}'),
       content: SizedBox(width: double.maxFinite, child: ListView(shrinkWrap: true, children: [
-        for (final key in available) ListTile(leading: const Icon(Icons.meeting_room_outlined), title: Text('طبقه ${int.parse(key.split('/')[0]).toPersianDigits()} — واحد ${int.parse(key.split('/')[1]).toPersianDigits()}'), onTap: () => Navigator.pop(dialogContext, key)),
+        for (final key in available) ListTile(leading: const Icon(Icons.meeting_room_outlined), title: Text('طبقه ${int.parse(key.split('/')[0]).toPersianDigits()} — واحد ${key.split('/').skip(1).join('/').toString().toPersianDigits()}'), onTap: () => Navigator.pop(dialogContext, key)),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف'))],
     ));
     if (destination == null || !mounted) return;
     setState(() { b.occupants.remove(fromKey); b.occupants[destination] = member; });
     await _persistBuilding(b);
-    await _syncMemberRecord(b, int.parse(destination.split('/')[0]), int.parse(destination.split('/')[1]), member);
+    await _syncMemberRecord(b, int.parse(destination.split('/')[0]), destination.split('/').skip(1).join('/'), member);
     _toast('عضو به واحد ${int.parse(destination.split('/')[1]).toPersianDigits()} طبقه ${int.parse(destination.split('/')[0]).toPersianDigits()} منتقل شد.');
   }
 
@@ -3114,14 +3163,14 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   }
 
   Future<void> _editFloorUnits(int floor) async {
-    final current = b.floorUnits[floor] ?? List<int>.generate(b.floors[floor]!, (i) => i + 1);
+    final current = b.floorUnits[floor] ?? List<String>.generate(b.floors[floor]!, (i) => '${i + 1}');
     final controller = TextEditingController(text: current.join('، '));
-    final result = await showDialog<List<int>>(
+    final result = await showDialog<List<String>>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('ویرایش واحدهای طبقه ${floor.toPersianDigits()}'),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('شمارهٔ واحدها را با ویرگول جدا کنید (مثلاً: ۱، ۲، ۳ یا ۵، ۶، ۷).', style: TextStyle(fontSize: 12, height: 1.6)),
+          const Text('نام واحدها را با ویرگول جدا کنید (مثلاً: ۱، ۲، ۳ یا A1، B1).', style: TextStyle(fontSize: 12, height: 1.6)),
           const SizedBox(height: 10),
           TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'شمارهٔ واحدها')),
         ]),
@@ -3129,12 +3178,8 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
           FilledButton(onPressed: () {
             final parts = _latinDigits(controller.text).split(RegExp(r'[,،]'));
-            final units = <int>[];
-            for (final part in parts) {
-              final n = int.tryParse(part.trim());
-              if (n == null || n < 1 || n > 999) return;
-              units.add(n);
-            }
+            final units = parts.map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
+            if (units.isEmpty) return;
             Navigator.pop(dialogContext, units);
           }, child: const Text('ذخیره')),
         ],
@@ -3741,7 +3786,7 @@ class _FeaturePageState extends State<_FeaturePage> {
     if (building != null) {
       final floors = building.floorUnits.keys.toList()..sort();
       for (final floor in floors) {
-        final unitNumbers = [...building.floorUnits[floor]!]..sort();
+        final unitNumbers = [...building.floorUnits[floor]!]..sort((a, b) => a.compareTo(b));
         for (final unit in unitNumbers) {
           units.add(building.unitId(floor, unit));
         }
