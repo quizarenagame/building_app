@@ -926,7 +926,7 @@ String _buildingCacheKey(_Building b) {
 Map<String, dynamic> _buildingStructure(_Building b) => <String, dynamic>{
   'floors': {for (final e in b.floors.entries) e.key.toString(): e.value},
   'floor_units': {for (final e in b.floorUnits.entries) e.key.toString(): e.value},
-  'tasks': [for (final task in b.tasks) {'title': task.title, 'dueAt': task.dueAt.toIso8601String(), 'createdAt': task.createdAt.toIso8601String()}],
+  'tasks': [for (final task in b.tasks) {'title': task.title, 'dueAt': task.dueAt.toIso8601String(), 'createdAt': task.createdAt.toIso8601String(), 'seenByUsers': task.seenByUsers.toList()}],
   'occupants': {for (final e in b.occupants.entries) e.key: {
     'name': e.value.name, 'role': e.value.role, 'ownership': e.value.ownership,
     'phone': e.value.phone, 'waterDebt': e.value.waterDebt,
@@ -951,7 +951,7 @@ void _applyBuildingStructure(_Building b, dynamic raw) {
       final dueAt = DateTime.tryParse((taskData['dueAt'] ?? taskData['due_at'] ?? '').toString());
       final createdAt = DateTime.tryParse((taskData['createdAt'] ?? taskData['created_at'] ?? '').toString());
       if (title.isNotEmpty && dueAt != null) {
-        b.tasks.add(_ScheduledTask(title: title, dueAt: dueAt, createdAt: createdAt));
+        b.tasks.add(_ScheduledTask(title: title, dueAt: dueAt, createdAt: createdAt, seenByUsers: (taskData['seenByUsers'] is List ? (taskData['seenByUsers'] as List).map((e) => e.toString()).toSet() : <String>{})));
       }
     }
   }
@@ -1148,6 +1148,48 @@ class _BuildingPoll {
   double percentage(int count) => totalVotes == 0 ? 0 : count * 100 / totalVotes;
 }
 
+// تبدیل داخلی تقویم جلالی بر پایهٔ شمارهٔ روز ژولیوسی؛ بدون وابستگی خارجی.
+int _gregorianToJdn(int gy, int gm, int gd) {
+  final a = (14 - gm) ~/ 12;
+  final y = gy + 4800 - a;
+  final m = gm + 12 * a - 3;
+  return gd + (153 * m + 2) ~/ 5 + 365 * y + y ~/ 4 - y ~/ 100 + y ~/ 400 - 32045;
+}
+DateTime _jdnToGregorian(int jdn) {
+  final a = jdn + 32044;
+  final b = (4 * a + 3) ~/ 146097;
+  final c = a - (146097 * b) ~/ 4;
+  final d = (4 * c + 3) ~/ 1461;
+  final e = c - (1461 * d) ~/ 4;
+  final m = (5 * e + 2) ~/ 153;
+  final day = e - (153 * m + 2) ~/ 5 + 1;
+  final month = m + 3 - 12 * (m ~/ 10);
+  final year = 100 * b + d - 4800 + m ~/ 10;
+  return DateTime(year, month, day);
+}
+int _jalaliToJdn(int jy, int jm, int jd) {
+  final y = jy + 1595;
+  final monthDays = jm <= 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186;
+  return -355668 + 365 * y + (y ~/ 33) * 8 + ((y % 33 + 3) ~/ 4) + monthDays + jd;
+}
+List<int> _gregorianToJalali(DateTime date) {
+  var days = _gregorianToJdn(date.year, date.month, date.day) - _jalaliToJdn(979, 1, 1);
+  var jy = 979 + 33 * (days ~/ 12053);
+  days %= 12053;
+  jy += 4 * (days ~/ 1461);
+  days %= 1461;
+  if (days > 365) { jy += (days - 1) ~/ 365; days = (days - 1) % 365; }
+  final jm = days < 186 ? 1 + days ~/ 31 : 7 + (days - 186) ~/ 30;
+  final jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+  return <int>[jy, jm, jd];
+}
+/// Converts a Jalali (Persian) year/month/day directly to a Gregorian DateTime.
+DateTime _jalaliToGregorian(int jy, int jm, int jd) => _jdnToGregorian(_jalaliToJdn(jy, jm, jd));
+String _formatJalaliDate(DateTime date) {
+  final j = _gregorianToJalali(date);
+  return _latinDigitsToPersian('${j[0].toString().padLeft(4, '0')}/${j[1].toString().padLeft(2, '0')}/${j[2].toString().padLeft(2, '0')}');
+}
+
 String _formatPersianDateTime(DateTime value) {
   final raw = '${value.year.toString().padLeft(4, '0')}/${value.month.toString().padLeft(2, '0')}/${value.day.toString().padLeft(2, '0')}  ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   return _latinDigitsToPersian(raw);
@@ -1208,12 +1250,23 @@ class _ChargeSettingTopic {
   }
 }
 class _ScheduledTask {
-  _ScheduledTask({required this.title, required this.dueAt, DateTime? createdAt})
-      : createdAt = createdAt ?? DateTime.now();
+  _ScheduledTask({required this.title, required this.dueAt, DateTime? createdAt, Set<String>? seenByUsers})
+      : createdAt = createdAt ?? DateTime.now(), seenByUsers = seenByUsers ?? <String>{};
   final String title;
   final DateTime dueAt;
   final DateTime createdAt;
+  final Set<String> seenByUsers;
   bool get isDue => !DateTime.now().isBefore(dueAt);
+  bool get isInAnnouncementWindow {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDay = DateTime(dueAt.year, dueAt.month, dueAt.day);
+    final diffDays = dueDay.difference(today).inDays;
+    final thirtyDayStage = diffDays >= 28 && diffDays <= 32;
+    final tenDayStage = diffDays >= 9 && diffDays <= 11;
+    final dueDateStage = diffDays == 0;
+    return thirtyDayStage || tenDayStage || dueDateStage;
+  }
 }
 
 class _Building {
@@ -1398,6 +1451,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   String get _currentRole => _roleOverride ?? widget.role;
   bool get _isManager => _currentRole == 'مدیر';
+
+  Future<void> _markScheduledTaskSeen(_ScheduledTask task) async {
+    final building = _joinedBuilding;
+    if (building == null) return;
+    await _persistBuilding(building);
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
@@ -1651,10 +1711,22 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isServiceRole = _currentRole == 'خدماتی';
+    final currentUserId = pb.authStore.record?.id ?? '';
+    final hasUnreadDueTasks = _joinedBuilding?.tasks.any((task) =>
+        task.isInAnnouncementWindow && !task.seenByUsers.contains(currentUserId)) ?? false;
+    Widget noticesIcon(IconData icon) => Stack(clipBehavior: Clip.none, children: [
+      Icon(icon),
+      if (hasUnreadDueTasks) Positioned(top: -2, right: -3, child: Container(
+        width: 10, height: 10, decoration: BoxDecoration(
+          color: colors.error, shape: BoxShape.circle,
+          border: Border.all(color: colors.surface, width: 1.5),
+        ),
+      )),
+    ]);
     final body = isServiceRole
         ? switch (selectedTab) {
             0 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true),
-            1 => _FeatureHub(index: 2, isManager: false, building: _joinedBuilding),
+            1 => _FeatureHub(index: 2, isManager: false, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen),
             2 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties),
             3 => _FeatureHub(index: 3, isManager: false, building: _joinedBuilding),
             4 => _SettingsPage(
@@ -1670,7 +1742,7 @@ class _DashboardPageState extends State<DashboardPage> {
           }
         : switch (selectedTab) {
             0 => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
-            1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding),
+            1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen),
             2 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
               building: _joinedBuilding, name: widget.name, myFloor: _myFloor, myUnit: _myUnit,
               ownership: widget.ownership,
@@ -1709,16 +1781,16 @@ class _DashboardPageState extends State<DashboardPage> {
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() { selectedTab = index; _savedSelectedTab = index; }),
         destinations: isServiceRole
-            ? const [
-                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
-                NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
+            ? [
+                const NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
+                NavigationDestination(icon: noticesIcon(Icons.campaign_outlined), selectedIcon: noticesIcon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
                 NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
                 NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
                 NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
               ]
-            : const [
-                NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
-                NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
+            : [
+                const NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
+                NavigationDestination(icon: noticesIcon(Icons.campaign_outlined), selectedIcon: noticesIcon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
                 NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
                 NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
                 NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
@@ -2954,6 +3026,37 @@ class _BuildingManagementMenuPage extends StatefulWidget {
   State<_BuildingManagementMenuPage> createState() => _BuildingManagementMenuPageState();
 }
 
+int _jalaliDaysInMonth(int year, int month) {
+  if (month >= 1 && month <= 6) return 31;
+  if (month >= 7 && month <= 11) return 30;
+  if (month != 12) return 0;
+  return _jalaliToJdn(year + 1, 1, 1) - _jalaliToJdn(year, 1, 1) == 366 ? 30 : 29;
+}
+
+Future<DateTime?> _showJalaliDatePicker(BuildContext context, DateTime initialDate) async {
+  final initial = _gregorianToJalali(initialDate);
+  var year = initial[0];
+  var month = initial[1];
+  var day = initial[2];
+  return showDialog<DateTime>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, setState) {
+    final monthLength = _jalaliDaysInMonth(year, month);
+    if (day > monthLength) day = monthLength;
+    return AlertDialog(
+      title: const Text('انتخاب تاریخ شمسی'),
+      content: SizedBox(width: 320, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          Expanded(child: DropdownButton<int>(isExpanded: true, value: year, items: [for (var y=initial[0]-100; y<=initial[0]+100; y++) DropdownMenuItem(value: y, child: Text(y.toString().toPersianDigits()))], onChanged: (v) { if (v != null) setState(() { year = v; day = day.clamp(1, _jalaliDaysInMonth(year, month)).toInt(); }); })),
+          const SizedBox(width: 8),
+          Expanded(child: DropdownButton<int>(isExpanded: true, value: month, items: [for (var m=1;m<=12;m++) DropdownMenuItem(value:m, child: Text(['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'][m-1]))], onChanged: (v) { if(v!=null) setState(() { month=v; day=day.clamp(1, _jalaliDaysInMonth(year, month)); }); })),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(spacing: 4, runSpacing: 4, children: [for (var d=1;d<=monthLength;d++) SizedBox(width: 38, height: 38, child: (d==day ? FilledButton : TextButton)(style: d==day ? null : TextButton.styleFrom(padding: EdgeInsets.zero), onPressed: () => setState(() { day=d; }), child: Text(d.toString().toPersianDigits()))) ]),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, _jalaliToGregorian(year, month, day)), child: const Text('تأیید'))],
+    );
+  }));
+}
+
 class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage> {
   _Building get b => widget.building;
   Future<void> _runAndRefresh(Future<void> Function() action) async { await action(); if (mounted) setState(() {}); }
@@ -2971,11 +3074,11 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
           OutlinedButton.icon(
             onPressed: () async {
               final now = DateTime.now();
-              final selected = await showDatePicker(context: context, initialDate: dueDate ?? now, firstDate: DateTime(now.year - 1), lastDate: DateTime(now.year + 20), helpText: 'انتخاب تاریخ سررسید');
+              final selected = await _showJalaliDatePicker(context, dueDate ?? now);
               if (selected != null) setDialogState(() => dueDate = DateTime(selected.year, selected.month, selected.day));
             },
             icon: const Icon(Icons.calendar_month_outlined),
-            label: Text(dueDate == null ? 'انتخاب تاریخ سررسید' : 'سررسید: ${_formatPersianDateTime(dueDate!)}'),
+            label: Text(dueDate == null ? 'انتخاب تاریخ سررسید (شمسی)' : 'سررسید: ${_formatJalaliDate(dueDate!)}'),
           ),
           Padding(padding: const EdgeInsets.only(top: 8), child: Text('تاریخ و ساعت ایجاد: ${_formatPersianDateTime(DateTime.now())}', style: Theme.of(context).textTheme.bodySmall)),
         ]),
@@ -3879,13 +3982,18 @@ class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
 }
 
 class _FeatureHub extends StatelessWidget {
-  const _FeatureHub({required this.index, required this.isManager, this.building});
+  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen});
   final int index;
   final bool isManager;
   final _Building? building;
+  final String userId;
+  final Future<void> Function(_ScheduledTask task)? onTaskSeen;
 
   @override
   Widget build(BuildContext context) {
+    final announcementTasks = index == 2
+        ? (building?.tasks.where((task) => task.isInAnnouncementWindow && !task.seenByUsers.contains(userId)).toList() ?? <_ScheduledTask>[])
+        : <_ScheduledTask>[];
     final items = index == 1
         ? <_FeatureItem>[
             const _FeatureItem('درخواست‌های من', '', Icons.handyman_rounded, 'service'),
@@ -3906,15 +4014,19 @@ class _FeatureHub extends StatelessWidget {
         Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
         if (index == 2) ...[
-          if (building == null || building!.tasks.isEmpty)
-            const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر امر دوره‌ای ثبت نشده است.')))),
-          if (building != null) ...building!.tasks.map((task) => Padding(
+          if (announcementTasks.isEmpty)
+            const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر اطلاعیهٔ سررسیدِ خوانده‌نشده‌ای وجود ندارد.')))),
+          ...announcementTasks.map((task) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Card(child: ListTile(
               leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? Theme.of(context).colorScheme.error : null)),
               title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text('${task.isDue ? 'یادآور فعال — سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)}\nتاریخ و ساعت ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
               isThreeLine: true,
+              onTap: () async {
+                if (!task.seenByUsers.add(userId)) return;
+                await onTaskSeen?.call(task);
+              },
             )),
           )),
         ],
