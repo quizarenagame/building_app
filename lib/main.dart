@@ -2079,25 +2079,6 @@ class _ManagerHomeState extends State<_ManagerHome> {
         _myBuildingsSection(context),
         const SizedBox(height: 8),
         if (b != null) ...[
-          InkWell(
-            onTap: () => _openBuildingDetail(b),
-            borderRadius: BorderRadius.circular(22),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(children: [
-                  Container(width: 46, height: 46, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.apartment_rounded, color: Theme.of(context).colorScheme.primary)),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('${b.address}\nکد ساختمان: ${b.buildingCode.toPersianDigits()}\n${b.floors.length.toPersianDigits()} طبقه — ${b.floors.values.fold<int>(0, (sum, n) => sum + n).toPersianDigits()} واحد', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  ])),
-                  Icon(Icons.chevron_left_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ]),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
           _BuildingLayout(building: b, highlightMemberName: widget.managerName),
         ],
       ],
@@ -2895,6 +2876,51 @@ class _UnitTile extends StatelessWidget {
   }
 }
 
+/// صفحهٔ فرعی برای دسترسی به ابزارهای مدیریتی ساختمان.
+class _BuildingManagementMenuPage extends StatefulWidget {
+  const _BuildingManagementMenuPage({required this.building, required this.onCreatePoll, required this.onCreateChargeTopic, required this.onOpenChargeTopic});
+  final _Building building;
+  final Future<void> Function() onCreatePoll;
+  final Future<void> Function() onCreateChargeTopic;
+  final Future<void> Function() onOpenChargeTopic;
+  @override
+  State<_BuildingManagementMenuPage> createState() => _BuildingManagementMenuPageState();
+}
+
+class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage> {
+  _Building get b => widget.building;
+  Future<void> _runAndRefresh(Future<void> Function() action) async { await action(); if (mounted) setState(() {}); }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    b.settlePolls();
+    return Scaffold(
+      appBar: AppBar(title: const Text('امور مدیریتی و نظرسنجی')),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [Icon(Icons.payments_outlined, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
+          const SizedBox(height: 8),
+          Text(b.chargeSettingTopic == null ? 'برای ساختمان «${b.name}» موضوع تعیین شارژ بسازید.' : 'موضوع فعال: ${b.chargeSettingTopic!.title}', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          if (b.monthlyCharge != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('شارژ ماهانهٔ هر واحد: ${formatTomanAmount(b.monthlyCharge!)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+          const SizedBox(height: 10),
+          FilledButton.icon(onPressed: () => _runAndRefresh(widget.onCreateChargeTopic), icon: const Icon(Icons.add_circle_outline), label: Text(b.chargeSettingTopic == null ? 'ایجاد موضوع شارژ' : 'ایجاد موضوع جدید')),
+          if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _runAndRefresh(widget.onOpenChargeTopic), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
+        ]))),
+        const SizedBox(height: 14),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [Icon(Icons.how_to_vote_outlined, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('مدیریت نظرسنجی‌ها', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
+          const SizedBox(height: 8),
+          Text('نظرسنجی‌های فعال: ${b.polls.where((p) => p.isActive).length.toPersianDigits()}', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          const SizedBox(height: 10),
+          FilledButton.icon(onPressed: () => _runAndRefresh(widget.onCreatePoll), icon: const Icon(Icons.add_circle_outline), label: const Text('ایجاد نظرسنجی')),
+          for (final poll in b.polls) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(poll.isActive ? Icons.poll_outlined : Icons.task_alt_outlined), title: Text(poll.title), subtitle: Text(poll.isActive ? 'ایجاد: ${_formatPersianDateTime(poll.createdAt)} • مهلت تا ${_formatPersianDateTime(poll.deadline)} • رأی‌دهنده: ${poll.totalVotes.toPersianDigits()}' : 'نتیجه: ${poll.passed ? 'تصویب شد' : 'تصویب نشد'} • موافق ${poll.agreeCount.toPersianDigits()} (${poll.percentage(poll.agreeCount).toStringAsFixed(1).toPersianDigits()}٪) • مخالف ${poll.disagreeCount.toPersianDigits()} (${poll.percentage(poll.disagreeCount).toStringAsFixed(1).toPersianDigits()}٪)')),
+        ]))),
+      ]),
+    );
+  }
+}
+
 /// ------------------- نمای جزئیات ساختمان -------------------
 /// با کلیک روی نام ساختمان باز می‌شود؛ مدیر می‌تواند نام، طبقات و واحدها
 /// را از همین صفحه ویرایش کند.
@@ -3259,24 +3285,32 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           if (b.monthlyCharge != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text('شارژ ماهانهٔ تصویب‌شده: ${formatTomanAmount(b.monthlyCharge!)}', style: const TextStyle(fontWeight: FontWeight.bold))),
         ]))),
         const SizedBox(height: 14),
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [Icon(Icons.payments_outlined, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
-          const SizedBox(height: 8),
-          Text(b.chargeSettingTopic == null ? 'برای ساختمان «${b.name}» موضوع تعیین شارژ بسازید.' : 'موضوع فعال: ${b.chargeSettingTopic!.title}', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
-          if (b.monthlyCharge != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('شارژ ماهانهٔ هر واحد: ${formatTomanAmount(b.monthlyCharge!)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-          const SizedBox(height: 10),
-          FilledButton.icon(onPressed: _createChargeTopic, icon: const Icon(Icons.add_circle_outline), label: Text(b.chargeSettingTopic == null ? 'ایجاد موضوع شارژ' : 'ایجاد موضوع جدید')),
-          if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _openChargeTopic(b, isManager: true), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
-        ]))),
-        const SizedBox(height: 14),
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [Icon(Icons.how_to_vote_outlined, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('نظرسنجی', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
-          const SizedBox(height: 8),
-          Text('نظرسنجی‌های فعال: ${b.polls.where((p) => p.isActive).length.toPersianDigits()}', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
-          const SizedBox(height: 10),
-          FilledButton.icon(onPressed: _createPoll, icon: const Icon(Icons.add_circle_outline), label: const Text('ایجاد نظرسنجی')),
-          for (final poll in b.polls) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(poll.isActive ? Icons.poll_outlined : Icons.task_alt_outlined), title: Text(poll.title), subtitle: Text(poll.isActive ? 'ایجاد: ${_formatPersianDateTime(poll.createdAt)} • مهلت تا ${_formatPersianDateTime(poll.deadline)} • رأی‌دهنده: ${poll.totalVotes.toPersianDigits()}' : 'نتیجه: ${poll.passed ? 'تصویب شد' : 'تصویب نشد'} • موافق ${poll.agreeCount.toPersianDigits()} (${poll.percentage(poll.agreeCount).toStringAsFixed(1).toPersianDigits()}٪) • مخالف ${poll.disagreeCount.toPersianDigits()} (${poll.percentage(poll.disagreeCount).toStringAsFixed(1).toPersianDigits()}٪)')),
-        ]))),
+        Card(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => _BuildingManagementMenuPage(
+                building: b,
+                onCreatePoll: _createPoll,
+                onCreateChargeTopic: _createChargeTopic,
+                onOpenChargeTopic: () => _openChargeTopic(b, isManager: true),
+              ),
+            )),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                Icon(Icons.admin_panel_settings_outlined, color: colors.primary),
+                const SizedBox(width: 12),
+                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('امور مدیریتی و نظرسنجی', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  SizedBox(height: 4),
+                  Text('مدیریت نظرسنجی‌ها و تعیین شارژ ساختمان'),
+                ])),
+                const Icon(Icons.chevron_left_rounded),
+              ]),
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
         OutlinedButton.icon(onPressed: _addFloor, icon: const Icon(Icons.add_rounded), label: const Text('افزودن طبقه جدید')),
         const SizedBox(height: 12),
