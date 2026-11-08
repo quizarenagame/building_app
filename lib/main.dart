@@ -367,7 +367,6 @@ void _goBack() {
   }
 
   Future<void> _sendOtpInBackground(String phone, {bool isResend = false}) async {
-    if (_latinDigits(phone).replaceAll(' ', '') == BuildingApp.managerPhone) return;
     if (_latinDigits(phone).replaceAll(' ', '') == BuildingApp.managerPhone) {
       if (mounted) setState(() => _isSendingOtp = false);
       return;
@@ -406,41 +405,10 @@ void _goBack() {
     }
   }
 
-  Future<bool> _verifyManagerPin(String phone, String code) async {
-    if (_latinDigits(phone).replaceAll(' ', '') != BuildingApp.managerPhone ||
-        _latinDigits(code) != BuildingApp.managerPin) return false;
-    try {
-      final auth = await pb.collection('users').authWithPassword(phone, BuildingApp.managerPin);
-      final record = auth.record;
-      if (record == null || (record.data['role'] ?? '').toString() != 'مدیر') {
-        pb.authStore.clear();
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('این شماره به‌عنوان حساب مدیر ثبت نشده است.')),
-        );
-        return true;
-      }
-      _timer?.cancel();
-      _nameController.text = (record.data['name'] ?? '').toString();
-      _lastNameController.text = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString();
-      if (mounted) setState(() => _step = _LoginStep.dashboard);
-      return true;
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('ورود مستقیم مدیر ناموفق بود؛ رمز حساب PocketBase باید با کد مدیر یکسان باشد.'),
-      ));
-      return true;
-    }
-  }
-
   Future<void> _verifyOtp() async {
   if (_isVerifyingOtp || !(_otpKey.currentState?.validate() ?? false)) return;
   final phone = _phoneController.text.trim();
   final code = _latinDigits(_otpController.text.trim());
-  if (_latinDigits(phone).replaceAll(' ', '') == BuildingApp.managerPhone && code == BuildingApp.managerPin) {
-    setState(() => _isVerifyingOtp = true);
-    try { await _verifyManagerPin(phone, code); } finally { if (mounted) setState(() => _isVerifyingOtp = false); }
-    return;
-  }
   setState(() => _isVerifyingOtp = true);
   try {
     final response = await pb.send<Map<String, dynamic>>(
@@ -466,12 +434,16 @@ void _goBack() {
     final existingName = (record.data['name'] ?? '').toString().trim();
     final existingLastName = (record.data['last_name'] ?? record.data['lastname'] ?? '').toString().trim();
     final existingRole = (record.data['role'] ?? '').toString().trim();
-    if (existingName.isNotEmpty || existingLastName.isNotEmpty) {
+    _role = _normalizeRole(existingRole);
+    _ownership = (record.data['ownership'] ?? 'ساکن').toString();
+    _buildingController.text = (record.data['building_name'] ?? '').toString();
+    if (_role == 'مدیر') {
       _nameController.text = existingName;
       _lastNameController.text = existingLastName;
-      _role = _normalizeRole(existingRole);
-      _ownership = (record.data['ownership'] ?? 'ساکن').toString();
-      _buildingController.text = (record.data['building_name'] ?? '').toString();
+      if (mounted) setState(() => _step = _LoginStep.dashboard);
+    } else if (existingName.isNotEmpty || existingLastName.isNotEmpty) {
+      _nameController.text = existingName;
+      _lastNameController.text = existingLastName;
       if (mounted) setState(() => _step = _LoginStep.dashboard);
     } else {
       if (mounted) setState(() => _step = _LoginStep.account);
