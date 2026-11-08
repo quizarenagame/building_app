@@ -270,6 +270,12 @@ class _LoginFlowState extends State<LoginFlow> {
         _role = _normalizeRole(role);
         _ownership = (record.data['ownership'] ?? 'ساکن').toString();
         _buildingController.text = (record.data['building_name'] ?? '').toString();
+        _selectedProvince = (record.data['province'] ?? '').toString().trim().isEmpty
+            ? null
+            : record.data['province'].toString();
+        _selectedCity = (record.data['city'] ?? '').toString().trim().isEmpty
+            ? null
+            : record.data['city'].toString();
         _showMyBuildings = record.data['show_my_buildings'] == true;
       }
     }
@@ -464,20 +470,27 @@ void _goBack() {
   final role = _role; // "مدیر" یا "ساکن"
   final ownership = _ownership; // "مالک" یا "مستأجر"
   final buildingName = _buildingController.text.trim();
+  final province = _selectedProvince ?? '';
+  final city = _selectedCity ?? '';
+  final password = _passwordController.text.trim();
+  final accountUpdates = <String, dynamic>{
+    'phone': phone,
+    'name': name,
+    'last_name': lastName,
+    'role': role,
+    'ownership': ownership,
+    'building_name': buildingName,
+    'province': province,
+    'city': city,
+    if (password.isNotEmpty) 'password': password,
+  };
 
   try {
     // ارسال اطلاعات حساب به اندپوینت سروری که ساختیم
     final response = await pb.send<Map<String, dynamic>>(
       '/api/update-profile',
       method: 'POST',
-      body: {
-        'phone': phone,
-        'name': name,
-        'last_name': lastName,
-        'role': role,
-        'ownership': ownership,
-        'building_name': buildingName,
-      },
+      body: accountUpdates,
     );
 
     if (response['success'] == true) {
@@ -490,16 +503,9 @@ void _goBack() {
         final updatedRecord = returnedRecord is Map
             ? RecordModel.fromJson(Map<String, dynamic>.from(returnedRecord))
             : currentRecord;
-        if (returnedRecord is! Map) {
-          updatedRecord.data.addAll({
-            'phone': phone,
-            'name': name,
-            'last_name': lastName,
-            'role': role,
-            'ownership': ownership,
-            'building_name': buildingName,
-          });
-        }
+        // Preserve edited profile fields in the local auth record even when the
+        // server returns a refreshed record without all of these fields.
+        updatedRecord.data.addAll(accountUpdates);
         pb.authStore.save(currentToken, updatedRecord);
       }
 
@@ -920,6 +926,7 @@ String _buildingCacheKey(_Building b) {
 Map<String, dynamic> _buildingStructure(_Building b) => <String, dynamic>{
   'floors': {for (final e in b.floors.entries) e.key.toString(): e.value},
   'floor_units': {for (final e in b.floorUnits.entries) e.key.toString(): e.value},
+  'tasks': [for (final task in b.tasks) {'title': task.title, 'dueAt': task.dueAt.toIso8601String(), 'createdAt': task.createdAt.toIso8601String()}],
   'occupants': {for (final e in b.occupants.entries) e.key: {
     'name': e.value.name, 'role': e.value.role, 'ownership': e.value.ownership,
     'phone': e.value.phone, 'waterDebt': e.value.waterDebt,
@@ -934,6 +941,20 @@ void _applyBuildingStructure(_Building b, dynamic raw) {
   }
   if (value is! Map) return;
   final data = Map<String, dynamic>.from(value);
+  final rawTasks = data['tasks'];
+  if (rawTasks is List) {
+    b.tasks.clear();
+    for (final item in rawTasks) {
+      if (item is! Map) continue;
+      final taskData = Map<String, dynamic>.from(item);
+      final title = (taskData['title'] ?? '').toString().trim();
+      final dueAt = DateTime.tryParse((taskData['dueAt'] ?? taskData['due_at'] ?? '').toString());
+      final createdAt = DateTime.tryParse((taskData['createdAt'] ?? taskData['created_at'] ?? '').toString());
+      if (title.isNotEmpty && dueAt != null) {
+        b.tasks.add(_ScheduledTask(title: title, dueAt: dueAt, createdAt: createdAt));
+      }
+    }
+  }
   final rawFloors = data['floors'];
   if (rawFloors is Map) {
     for (final entry in rawFloors.entries) {
@@ -1186,6 +1207,15 @@ class _ChargeSettingTopic {
     return true;
   }
 }
+class _ScheduledTask {
+  _ScheduledTask({required this.title, required this.dueAt, DateTime? createdAt})
+      : createdAt = createdAt ?? DateTime.now();
+  final String title;
+  final DateTime dueAt;
+  final DateTime createdAt;
+  bool get isDue => !DateTime.now().isBefore(dueAt);
+}
+
 class _Building {
   _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', String province = '', String city = '', this.recordId}) : province = province, city = city;
   String name;
@@ -1204,6 +1234,7 @@ class _Building {
   final Map<String, _Member> occupants = {};
   _ChargeSettingTopic? chargeSettingTopic;
   final List<_BuildingPoll> polls = [];
+  final List<_ScheduledTask> tasks = [];
   final Map<String, int> financialDebtByUnitId = {};
   /// بدهی آب به تفکیک واحد و شناسهٔ قبض: unitId -> {billId -> amount}.
   final Map<String, Map<String, int>> waterDebtByUnitAndBill = {};
@@ -2927,6 +2958,44 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
   _Building get b => widget.building;
   Future<void> _runAndRefresh(Future<void> Function() action) async { await action(); if (mounted) setState(() {}); }
 
+  Future<void> _addScheduledTask() async {
+    final titleController = TextEditingController();
+    DateTime? dueDate;
+    final result = await showDialog<_ScheduledTask>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+        title: const Text('افزودن امر دوره‌ای'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          TextField(controller: titleController, autofocus: true, decoration: const InputDecoration(labelText: 'موضوع', hintText: 'مثلاً سرویس آسانسور')),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final now = DateTime.now();
+              final selected = await showDatePicker(context: context, initialDate: dueDate ?? now, firstDate: DateTime(now.year - 1), lastDate: DateTime(now.year + 20), helpText: 'انتخاب تاریخ سررسید');
+              if (selected != null) setDialogState(() => dueDate = DateTime(selected.year, selected.month, selected.day));
+            },
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: Text(dueDate == null ? 'انتخاب تاریخ سررسید' : 'سررسید: ${_formatPersianDateTime(dueDate!)}'),
+          ),
+          Padding(padding: const EdgeInsets.only(top: 8), child: Text('تاریخ و ساعت ایجاد: ${_formatPersianDateTime(DateTime.now())}', style: Theme.of(context).textTheme.bodySmall)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+          FilledButton(onPressed: () {
+            final title = titleController.text.trim();
+            if (title.isEmpty || dueDate == null) return;
+            Navigator.pop(dialogContext, _ScheduledTask(title: title, dueAt: dueDate!, createdAt: DateTime.now()));
+          }, child: const Text('ثبت')),
+        ],
+      )),
+    );
+    titleController.dispose();
+    if (result == null) return;
+    b.tasks.add(result);
+    await _persistBuilding(b);
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -2942,6 +3011,15 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
           const SizedBox(height: 10),
           FilledButton.icon(onPressed: () => _runAndRefresh(widget.onCreateChargeTopic), icon: const Icon(Icons.add_circle_outline), label: Text(b.chargeSettingTopic == null ? 'ایجاد موضوع شارژ' : 'ایجاد موضوع جدید')),
           if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _runAndRefresh(widget.onOpenChargeTopic), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
+        ]))),
+        const SizedBox(height: 14),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [Icon(Icons.event_repeat_rounded, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('امور دوره‌ای', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
+          const SizedBox(height: 8),
+          Text('ثبت و پیگیری سرویس‌ها و نگهداری‌های زمان‌بندی‌شدهٔ ساختمان.', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          const SizedBox(height: 10),
+          FilledButton.icon(onPressed: _addScheduledTask, icon: const Icon(Icons.add_circle_outline), label: const Text('افزودن امر دوره‌ای')),
+          for (final task in b.tasks) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_outlined, color: task.isDue ? colors.error : colors.primary), title: Text(task.title), subtitle: Text('${task.isDue ? 'سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)} • ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
         ]))),
         const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -3288,6 +3366,38 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     _toast('طبقه ${result.$1.toPersianDigits()} با ${result.$2.toPersianDigits()} واحد اضافه شد.');
   }
 
+  Widget _buildingFeatureCard(
+    BuildContext context,
+    ColorScheme colors, {
+    required _FeatureItem item,
+    required _Building building,
+  }) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => _FeaturePage(item: item, building: building),
+        )),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            Icon(item.icon, color: colors.primary),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text(item.subtitle),
+              ],
+            )),
+            const Icon(Icons.chevron_left_rounded),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -3344,6 +3454,30 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
               ]),
             ),
           ),
+        ),
+        const SizedBox(height: 14),
+        _buildingFeatureCard(
+          context,
+          colors,
+          item: const _FeatureItem(
+            'رأی‌گیری ساختمان',
+            'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها',
+            Icons.how_to_vote_rounded,
+            'vote',
+          ),
+          building: b,
+        ),
+        const SizedBox(height: 14),
+        _buildingFeatureCard(
+          context,
+          colors,
+          item: const _FeatureItem(
+            'ارزیابی عملکرد مدیر',
+            'ارزیابی دوره‌ای هر شش ماه',
+            Icons.fact_check_rounded,
+            'evaluation',
+          ),
+          building: b,
         ),
         const SizedBox(height: 14),
         Card(
@@ -3758,10 +3892,7 @@ class _FeatureHub extends StatelessWidget {
             const _FeatureItem('متخصصین', 'لیست افراد خدماتی، تخصص‌ها و شماره تماس', Icons.people_alt_rounded, 'specialists'),
           ]
         : index == 2
-            ? <_FeatureItem>[
-                const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'),
-                const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'),
-              ]
+            ? <_FeatureItem>[]
             : <_FeatureItem>[
                 if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
                 const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
@@ -3769,11 +3900,24 @@ class _FeatureHub extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
-        Text(index == 1 ? 'خدمات و ارتباط' : index == 2 ? 'رأی‌گیری و ارزیابی' : 'امور مالی',
+        Text(index == 1 ? 'خدمات و ارتباط' : index == 2 ? 'اطلاعیه‌ها' : 'امور مالی',
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
+        if (index == 2) ...[
+          if (building == null || building!.tasks.isEmpty)
+            const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر امر دوره‌ای ثبت نشده است.')))),
+          if (building != null) ...building!.tasks.map((task) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Card(child: ListTile(
+              leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? Theme.of(context).colorScheme.error : null)),
+              title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text('${task.isDue ? 'یادآور فعال — سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)}\nتاریخ و ساعت ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
+              isThreeLine: true,
+            )),
+          )),
+        ],
         ...items.map((item) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Card(child: ListTile(
