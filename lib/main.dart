@@ -367,6 +367,11 @@ void _goBack() {
   }
 
   Future<void> _sendOtpInBackground(String phone, {bool isResend = false}) async {
+    if (_latinDigits(phone).replaceAll(' ', '') == BuildingApp.managerPhone) return;
+    if (_latinDigits(phone).replaceAll(' ', '') == BuildingApp.managerPhone) {
+      if (mounted) setState(() => _isSendingOtp = false);
+      return;
+    }
     try {
       final response = await pb.send<Map<String, dynamic>>(
         '/api/send-otp',
