@@ -4226,8 +4226,7 @@ class _FeaturePageState extends State<_FeaturePage> {
           if (snapshot.hasError) {
             return Card(child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('بارگذاری فهرست متخصصین با خطا روبه‌رو شد. اتصال شبکه و دسترسی PocketBase را بررسی کنید.
-${snapshot.error}'),
+              child: Text('بارگذاری فهرست متخصصین با خطا روبه‌رو شد. اتصال شبکه و دسترسی PocketBase را بررسی کنید.\n${snapshot.error}'),
             ));
           }
           final users = snapshot.data ?? const <dynamic>[];
