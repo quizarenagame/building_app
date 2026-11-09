@@ -466,6 +466,11 @@ void _goBack() {
     _role = _normalizeRole(existingRole);
     _ownership = (record.data['ownership'] ?? 'ساکن').toString();
     _buildingController.text = (record.data['building_name'] ?? '').toString();
+    _selectedProvince = (record.data['province'] ?? '').toString().trim().isEmpty
+        ? null : record.data['province'].toString().trim();
+    _selectedCity = (record.data['city'] ?? '').toString().trim().isEmpty
+        ? null : record.data['city'].toString().trim();
+    await _loadSavedAccountDetails();
     if (_role == 'مدیر') {
       _nameController.text = existingName;
       _lastNameController.text = existingLastName;
@@ -973,7 +978,7 @@ void _applyBuildingStructure(_Building b, dynamic raw) {
   if (value is! Map) return;
   final data = Map<String, dynamic>.from(value);
   final rawTasks = data['tasks'];
-  if (rawTasks is List) {
+  if (rawTasks is List && rawTasks.isNotEmpty) {
     b.tasks.clear();
     for (final item in rawTasks) {
       if (item is! Map) continue;
@@ -1199,21 +1204,33 @@ DateTime _jdnToGregorian(int jdn) {
   return DateTime(year, month, day);
 }
 int _jalaliToJdn(int jy, int jm, int jd) {
-  final y = jy + 1595;
+  final epbase = jy - (jy >= 0 ? 474 : 473);
+  final epyear = 474 + (epbase % 2820);
   final monthDays = jm <= 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186;
-  return -355668 + 365 * y + (y ~/ 33) * 8 + ((y % 33 + 3) ~/ 4) + monthDays + jd;
+  return jd + monthDays + ((epyear * 682 - 110) ~/ 2816) +
+      (epyear - 1) * 365 + (epbase ~/ 2820) * 1029983 + 1948320;
 }
 List<int> _gregorianToJalali(DateTime date) {
-  var days = _gregorianToJdn(date.year, date.month, date.day) - _jalaliToJdn(979, 1, 1);
-  var jy = 979 + 33 * (days ~/ 12053);
-  days %= 12053;
-  jy += 4 * (days ~/ 1461);
-  days %= 1461;
-  if (days > 365) { jy += (days - 1) ~/ 365; days = (days - 1) % 365; }
-  final jm = days < 186 ? 1 + days ~/ 31 : 7 + (days - 186) ~/ 30;
-  final jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+  final jdn = _gregorianToJdn(date.year, date.month, date.day);
+  var depoch = jdn - _jalaliToJdn(475, 1, 1);
+  final cycle = depoch ~/ 1029983;
+  final cyear = depoch % 1029983;
+  int ycycle;
+  if (cyear == 1029982) {
+    ycycle = 2820;
+  } else {
+    final aux1 = cyear ~/ 366;
+    final aux2 = cyyearRemainder(cyear, aux1);
+    ycycle = (2134 * aux1 + 2816 * aux2 + 2815) ~/ 1028522 + aux1 + 1;
+  }
+  var jy = ycycle + 2820 * cycle + 474;
+  if (jy <= 0) jy--;
+  final yday = jdn - _jalaliToJdn(jy, 1, 1) + 1;
+  final jm = yday <= 186 ? (yday + 30) ~/ 31 : (yday - 6 + 29) ~/ 30;
+  final jd = jdn - _jalaliToJdn(jy, jm, 1) + 1;
   return <int>[jy, jm, jd];
 }
+int cyyearRemainder(int cyear, int aux1) => cyear - aux1 * 366;
 /// Converts a Jalali (Persian) year/month/day directly to a Gregorian DateTime.
 DateTime _jalaliToGregorian(int jy, int jm, int jd) => _jdnToGregorian(_jalaliToJdn(jy, jm, jd));
 String _formatJalaliDate(DateTime date) {
@@ -3050,6 +3067,66 @@ class _UnitTile extends StatelessWidget {
 }
 
 /// صفحهٔ فرعی برای دسترسی به ابزارهای مدیریتی ساختمان.
+class _PeriodicTasksPage extends StatefulWidget {
+  const _PeriodicTasksPage({required this.building});
+  final _Building building;
+  @override
+  State<_PeriodicTasksPage> createState() => _PeriodicTasksPageState();
+}
+
+class _PeriodicTasksPageState extends State<_PeriodicTasksPage> {
+  Future<void> _addTask() async {
+    final titleController = TextEditingController();
+    DateTime? dueDate;
+    final result = await showDialog<_ScheduledTask>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+        title: const Text('افزودن امور دوره‌ای'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          TextField(controller: titleController, autofocus: true, decoration: const InputDecoration(labelText: 'موضوع', hintText: 'مثلاً سرویس آسانسور')),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(onPressed: () async {
+            final selected = await _showJalaliDatePicker(context, dueDate ?? DateTime.now());
+            if (selected != null) setDialogState(() => dueDate = DateTime(selected.year, selected.month, selected.day));
+          }, icon: const Icon(Icons.calendar_month_outlined), label: Text(dueDate == null ? 'انتخاب تاریخ سررسید (شمسی)' : 'سررسید: ${_formatJalaliDate(dueDate!)}')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+          FilledButton(onPressed: () { final title = titleController.text.trim(); if (title.isNotEmpty && dueDate != null) Navigator.pop(dialogContext, _ScheduledTask(title: title, dueAt: dueDate!, createdAt: DateTime.now())); }, child: const Text('ثبت')),
+        ],
+      )),
+    );
+    titleController.dispose();
+    if (result == null || !mounted) return;
+    setState(() => widget.building.tasks.add(result));
+    await _persistBuilding(widget.building);
+  }
+
+  Future<void> _deleteTask(_ScheduledTask task) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('حذف امر دوره‌ای'), content: Text('«${task.title}» حذف شود؟'),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف'))],
+    ));
+    if (confirmed != true || !mounted) return;
+    setState(() => widget.building.tasks.remove(task));
+    await _persistBuilding(widget.building);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('امور دوره‌ای')),
+    body: widget.building.tasks.isEmpty
+      ? const Center(child: Text('هنوز امری ثبت نشده است.'))
+      : ListView(padding: const EdgeInsets.all(16), children: [for (final task in widget.building.tasks.toList()) ListTile(
+          leading: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_outlined, color: task.isDue ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary),
+          title: Text(task.title),
+          subtitle: Text('${task.isDue ? 'سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)} • ایجاد: ${_formatPersianDateTime(task.createdAt)}'),
+          trailing: IconButton(tooltip: 'حذف امر دوره‌ای', icon: const Icon(Icons.delete_outline), onPressed: () => _deleteTask(task)),
+        )]),
+    floatingActionButton: FloatingActionButton.extended(onPressed: _addTask, icon: const Icon(Icons.add), label: const Text('افزودن امور دوره‌ای')),
+  );
+}
+
 class _BuildingManagementMenuPage extends StatefulWidget {
   const _BuildingManagementMenuPage({required this.building, required this.onCreatePoll, required this.onCreateChargeTopic, required this.onOpenChargeTopic});
   final _Building building;
@@ -3080,7 +3157,7 @@ Future<DateTime?> _showJalaliDatePicker(BuildContext context, DateTime initialDa
       title: const Text('انتخاب تاریخ شمسی'),
       content: SizedBox(width: 320, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Row(children: [
-          Expanded(child: DropdownButton<int>(isExpanded: true, value: year, items: [for (var y=1300; y<=1500; y++) DropdownMenuItem(value: y, child: Text(y.toString().toPersianDigits()))], onChanged: (v) { if (v != null) setState(() { year = v; day = day.clamp(1, _jalaliDaysInMonth(year, month)).toInt(); }); })),
+          Expanded(child: DropdownButton<int>(isExpanded: true, value: year, items: [for (var y=1400; y<=1500; y++) DropdownMenuItem(value: y, child: Text(y.toString().toPersianDigits()))], onChanged: (v) { if (v != null) setState(() { year = v; day = day.clamp(1, _jalaliDaysInMonth(year, month)).toInt(); }); })),
           const SizedBox(width: 8),
           Expanded(child: DropdownButton<int>(isExpanded: true, value: month, items: [for (var m=1;m<=12;m++) DropdownMenuItem(value:m, child: Text(['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'][m-1]))], onChanged: (v) { if(v!=null) setState(() { month=v; day=day.clamp(1, _jalaliDaysInMonth(year, month)); }); })),
         ]),
@@ -3117,43 +3194,6 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
   _Building get b => widget.building;
   Future<void> _runAndRefresh(Future<void> Function() action) async { await action(); if (mounted) setState(() {}); }
 
-  Future<void> _addScheduledTask() async {
-    final titleController = TextEditingController();
-    DateTime? dueDate;
-    final result = await showDialog<_ScheduledTask>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
-        title: const Text('افزودن امور دوره‌ای'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          TextField(controller: titleController, autofocus: true, decoration: const InputDecoration(labelText: 'موضوع', hintText: 'مثلاً سرویس آسانسور')),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final now = DateTime.now();
-              final selected = await _showJalaliDatePicker(context, dueDate ?? now);
-              if (selected != null) setDialogState(() => dueDate = DateTime(selected.year, selected.month, selected.day));
-            },
-            icon: const Icon(Icons.calendar_month_outlined),
-            label: Text(dueDate == null ? 'انتخاب تاریخ سررسید (شمسی)' : 'سررسید: ${_formatJalaliDate(dueDate!)}'),
-          ),
-          Padding(padding: const EdgeInsets.only(top: 8), child: Text('تاریخ و ساعت ایجاد: ${_formatPersianDateTime(DateTime.now())}', style: Theme.of(context).textTheme.bodySmall)),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
-          FilledButton(onPressed: () {
-            final title = titleController.text.trim();
-            if (title.isEmpty || dueDate == null) return;
-            Navigator.pop(dialogContext, _ScheduledTask(title: title, dueAt: dueDate!, createdAt: DateTime.now()));
-          }, child: const Text('ثبت')),
-        ],
-      )),
-    );
-    titleController.dispose();
-    if (result == null) return;
-    b.tasks.add(result);
-    await _persistBuilding(b);
-    if (mounted) setState(() {});
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -3172,14 +3212,13 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
           if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _runAndRefresh(widget.onOpenChargeTopic), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
         ]))),
         const SizedBox(height: 14),
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [Icon(Icons.event_repeat_rounded, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('امور دوره‌ای', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
-          const SizedBox(height: 8),
-          Text('ثبت و پیگیری سرویس‌ها و نگهداری‌های زمان‌بندی‌شدهٔ ساختمان.', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
-          const SizedBox(height: 10),
-          FilledButton.icon(onPressed: _addScheduledTask, icon: const Icon(Icons.add_circle_outline), label: const Text('افزودن امور دوره‌ای')),
-          for (final task in b.tasks.toList()) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_outlined, color: task.isDue ? colors.error : colors.primary), title: Text(task.title), subtitle: Text('${task.isDue ? 'سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)} • ایجاد: ${_formatPersianDateTime(task.createdAt)}'), trailing: IconButton(tooltip: 'حذف امر دوره‌ای', icon: const Icon(Icons.delete_outline), color: colors.error, onPressed: () async { final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(title: const Text('حذف امر دوره‌ای'), content: Text('«${task.title}» حذف شود؟'), actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف'))])); if (confirmed == true) { b.tasks.remove(task); await _persistBuilding(b); if (mounted) setState(() {}); } })),
-        ]))),
+        Card(child: ListTile(
+          leading: Icon(Icons.event_repeat_rounded, color: colors.primary),
+          title: const Text('امور دوره‌ای', style: TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: const Text('مدیریت امور دوره‌ای ساختمان'),
+          trailing: const Icon(Icons.chevron_left_rounded),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _PeriodicTasksPage(building: b))),
+        )),
         const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [Icon(Icons.how_to_vote_outlined, color: colors.primary), const SizedBox(width: 8), const Expanded(child: Text('مدیریت نظرسنجی‌ها', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))]),
