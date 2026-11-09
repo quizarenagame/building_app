@@ -2508,7 +2508,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
   void _selectBuilding(_Building b) {
     setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name),
+      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name, onJoin: (floor, unit) => _joinUnit(b, floor, unit)),
     ));
   }
 
@@ -2694,25 +2694,15 @@ class _ResidentHomeState extends State<_ResidentHome> {
         }),
       ]),
       const SizedBox(height: 16),
-      if (found != null) ...[
-        Text('ساختمان: ${found.name}\nآدرس: ${found.address.isEmpty ? 'ثبت نشده' : found.address}\nکد: ${found.buildingCode.isEmpty ? 'در دسترس نیست' : found.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        const SizedBox(height: 10),
-        _BuildingLayout(
-          building: found,
-          onUnitTap: (floor, unit) => _showResidentUnit(found, floor, unit),
-          highlightMemberName: widget.name,
-        ),
-        const SizedBox(height: 12),
-        _ResidentPollsCard(building: found, unitId: null, onChanged: () { if (mounted) setState(() {}); }),
-      ],
     ]);
   }
 }
 
 class _ResidentBuildingDetailPage extends StatelessWidget {
-  const _ResidentBuildingDetailPage({required this.building, required this.residentName});
+  const _ResidentBuildingDetailPage({required this.building, required this.residentName, required this.onJoin});
   final _Building building;
   final String residentName;
+  final void Function(int floor, dynamic unit) onJoin;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -2725,7 +2715,14 @@ class _ResidentBuildingDetailPage extends StatelessWidget {
         if (member != null) {
           showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()}'), content: _MemberInfoContent(building: building, member: member, unitId: building.unitId(floor, unit)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
         } else {
-          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'), content: const Text('این واحد خالی است. برای ثبت‌نام به صفحهٔ جست‌وجو بازگردید.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
+          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+            title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+            content: const Text('وضعیت واحد: خالی\nبرای سکونت در این واحد ثبت‌نام می‌کنید؟'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('بستن')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('انتخاب این واحد')),
+            ],
+          )).then((join) { if (join == true) onJoin(floor, unit); });
         }
       }, highlightMemberName: residentName),
       const SizedBox(height: 12),
@@ -4095,7 +4092,7 @@ class _SpecialtySelectionPage extends StatefulWidget {
 }
 
 class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
-  static const List<String> _available = ['لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور'];
+  static const List<String> _available = ['لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'آسانسور', 'نقاشی و رنگ آمیزی ', 'نصب دوربین مداربسته ', 'تعمیر جک و کرکره برقی ', 'سرویس کار پکیج ', 'سمپاشی سوسک و حشرات ', 'قالی شویی ', 'شارژ کپسول آتش نشانی ', 'ماشین لباسشویی ', 'کولر آبی ', 'کولر گازی ', 'کابینت MDF ', 'کابینت فلزی ', 'لوله باز کن ', 'درب و پنجره دوجداره ', 'نظافتچی منزل ', 'باغبانی ', 'برق کشی ', 'خطوط تلفن داخلی ', 'آب تصفیه ', 'بیمه ', 'وکیل و مشاور حقوقی '];
   late final Set<String> _selected = Set<String>.of(widget.initial);
 
   @override
