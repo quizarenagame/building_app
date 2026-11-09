@@ -3230,6 +3230,38 @@ Future<DateTime?> _showJalaliDatePicker(BuildContext context, DateTime initialDa
   }));
 }
 
+Widget _buildingFeatureCard(
+  BuildContext context,
+  ColorScheme colors, {
+  required _FeatureItem item,
+  required _Building building,
+}) {
+  return Card(
+    child: InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => _FeaturePage(item: item, building: building),
+      )),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(children: [
+          Icon(item.icon, color: colors.primary),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 4),
+              Text(item.subtitle),
+            ],
+          )),
+          const Icon(Icons.chevron_left_rounded),
+        ]),
+      ),
+    ),
+  );
+}
+
 class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage> {
   _Building get b => widget.building;
   Future<void> _runAndRefresh(Future<void> Function() action) async { await action(); if (mounted) setState(() {}); }
@@ -3625,37 +3657,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     _toast('طبقه ${result.$1.toPersianDigits()} با ${result.$2.toPersianDigits()} واحد اضافه شد.');
   }
 
-  Widget _buildingFeatureCard(
-    BuildContext context,
-    ColorScheme colors, {
-    required _FeatureItem item,
-    required _Building building,
-  }) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => _FeaturePage(item: item, building: building),
-        )),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(children: [
-            Icon(item.icon, color: colors.primary),
-            const SizedBox(width: 12),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text(item.subtitle),
-              ],
-            )),
-            const Icon(Icons.chevron_left_rounded),
-          ]),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -4776,9 +4777,4 @@ class _FeaturePageState extends State<_FeaturePage> {
     } else {
       _message('ارزیابی شما با موفقیت ثبت شد.');
     }
-  }
-
-  void _message(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  }
-}
+ 
