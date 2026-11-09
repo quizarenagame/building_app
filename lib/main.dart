@@ -290,14 +290,17 @@ class _LoginFlowState extends State<LoginFlow> {
     final savedCity = prefs.getString('pref_city_$phone');
     final savedPassword = prefs.getString('pref_password_$phone');
     var changed = false;
-    if ((_selectedProvince ?? '').trim().isEmpty && (savedProvince ?? '').trim().isNotEmpty) {
-      _selectedProvince = savedProvince;
-      changed = true;
-    }
-    if ((_selectedCity ?? '').trim().isEmpty && (savedCity ?? '').trim().isNotEmpty) {
-      _selectedCity = savedCity;
-      changed = true;
-    }
+    final record = pb.authStore.record;
+    final recordProvince = (record?.data['province'] ?? '').toString().trim();
+    final recordCity = (record?.data['city'] ?? '').toString().trim();
+    final provinceCandidate = recordProvince.isNotEmpty ? recordProvince : (savedProvince ?? '').trim();
+    final cityCandidate = recordCity.isNotEmpty ? recordCity : (savedCity ?? '').trim();
+    final validProvince = _iranProvinceCities.any((entry) => entry.key == provinceCandidate);
+    final province = validProvince ? provinceCandidate : (_iranProvinceCities.any((e) => e.key == (savedProvince ?? '').trim()) ? savedProvince!.trim() : '');
+    final validCity = _iranProvinceCities.any((entry) => entry.key == province && entry.value.contains(cityCandidate));
+    final city = validCity ? cityCandidate : (_iranProvinceCities.any((entry) => entry.key == province && entry.value.contains((savedCity ?? '').trim())) ? savedCity!.trim() : '');
+    if (province.isNotEmpty && _selectedProvince != province) { _selectedProvince = province; changed = true; }
+    if (city.isNotEmpty && _selectedCity != city) { _selectedCity = city; changed = true; }
     if (_passwordController.text.trim().isEmpty && (savedPassword ?? '').isNotEmpty) {
       _passwordController.text = savedPassword!;
     }
@@ -3120,7 +3123,7 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
     final result = await showDialog<_ScheduledTask>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
-        title: const Text('افزودن امر دوره‌ای'),
+        title: const Text('افزودن امور دوره‌ای'),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           TextField(controller: titleController, autofocus: true, decoration: const InputDecoration(labelText: 'موضوع', hintText: 'مثلاً سرویس آسانسور')),
           const SizedBox(height: 12),
@@ -3174,8 +3177,8 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
           const SizedBox(height: 8),
           Text('ثبت و پیگیری سرویس‌ها و نگهداری‌های زمان‌بندی‌شدهٔ ساختمان.', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
           const SizedBox(height: 10),
-          FilledButton.icon(onPressed: _addScheduledTask, icon: const Icon(Icons.add_circle_outline), label: const Text('افزودن امر دوره‌ای')),
-          for (final task in b.tasks) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_outlined, color: task.isDue ? colors.error : colors.primary), title: Text(task.title), subtitle: Text('${task.isDue ? 'سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)} • ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
+          FilledButton.icon(onPressed: _addScheduledTask, icon: const Icon(Icons.add_circle_outline), label: const Text('افزودن امور دوره‌ای')),
+          for (final task in b.tasks.toList()) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_outlined, color: task.isDue ? colors.error : colors.primary), title: Text(task.title), subtitle: Text('${task.isDue ? 'سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)} • ایجاد: ${_formatPersianDateTime(task.createdAt)}'), trailing: IconButton(tooltip: 'حذف امر دوره‌ای', icon: const Icon(Icons.delete_outline), color: colors.error, onPressed: () async { final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(title: const Text('حذف امر دوره‌ای'), content: Text('«${task.title}» حذف شود؟'), actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف'))])); if (confirmed == true) { b.tasks.remove(task); await _persistBuilding(b); if (mounted) setState(() {}); } })),
         ]))),
         const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -4314,6 +4317,7 @@ class _FeaturePageState extends State<_FeaturePage> {
               ),
               const SizedBox(height: 12),
               TextFormField(
+                enabled: !_serviceFeeFlexible,
                 keyboardType: TextInputType.number,
                 textDirection: TextDirection.rtl,
                 decoration: InputDecoration(
@@ -4322,12 +4326,12 @@ class _FeaturePageState extends State<_FeaturePage> {
                 ),
                 validator: (value) => !_serviceFeeFlexible && (value == null || value.trim().isEmpty)
                     ? 'دستمزد پیشنهادی را وارد کنید یا گزینهٔ قابل انتخاب را فعال کنید' : null,
-                onSaved: (value) => _values['دستمزد پیشنهادی'] = value?.trim() ?? '',
+                onSaved: (value) => _values['دستمزد پیشنهادی'] = _serviceFeeFlexible ? '' : (value?.trim() ?? ''),
               ),
               CheckboxListTile(
                 value: _serviceFeeFlexible,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('بنا به تشخیص متخصص'),
+                title: const Text('مطابق نظر متخصص'),
                 onChanged: (value) => setState(() => _serviceFeeFlexible = value ?? false),
               ),
             ] else ..._fields.map((label) => Padding(
@@ -4388,7 +4392,7 @@ class _FeaturePageState extends State<_FeaturePage> {
                     'تخصص: ${request['تخصص درخواستی'] ?? 'لوله‌کشی و تأسیسات'}\n'
                     'شماره تماس: ${request['شماره تماس'] ?? '—'}\n'
                     'آدرس: ${request['آدرس'] ?? '—'}\n'
-                    'دستمزد: ${request['قابل انتخاب (بنا به تشخیص متخصص)'] == 'true' ? 'بنا به تشخیص متخصص' : (request['دستمزد پیشنهادی'] ?? '—')}',
+                    'دستمزد: ${request['قابل انتخاب (بنا به تشخیص متخصص)'] == 'true' ? 'مطابق نظر متخصص' : (request['دستمزد پیشنهادی'] ?? '—')}',
                   ),
                   isThreeLine: true,
                   trailing: Chip(label: Text(request['وضعیت'] ?? 'در انتظار بررسی')),
