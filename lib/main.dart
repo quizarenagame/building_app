@@ -1667,6 +1667,8 @@ class _DashboardPageState extends State<DashboardPage> {
           'role': newRole,
           'ownership': (data['ownership'] ?? widget.ownership).toString(),
           'building_name': (data['building_name'] ?? widget.buildingName).toString(),
+          'province': (data['province'] ?? '').toString(),
+          'city': (data['city'] ?? '').toString(),
         },
       );
 
@@ -3069,6 +3071,7 @@ Future<DateTime?> _showJalaliDatePicker(BuildContext context, DateTime initialDa
   var day = initial[2];
   return showDialog<DateTime>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, setState) {
     final monthLength = _jalaliDaysInMonth(year, month);
+    if (day < 1) day = 1;
     if (day > monthLength) day = monthLength;
     return AlertDialog(
       title: const Text('انتخاب تاریخ شمسی'),
