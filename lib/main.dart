@@ -1030,6 +1030,7 @@ void _applyBuildingStructure(_Building b, dynamic raw) {
 void _applyBuildingRecord(_Building b, RecordModel record) {
   final data = record.data;
   b.recordId = record.id;
+  b.initialBalance = (data['initial_balance'] as num?)?.toInt() ?? b.initialBalance;
   b.createdBy = (data['created_by'] ?? b.createdBy ?? '').toString();
   final code = (data['building_code'] ?? '').toString().trim();
   if (code.isNotEmpty) b.buildingCode = code;
@@ -1047,7 +1048,7 @@ Future<void> _persistBuilding(_Building b) async {
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_buildingCacheKey(b), jsonEncode({
-      'name': b.name, 'address': b.address, 'building_code': b.buildingCode,
+      'name': b.name, 'address': b.address, 'building_code': b.buildingCode, 'initial_balance': b.initialBalance,
       'province': b.province, 'city': b.city,
       'recordId': b.recordId, 'created_by': b.createdBy, 'floors_data': structure,
     }));
@@ -1057,7 +1058,7 @@ Future<void> _persistBuilding(_Building b) async {
   // Keep the JSON structure canonical on servers with a JSON field. For older
   // collections, the local durable cache still protects all floor/unit data.
   try {
-    await pb.collection('buildings').update(id, body: {'floors_data': structure});
+    await pb.collection('buildings').update(id, body: {'floors_data': structure, 'initial_balance': b.initialBalance});
   } catch (_) {
     try { await pb.collection('buildings').update(id, body: {'floors': structure['floors']}); } catch (_) {}
   }
@@ -1077,6 +1078,7 @@ Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
     b.recordId = (d['recordId'] ?? '').toString().isEmpty ? null : d['recordId'].toString();
     b.createdBy = (d['created_by'] ?? '').toString().isEmpty ? null : d['created_by'].toString();
     b.buildingCode = (d['building_code'] ?? '').toString();
+    b.initialBalance = (d['initial_balance'] as num?)?.toInt() ?? 0;
     b.province = (d['province'] ?? '').toString();
     b.city = (d['city'] ?? '').toString();
     _applyBuildingStructure(b, d['floors_data']);
@@ -1319,10 +1321,11 @@ class _ScheduledTask {
 }
 
 class _Building {
-  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', String province = '', String city = '', this.recordId}) : province = province, city = city;
+  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', this.initialBalance = 0, String province = '', String city = '', this.recordId}) : province = province, city = city;
   String name;
   String address;
   String buildingCode;
+  int initialBalance;
   String province = '';
   String city = '';
   String? recordId;
@@ -1673,52 +1676,40 @@ class _DashboardPageState extends State<DashboardPage> {
       _toast('نشست کاربری معتبر نیست؛ لطفاً دوباره وارد شوید.', error: true);
       return;
     }
-
-    setState(() => _isChangingRole = true);
-    try {
-      final data = record.data;
-      final response = await pb.send<Map<String, dynamic>>(
-        '/api/update-profile',
-        method: 'POST',
-        body: {
-          'phone': (data['phone'] ?? '').toString(),
-          'name': (data['name'] ?? '').toString(),
-          'last_name': (data['last_name'] ?? data['lastname'] ?? '').toString(),
-          'role': newRole,
+    final previousRole = _currentRole;
+    final data = Map<String, dynamic>.from(record.data);
+    final token = pb.authStore.token;
+    setState(() {
+      _isChangingRole = true;
+      _roleOverride = newRole;
+      selectedTab = 2;
+      _savedSelectedTab = selectedTab;
+    });
+    widget.onRoleChanged?.call(newRole);
+    pb.authStore.save(token, RecordModel.fromJson({...record.toJson(), 'role': newRole}));
+    _toast('نقش شما به «$newRole» تغییر کرد.');
+    () async {
+      try {
+        final response = await pb.send<Map<String, dynamic>>('/api/update-profile', method: 'POST', body: {
+          'phone': (data['phone'] ?? '').toString(), 'name': (data['name'] ?? '').toString(),
+          'last_name': (data['last_name'] ?? data['lastname'] ?? '').toString(), 'role': newRole,
           'ownership': (data['ownership'] ?? widget.ownership).toString(),
           'building_name': (data['building_name'] ?? widget.buildingName).toString(),
-          'province': (data['province'] ?? '').toString(),
-          'city': (data['city'] ?? '').toString(),
-        },
-      );
-
-      if (!mounted) return;
-      if (response['success'] != true || response['record'] is! Map) {
-        _toast((response['error'] ?? 'به‌روزرسانی نقش انجام نشد.').toString(), error: true);
+          'province': (data['province'] ?? '').toString(), 'city': (data['city'] ?? '').toString(),
+        });
+        if (response['success'] != true || response['record'] is! Map) throw Exception((response['error'] ?? 'به‌روزرسانی نقش انجام نشد.').toString());
+        pb.authStore.save(token, RecordModel.fromJson(Map<String, dynamic>.from(response['record'] as Map)));
+      } catch (err) {
+        pb.authStore.save(token, RecordModel.fromJson({...record.toJson(), 'role': previousRole}));
+        if (mounted) {
+          setState(() { _roleOverride = previousRole; _isChangingRole = false; });
+          widget.onRoleChanged?.call(previousRole);
+          _toast('تغییر نقش در سرور ذخیره نشد: $err', error: true);
+        }
         return;
       }
-
-      final updatedRecord = RecordModel.fromJson(
-        Map<String, dynamic>.from(response['record'] as Map),
-      );
-      final token = pb.authStore.token;
-      if (token.isEmpty) {
-        _toast('نشست کاربری معتبر نیست؛ لطفاً دوباره وارد شوید.', error: true);
-        return;
-      }
-      pb.authStore.save(token, updatedRecord);
-      setState(() {
-        _roleOverride = newRole;
-        selectedTab = 2;
-        _savedSelectedTab = selectedTab;
-      });
-      widget.onRoleChanged?.call(newRole);
-      _toast('نقش شما به «$newRole» تغییر کرد.');
-    } catch (err) {
-      if (mounted) _toast('خطا در تغییر نقش: $err', error: true);
-    } finally {
       if (mounted) setState(() => _isChangingRole = false);
-    }
+    }();
   }
 
   Future<void> _showRoleDialog() async {
@@ -1877,6 +1868,7 @@ class _AddressPrefixFormatter extends TextInputFormatter {
 class _ManagerHomeState extends State<_ManagerHome> {
   late final TextEditingController _nameController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _initialBalanceController = TextEditingController(text: '0');
   late String _addressPrefix;
   final _createFormKey = GlobalKey<FormState>();
 
@@ -1915,6 +1907,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
   void dispose() {
     _nameController.dispose();
     _addressController.dispose();
+    _initialBalanceController.dispose();
     _floorController.dispose();
     _unitsController.dispose();
     super.dispose();
@@ -1937,15 +1930,17 @@ class _ManagerHomeState extends State<_ManagerHome> {
     final address = _addressController.text.trim();
     final floorCount = int.parse(_latinDigits(_floorController.text.trim()));
     final unitsPerFloor = int.parse(_latinDigits(_unitsController.text.trim()));
+    final initialBalance = int.tryParse(_latinDigits(_initialBalanceController.text.trim())) ?? 0;
     final isNew = !AppSharedState.instance.buildings.values.any((item) => item.name.trim().toLowerCase() == name.toLowerCase() && item.address.trim().toLowerCase() == address.toLowerCase());
     final b = AppSharedState.instance.buildingByName(name, address: address);
     if (isNew || b.createdBy == null) b.createdBy = pb.authStore.record?.id ?? widget.managerName;
     b.address = address;
+    b.initialBalance = initialBalance;
     if (isNew && b.recordId == null) {
       try {
         final code = await _generateUniqueBuildingCode();
         b.buildingCode = code;
-        final body = <String, dynamic>{'name': name, 'address': address, 'created_by': pb.authStore.record?.id, 'building_code': code};
+        final body = <String, dynamic>{'name': name, 'address': address, 'created_by': pb.authStore.record?.id, 'building_code': code, 'initial_balance': initialBalance};
         try {
           final record = await pb.collection('buildings').create(body: body);
           b.recordId = record.id;
@@ -2194,6 +2189,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
                 TextFormField(
                   controller: _nameController,
                   decoration: _deco(context, 'نام ساختمان (مثلاً برج آسمان)', Icons.location_city_outlined),
+      const SizedBox(height: 12),
+      TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
                   validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام ساختمان حداقل ۲ حرف باشد.',
                 ),
                 const SizedBox(height: 12),
@@ -3245,6 +3242,12 @@ class _BuildingDetailPage extends StatefulWidget {
 }
 
 class _BuildingDetailPageState extends State<_BuildingDetailPage> {
+  DateTime _now = DateTime.now();
+  Timer? _clockTimer;
+  @override void initState() { super.initState(); _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) { if (mounted) setState(() => _now = DateTime.now()); }); }
+  @override void dispose() { _clockTimer?.cancel(); super.dispose(); }
+  String get _dateTimeText => '\${_now.year.toString().toPersianDigits()}/\${_now.month.toString().padLeft(2, '0').toPersianDigits()}/\${_now.day.toString().padLeft(2, '0').toPersianDigits()}  •  '\${_now.hour.toString().padLeft(2, '0').toPersianDigits()}:\${_now.minute.toString().padLeft(2, '0').toPersianDigits()}:\${_now.second.toString().padLeft(2, '0').toPersianDigits()}';
+
   _Building get b => widget.building;
 
   void _toast(String message, {bool error = false}) {
@@ -3603,7 +3606,8 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final totalUnits = b.floors.values.fold<int>(0, (sum, n) => sum + n);
     return Scaffold(
       appBar: AppBar(
-        title: InkWell(onTap: _rename, borderRadius: BorderRadius.circular(10), child: Row(mainAxisSize: MainAxisSize.min, children: [
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(b.name), Text(_dateTimeText, style: Theme.of(context).textTheme.labelSmall)]),
+       InkWell(onTap: _rename, borderRadius: BorderRadius.circular(10), child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
           const SizedBox(width: 6),
           Icon(Icons.edit_rounded, size: 17, color: colors.onSurfaceVariant),
