@@ -495,7 +495,7 @@ void _goBack() {
   final buildingName = _buildingController.text.trim();
   final province = _selectedProvince ?? '';
   final city = _selectedCity ?? '';
-  final password = _passwordController.text.trim();
+  final newPassword = _passwordController.text.trim();
   final accountUpdates = <String, dynamic>{
     'phone': phone,
     'name': name,
@@ -505,7 +505,7 @@ void _goBack() {
     'building_name': buildingName,
     'province': province,
     'city': city,
-    if (password.isNotEmpty) 'password': password,
+    if (newPassword.isNotEmpty) 'password': newPassword,
   };
 
   try {
@@ -520,7 +520,7 @@ void _goBack() {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('pref_prov_$phone', province);
       await prefs.setString('pref_city_$phone', city);
-      if (password.isNotEmpty) await prefs.setString('pref_password_$phone', password);
+      if (newPassword.isNotEmpty) await prefs.setString('pref_password_$phone', newPassword);
       // The server is the source of truth. Persist its refreshed auth record locally as
       // well, so the restored session uses the edited profile after an app restart.
       final currentToken = pb.authStore.token;
@@ -3077,7 +3077,7 @@ Future<DateTime?> _showJalaliDatePicker(BuildContext context, DateTime initialDa
       title: const Text('انتخاب تاریخ شمسی'),
       content: SizedBox(width: 320, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Row(children: [
-          Expanded(child: DropdownButton<int>(isExpanded: true, value: year, items: [for (var y=initial[0]-100; y<=initial[0]+100; y++) DropdownMenuItem(value: y, child: Text(y.toString().toPersianDigits()))], onChanged: (v) { if (v != null) setState(() { year = v; day = day.clamp(1, _jalaliDaysInMonth(year, month)).toInt(); }); })),
+          Expanded(child: DropdownButton<int>(isExpanded: true, value: year, items: [for (var y=1300; y<=1500; y++) DropdownMenuItem(value: y, child: Text(y.toString().toPersianDigits()))], onChanged: (v) { if (v != null) setState(() { year = v; day = day.clamp(1, _jalaliDaysInMonth(year, month)).toInt(); }); })),
           const SizedBox(width: 8),
           Expanded(child: DropdownButton<int>(isExpanded: true, value: month, items: [for (var m=1;m<=12;m++) DropdownMenuItem(value:m, child: Text(['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'][m-1]))], onChanged: (v) { if(v!=null) setState(() { month=v; day=day.clamp(1, _jalaliDaysInMonth(year, month)); }); })),
         ]),
