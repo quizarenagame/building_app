@@ -2775,10 +2775,6 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
     return Scaffold(
       appBar: AppBar(title: Text(topic.title), centerTitle: true),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        _buildingFeatureCard(context, colors, item: const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'), building: b),
-        const SizedBox(height: 14),
-        _buildingFeatureCard(context, colors, item: const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'), building: b),
-        const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Expanded(child: Text('موضوع تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)))]),
           const SizedBox(height: 8),
@@ -3256,6 +3252,10 @@ class _BuildingManagementMenuPageState extends State<_BuildingManagementMenuPage
           if (b.chargeSettingTopic != null) OutlinedButton.icon(onPressed: () => _runAndRefresh(widget.onOpenChargeTopic), icon: const Icon(Icons.open_in_new), label: const Text('بازکردن موضوع')),
         ]))),
         const SizedBox(height: 14),
+        _buildingFeatureCard(context, colors, item: const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'), building: b),
+        const SizedBox(height: 14),
+        _buildingFeatureCard(context, colors, item: const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'), building: b),
+        const SizedBox(height: 14),
         Card(child: ListTile(
           leading: Icon(Icons.event_repeat_rounded, color: colors.primary),
           title: const Text('امور دوره‌ای', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -3675,6 +3675,10 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         centerTitle: true,
       ),
       body: ListView(padding: const EdgeInsets.all(16), children: [
+        _buildingFeatureCard(context, colors, item: const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'), building: b),
+        const SizedBox(height: 14),
+        _buildingFeatureCard(context, colors, item: const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'), building: b),
+        const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Icon(Icons.apartment_rounded, color: colors.primary),
