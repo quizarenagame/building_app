@@ -6,6 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9۰-۹٠-٩]'), '');
+    final grouped = digits.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
+    return TextEditingValue(text: grouped, selection: TextSelection.collapsed(offset: grouped.length));
+  }
+}
+
 late final PocketBase pb;
 
 Future<void> main() async {
@@ -1252,9 +1261,11 @@ class _ChargeProposal {
 }
 
 class _ChargeSettingTopic {
-  _ChargeSettingTopic(this.title, {DateTime? createdAt})
+  _ChargeSettingTopic(this.title, {DateTime? createdAt, int? initialAmount, String managerName = 'مدیر'})
       : createdAt = createdAt ?? DateTime.now(),
-        deadline = (createdAt ?? DateTime.now()).add(const Duration(days: 7));
+        deadline = (createdAt ?? DateTime.now()).add(const Duration(days: 7)) {
+    if (initialAmount != null && initialAmount > 0) proposals.add(_ChargeProposal(amount: initialAmount, unitId: 'manager', authorName: managerName));
+  }
   final String title;
   final DateTime createdAt;
   final DateTime deadline;
@@ -1869,6 +1880,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
   final TextEditingController _initialBalanceController = TextEditingController(text: '0');
   late String _addressPrefix;
   final _createFormKey = GlobalKey<FormState>();
+  bool _isCreatingBuilding = false;
 
   @override
   void initState() {
@@ -1923,7 +1935,9 @@ class _ManagerHomeState extends State<_ManagerHome> {
 
   /// ثبت مجموعه در PocketBase و سپس به‌روزرسانی مدل محلی و طبقات.
   Future<void> _createBuildingWithFloors() async {
-    if (!(_createFormKey.currentState?.validate() ?? false)) return;
+    if (_isCreatingBuilding || !(_createFormKey.currentState?.validate() ?? false)) return;
+    setState(() => _isCreatingBuilding = true);
+    try {
     final name = _nameController.text.trim();
     final address = _addressController.text.trim();
     final floorCount = int.parse(_latinDigits(_floorController.text.trim()));
@@ -1979,6 +1993,9 @@ class _ManagerHomeState extends State<_ManagerHome> {
     await _persistBuilding(b);
     widget.onBuildingChanged(b);
     _toast('ساختمان «${b.name}» با ${floorCount.toPersianDigits()} طبقه ساخته شد. کد: ${b.buildingCode.toPersianDigits()}');
+    } finally {
+      if (mounted) setState(() => _isCreatingBuilding = false);
+    }
   }
 
   Future<String> _generateUniqueBuildingCode() async {
@@ -2190,7 +2207,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
                   validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام ساختمان حداقل ۲ حرف باشد.',
                 ),
                 const SizedBox(height: 12),
-                TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
+                TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').replaceAll(',', '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
@@ -2257,9 +2274,9 @@ class _ManagerHomeState extends State<_ManagerHome> {
                   title: const Text('ادامه از شمارهٔ آخر طبقهٔ قبل')),
                 const SizedBox(height: 8),
                 FilledButton.icon(
-                  onPressed: _createBuildingWithFloors,
-                  icon: const Icon(Icons.add_business_rounded),
-                  label: const Text('ثبت مجموعه'),
+                  onPressed: _isCreatingBuilding ? null : _createBuildingWithFloors,
+                  icon: _isCreatingBuilding ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_business_rounded),
+                  label: Text(_isCreatingBuilding ? 'در حال ثبت...' : 'ثبت مجموعه'),
                 ),
               ]),
             ),
@@ -2490,6 +2507,9 @@ class _ResidentHomeState extends State<_ResidentHome> {
 
   void _selectBuilding(_Building b) {
     setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name),
+    ));
   }
 
   void _joinUnit(_Building b, int floor, dynamic unit) {
@@ -2689,6 +2709,31 @@ class _ResidentHomeState extends State<_ResidentHome> {
   }
 }
 
+class _ResidentBuildingDetailPage extends StatelessWidget {
+  const _ResidentBuildingDetailPage({required this.building, required this.residentName});
+  final _Building building;
+  final String residentName;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(building.name)),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      Text('آدرس: ${building.address.isEmpty ? 'ثبت نشده' : building.address}\nکد ساختمان: ${building.buildingCode.isEmpty ? 'در دسترس نیست' : building.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+      const SizedBox(height: 10),
+      _BuildingLayout(building: building, onUnitTap: (floor, unit) {
+        final member = building.occupantOf(floor, unit);
+        if (member != null) {
+          showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()}'), content: _MemberInfoContent(building: building, member: member, unitId: building.unitId(floor, unit)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
+        } else {
+          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'), content: const Text('این واحد خالی است. برای ثبت‌نام به صفحهٔ جست‌وجو بازگردید.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
+        }
+      }, highlightMemberName: residentName),
+      const SizedBox(height: 12),
+      _ResidentPollsCard(building: building, unitId: null, onChanged: () {}),
+    ]),
+  );
+}
+
 /// ------------------------- نمای طبقات و واحدها -------------------------
 
 class _ChargeTopicPage extends StatefulWidget {
@@ -2730,6 +2775,10 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
     return Scaffold(
       appBar: AppBar(title: Text(topic.title), centerTitle: true),
       body: ListView(padding: const EdgeInsets.all(16), children: [
+        _buildingFeatureCard(context, colors, item: const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'), building: b),
+        const SizedBox(height: 14),
+        _buildingFeatureCard(context, colors, item: const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'), building: b),
+        const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Expanded(child: Text('موضوع تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)))]),
           const SizedBox(height: 8),
@@ -3251,7 +3300,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   }
   @override
   void dispose() { _clockTimer?.cancel(); super.dispose(); }
-  String get _dateTimeText => '${_now.year.toString().toPersianDigits()}/${_now.month.toString().padLeft(2, '0').toPersianDigits()}/${_now.day.toString().padLeft(2, '0').toPersianDigits()}  •  ${_now.hour.toString().padLeft(2, '0').toPersianDigits()}:${_now.minute.toString().padLeft(2, '0').toPersianDigits()}:${_now.second.toString().padLeft(2, '0').toPersianDigits()}';
+  String get _dateTimeText => _formatPersianDateTime(_now);
   _Building get b => widget.building;
 
   void _toast(String message, {bool error = false}) {
@@ -3449,14 +3498,19 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
 
   Future<void> _createChargeTopic() async {
     final controller = TextEditingController(text: 'تعیین شارژ');
-    final title = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
+    final amountController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<(String, int)>(context: context, builder: (dialogContext) => AlertDialog(
       title: const Text('ایجاد موضوع شارژ'),
-      content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'عنوان موضوع')),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () { final value = controller.text.trim(); if (value.isNotEmpty) Navigator.pop(dialogContext, value); }, child: const Text('ایجاد و بازکردن'))],
+      content: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextFormField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'عنوان موضوع'), validator: (v) => v == null || v.trim().isEmpty ? 'عنوان را وارد کنید.' : null),
+        TextFormField(controller: amountController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()], decoration: const InputDecoration(labelText: 'مبلغ پیشنهادی مدیر', suffixText: 'تومان'), validator: (v) { final n = parseTomanAmount(v ?? ''); return n == null || n < 100000 || n > 10000000 || n % 100000 != 0 ? 'مبلغ باید بین ۱۰۰ هزار تا ۱۰ میلیون و مضربی از ۱۰۰ هزار باشد.' : null; }),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () { if (!formKey.currentState!.validate()) return; Navigator.pop(dialogContext, (controller.text.trim(), parseTomanAmount(amountController.text)!)); }, child: const Text('ایجاد و بازکردن'))],
     ));
-    controller.dispose();
-    if (title == null || title.trim().isEmpty) return;
-    setState(() => b.chargeSettingTopic = _ChargeSettingTopic(title.trim()));
+    controller.dispose(); amountController.dispose();
+    if (result == null) return;
+    setState(() => b.chargeSettingTopic = _ChargeSettingTopic(result.$1, initialAmount: result.$2, managerName: widget.managerName));
     await _openChargeTopic(b, isManager: true);
   }
 
@@ -3662,30 +3716,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
               ]),
             ),
           ),
-        ),
-        const SizedBox(height: 14),
-        _buildingFeatureCard(
-          context,
-          colors,
-          item: const _FeatureItem(
-            'رأی‌گیری ساختمان',
-            'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها',
-            Icons.how_to_vote_rounded,
-            'vote',
-          ),
-          building: b,
-        ),
-        const SizedBox(height: 14),
-        _buildingFeatureCard(
-          context,
-          colors,
-          item: const _FeatureItem(
-            'ارزیابی عملکرد مدیر',
-            'ارزیابی دوره‌ای هر شش ماه',
-            Icons.fact_check_rounded,
-            'evaluation',
-          ),
-          building: b,
         ),
         const SizedBox(height: 14),
         Card(
