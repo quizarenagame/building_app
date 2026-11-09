@@ -3050,7 +3050,28 @@ Future<DateTime?> _showJalaliDatePicker(BuildContext context, DateTime initialDa
           Expanded(child: DropdownButton<int>(isExpanded: true, value: month, items: [for (var m=1;m<=12;m++) DropdownMenuItem(value:m, child: Text(['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'][m-1]))], onChanged: (v) { if(v!=null) setState(() { month=v; day=day.clamp(1, _jalaliDaysInMonth(year, month)); }); })),
         ]),
         const SizedBox(height: 8),
-        Wrap(spacing: 4, runSpacing: 4, children: [for (var d=1;d<=monthLength;d++) SizedBox(width: 38, height: 38, child: (d==day ? FilledButton : TextButton)(style: d==day ? null : TextButton.styleFrom(padding: EdgeInsets.zero), onPressed: () => setState(() { day=d; }), child: Text(d.toString().toPersianDigits()))) ]),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (var d = 1; d <= monthLength; d++)
+              SizedBox(
+                width: 38,
+                height: 38,
+                child: d == day
+                    ? FilledButton(
+                        style: FilledButton.styleFrom(padding: EdgeInsets.zero),
+                        onPressed: () => setState(() { day = d; }),
+                        child: Text(d.toString().toPersianDigits()),
+                      )
+                    : TextButton(
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        onPressed: () => setState(() { day = d; }),
+                        child: Text(d.toString().toPersianDigits()),
+                      ),
+              ),
+          ],
+        ),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, _jalaliToGregorian(year, month, day)), child: const Text('تأیید'))],
     );
