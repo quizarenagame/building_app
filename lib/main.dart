@@ -731,7 +731,7 @@ void _goBack() {
       const SizedBox(height: 20),
       const Text('کد تأیید را وارد کنید', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 9),
-      Text(_latinDigits(_phoneController.text).replaceAll(' ', '') == BuildingApp.managerPhone ? 'برای ورود مدیر، کد ثابت ۴ رقمی را وارد کنید؛ سایر شماره‌ها از کد پیامکی استفاده می‌کنند.' : 'کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
+      Text('کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
       const SizedBox(height: 15),
       Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی از طریق پیامک برای شمارهٔ شما ارسال می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
       const SizedBox(height: 25),
@@ -3791,47 +3791,60 @@ extension _PersianDigits on int {
   }
 }
 
+Future<List<Map<String, dynamic>>> _loadServiceRequests() async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getString('service_requests');
+  if (raw == null) return <Map<String, dynamic>>[];
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is List) return decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+  } catch (_) {}
+  return <Map<String, dynamic>>[];
+}
+
 class _ServiceHome extends StatelessWidget {
   const _ServiceHome({required this.name, required this.specialties, this.showRequestsOnly = false});
   final String name;
   final List<String> specialties;
   final bool showRequestsOnly;
 
-  static const List<Map<String, String>> _requests = <Map<String, String>>[
-    {'block': 'بلوک A', 'address': 'تهران، خیابان بهار، کوچه یاس', 'requester': 'مریم رضایی', 'phone': '۰۹۱۲۳۴۵۶۷۸۹', 'specialty': 'لوله‌کشی و تأسیسات', 'description': 'نشتی آب زیر سینک آشپزخانه نیاز به بررسی دارد.'},
-    {'block': 'بلوک B', 'address': 'تهران، خیابان آزادی، پلاک ۲۴', 'requester': 'علی محمدی (مدیر)', 'phone': '۰۹۳۵۱۲۳۴۵۶۷', 'specialty': 'برق‌کاری ساختمان', 'description': 'چراغ‌های راهروی طبقه سوم روشن نمی‌شوند.'},
-    {'block': 'بلوک C', 'address': 'کرج، گوهردشت، خیابان پنجم', 'requester': 'زهرا احمدی', 'phone': '۰۹۱۰۹۸۷۶۵۴۳', 'specialty': 'نظافت مشاعات', 'description': 'برای نظافت راه‌پله و ورودی ساختمان درخواست نیرو داریم.'},
-  ];
+
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     if (showRequestsOnly) {
-      return ListView(
+      return FutureBuilder<List<Map<String, dynamic>>>(
+        future: _loadServiceRequests(),
+        builder: (context, snapshot) {
+          final requests = snapshot.data ?? <Map<String, dynamic>>[];
+          return ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
           Text('درخواست‌های دریافتی', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           Text('درخواست‌های مدیران و ساکنان ساختمان‌ها', style: TextStyle(color: colors.onSurfaceVariant)),
           const SizedBox(height: 12),
-          ..._requests.map((request) => Card(
+          ...requests.map((request) => Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
               padding: const EdgeInsets.all(15),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [const Icon(Icons.apartment_rounded, color: Colors.teal), const SizedBox(width: 8), Expanded(child: Text(request['block']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text(request['specialty']!), visualDensity: VisualDensity.compact)]),
+                Row(children: [const Icon(Icons.apartment_rounded, color: Colors.teal), const SizedBox(width: 8), Expanded(child: Text((request['block'] ?? '').toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text((request['specialty'] ?? '').toString()), visualDensity: VisualDensity.compact)]),
                 const Divider(height: 18),
-                _requestLine(Icons.location_on_outlined, 'آدرس', request['address']!),
-                _requestLine(Icons.person_outline, 'درخواست‌دهنده', request['requester']!),
-                _requestLine(Icons.phone_outlined, 'شماره تماس', request['phone']!),
-                _requestLine(Icons.handyman_outlined, 'تخصص درخواست‌شده', request['specialty']!),
-                _requestLine(Icons.notes_rounded, 'شرح درخواست', request['description']!),
+                _requestLine(Icons.location_on_outlined, 'آدرس', (request['address'] ?? '').toString()),
+                _requestLine(Icons.person_outline, 'درخواست‌دهنده', (request['requester'] ?? '').toString()),
+                _requestLine(Icons.phone_outlined, 'شماره تماس', (request['phone'] ?? '').toString()),
+                _requestLine(Icons.handyman_outlined, 'تخصص درخواست‌شده', (request['specialty'] ?? '').toString()),
+                _requestLine(Icons.notes_rounded, 'شرح درخواست', (request['description'] ?? '').toString()),
                 const SizedBox(height: 8),
                 Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: () {}, icon: const Icon(Icons.mark_chat_read_outlined), label: const Text('مشاهدهٔ درخواست'))),
               ]),
             ),
           )),
         ],
+      );
+        },
       );
     }
     return ListView(
@@ -3934,6 +3947,17 @@ class _TicketSupportPageState extends State<_TicketSupportPage> {
         _loading = false;
       });
       await _saveLocal();
+      final prefs = await SharedPreferences.getInstance();
+      final noticesKey = 'ticket_reply_notices_${widget.phone}';
+      final noticeRaw = prefs.getString(noticesKey);
+      final notices = <Map<String, dynamic>>[];
+      if (noticeRaw != null) { try { final d = jsonDecode(noticeRaw); if (d is List) notices.addAll(d.whereType<Map>().map((e) => Map<String, dynamic>.from(e))); } catch (_) {} }
+      for (final ticket in _tickets) {
+        final reply = (ticket['reply'] ?? ticket['admin_reply'] ?? ticket['response'] ?? '').toString().trim();
+        final id = (ticket['id'] ?? ticket['created'] ?? ticket['subject'] ?? '').toString();
+        if (reply.isNotEmpty && !notices.any((n) => n['ticketId'] == id)) notices.add({'ticketId': id, 'title': 'پاسخ جدید تیکت', 'message': reply, 'created': DateTime.now().toIso8601String(), 'read': false});
+      }
+      await prefs.setString(noticesKey, jsonEncode(notices));
     }
   }
 
@@ -4092,7 +4116,7 @@ class _SpecialtySelectionPage extends StatefulWidget {
 }
 
 class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
-  static const List<String> _available = ['لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'آسانسور', 'نقاشی و رنگ آمیزی ', 'نصب دوربین مداربسته ', 'تعمیر جک و کرکره برقی ', 'سرویس کار پکیج ', 'سمپاشی سوسک و حشرات ', 'قالی شویی ', 'شارژ کپسول آتش نشانی ', 'ماشین لباسشویی ', 'کولر آبی ', 'کولر گازی ', 'کابینت MDF ', 'کابینت فلزی ', 'لوله باز کن ', 'درب و پنجره دوجداره ', 'نظافتچی منزل ', 'باغبانی ', 'برق کشی ', 'خطوط تلفن داخلی ', 'آب تصفیه ', 'بیمه ', 'وکیل و مشاور حقوقی '];
+  static const List<String> _available = ['لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور'];
   late final Set<String> _selected = Set<String>.of(widget.initial);
 
   @override
@@ -4140,7 +4164,10 @@ class _FeatureHub extends StatelessWidget {
                 if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
                 const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
               ];
-    return ListView(
+    return RefreshIndicator(
+      onRefresh: () async { await Future<void>.delayed(const Duration(milliseconds: 250)); },
+      child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
         Text(index == 1 ? 'خدمات و ارتباط' : index == 2 ? 'اطلاعیه‌ها' : 'امور مالی',
@@ -4149,6 +4176,12 @@ class _FeatureHub extends StatelessWidget {
         Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
         if (index == 2) ...[
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _loadReplyNotices(userId),
+            builder: (context, snapshot) => Column(children: [
+              for (final notice in snapshot.data ?? <Map<String, dynamic>>[]) Card(child: ListTile(leading: const Icon(Icons.mark_chat_unread_outlined), title: Text((notice['title'] ?? 'پاسخ تیکت').toString()), subtitle: Text((notice['message'] ?? '').toString()))),
+            ]),
+          ),
           if (announcementTasks.isEmpty)
             const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر اطلاعیهٔ سررسیدِ خوانده‌نشده‌ای وجود ندارد.')))),
           ...announcementTasks.map((task) => Padding(
@@ -4177,8 +4210,16 @@ class _FeatureHub extends StatelessWidget {
           )),
         )),
       ],
-    );
+    ));
   }
+}
+
+Future<List<Map<String, dynamic>>> _loadReplyNotices(String userId) async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getString('ticket_reply_notices_$userId');
+  if (raw == null) return <Map<String, dynamic>>[];
+  try { final d = jsonDecode(raw); if (d is List) return d.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList(); } catch (_) {}
+  return <Map<String, dynamic>>[];
 }
 
 class _FeaturePage extends StatefulWidget {
