@@ -3676,9 +3676,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         centerTitle: true,
       ),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        _buildingFeatureCard(context, colors, item: const _FeatureItem('رأی‌گیری ساختمان', 'ثبت موضوع و رأی‌گیری ناشناس دربارهٔ تصمیم‌ها', Icons.how_to_vote_rounded, 'vote'), building: b),
         const SizedBox(height: 14),
-        _buildingFeatureCard(context, colors, item: const _FeatureItem('ارزیابی عملکرد مدیر', 'ارزیابی دوره‌ای هر شش ماه', Icons.fact_check_rounded, 'evaluation'), building: b),
         const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
@@ -4777,4 +4775,9 @@ class _FeaturePageState extends State<_FeaturePage> {
     } else {
       _message('ارزیابی شما با موفقیت ثبت شد.');
     }
- 
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+}
