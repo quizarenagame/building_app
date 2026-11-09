@@ -2187,10 +2187,10 @@ class _ManagerHomeState extends State<_ManagerHome> {
                 TextFormField(
                   controller: _nameController,
                   decoration: _deco(context, 'نام ساختمان (مثلاً برج آسمان)', Icons.location_city_outlined),
-                  const SizedBox(height: 12),
-                  TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
                   validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام ساختمان حداقل ۲ حرف باشد.',
                 ),
+                const SizedBox(height: 12),
+                TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
