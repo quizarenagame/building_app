@@ -68,14 +68,32 @@ class BuildingApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-          scaffoldBackgroundColor: const Color(0xFFF5F7F8),
+          scaffoldBackgroundColor: const Color(0xFFF4F8F7),
           fontFamily: 'Roboto',
-          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFF4F8F7), foregroundColor: Color(0xFF173A36),
+            elevation: 0, centerTitle: false, surfaceTintColor: Colors.transparent,
+          ),
+          cardTheme: CardTheme(
+            color: Colors.white, elevation: 1, shadowColor: const Color(0x1A17443D),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          navigationBarTheme: NavigationBarThemeData(
+            height: 72, backgroundColor: Colors.white, elevation: 8,
+            indicatorColor: seed.withOpacity(.13),
+            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
+              fontSize: 11, fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
+            )),
+          ),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          scaffoldBackgroundColor: const Color(0xFF101A18),
+          appBarTheme: const AppBarTheme(elevation: 0, surfaceTintColor: Colors.transparent),
+          cardTheme: CardTheme(elevation: 1, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+          navigationBarTheme: NavigationBarThemeData(height: 72, elevation: 8),
         ),
         themeMode: mode,
         home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
@@ -1813,8 +1831,9 @@ class _DashboardPageState extends State<DashboardPage> {
           };
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 76,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('سلام، ${widget.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text('سلام، ${widget.name} جان', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
           Text(_isManager ? 'نقش شما: مدیر ساختمان' : _currentRole == 'خدماتی' ? 'نقش شما: نیروی خدماتی' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
         ]),
         actions: [
@@ -1829,6 +1848,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       body: SafeArea(child: body),
       bottomNavigationBar: NavigationBar(
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() { selectedTab = index; _savedSelectedTab = index; }),
         destinations: isServiceRole
@@ -4798,24 +4818,4 @@ class _FeaturePageState extends State<_FeaturePage> {
       _message('سهم‌بندی قبض $billId برای ${_meters.length} واحد ثبت شد.');
     } else if (kind == 'withdraw') {
       setState(() => _withdrawals.add('${_values['مبلغ درخواستی (تومان)'] ?? '—'} تومان • ${_values['شماره شبا'] ?? ''}'));
-      _message('درخواست برداشت برای بررسی ثبت شد.');
-    } else if (kind == 'vote') {
-      _message('پیشنهاد «${_values['عنوان موضوع رأی‌گیری'] ?? ''}» در فهرست بررسی قرار گرفت.');
-    } else if (kind == 'service') {
-      final request = <String, String>{
-        ..._values,
-        'تخصص درخواستی': _values['تخصص درخواستی'] ?? _registeredServiceSpecialties.first,
-        'قابل انتخاب (بنا به تشخیص متخصص)': _serviceFeeFlexible.toString(),
-        'وضعیت': 'در انتظار بررسی',
-      };
-      setState(() => _myServiceRequests.add(request));
-      _message('درخواست خدمت شما ثبت شد.');
-    } else {
-      _message('ارزیابی شما با موفقیت ثبت شد.');
-    }
-  }
-
-  void _message(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  }
-}
+ 
