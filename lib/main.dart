@@ -278,7 +278,33 @@ class _LoginFlowState extends State<LoginFlow> {
             : record.data['city'].toString();
         _showMyBuildings = record.data['show_my_buildings'] == true;
       }
+      _loadSavedAccountFields(record);
     }
+  }
+
+  Future<void> _loadSavedAccountFields(RecordModel? record) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phone = (record?.data['phone'] ?? _phoneController.text).toString().trim();
+      if (phone.isEmpty || !mounted) return;
+      final recordData = record?.data ?? <String, dynamic>{};
+      final provinceInRecord = (recordData['province'] ?? '').toString().trim();
+      final cityInRecord = (recordData['city'] ?? '').toString().trim();
+      final passwordInRecord = (recordData['password'] ?? '').toString();
+      final savedProvince = prefs.getString('p_prov_${phone}');
+      final savedCity = prefs.getString('p_city_${phone}');
+      final savedPassword = prefs.getString('p_pass_${phone}');
+      if (provinceInRecord.isEmpty && (savedProvince ?? '').trim().isNotEmpty) {
+        _selectedProvince = savedProvince;
+      }
+      if (cityInRecord.isEmpty && (savedCity ?? '').trim().isNotEmpty) {
+        _selectedCity = savedCity;
+      }
+      if (passwordInRecord.isEmpty && _secret-88eb2f85Controller.text.isEmpty && savedPassword != null) {
+        _secret-88eb2f85Controller.text = savedPassword;
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   @override
@@ -486,6 +512,10 @@ void _goBack() {
   };
 
   try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('p_prov_${phone}', province);
+    await prefs.setString('p_city_${phone}', city);
+    await prefs.setString('p_pass_${phone}', password);
     // ارسال اطلاعات حساب به اندپوینت سروری که ساختیم
     final response = await pb.send<Map<String, dynamic>>(
       '/api/update-profile',
@@ -505,7 +535,9 @@ void _goBack() {
             : currentRecord;
         // Preserve edited profile fields in the local auth record even when the
         // server returns a refreshed record without all of these fields.
-        updatedRecord.data.addAll(accountUpdates);
+        final localAccountUpdates = Map<String, dynamic>.from(accountUpdates)
+          ..remove('password');
+        updatedRecord.data.addAll(localAccountUpdates);
         pb.authStore.save(currentToken, updatedRecord);
       }
 
@@ -1191,7 +1223,8 @@ String _formatJalaliDate(DateTime date) {
 }
 
 String _formatPersianDateTime(DateTime value) {
-  final raw = '${value.year.toString().padLeft(4, '0')}/${value.month.toString().padLeft(2, '0')}/${value.day.toString().padLeft(2, '0')}  ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  final j = _gregorianToJalali(value);
+  final raw = '${j[0].toString().padLeft(4, '0')}/${j[1].toString().padLeft(2, '0')}/${j[2].toString().padLeft(2, '0')}  ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   return _latinDigitsToPersian(raw);
 }
 
@@ -4282,10 +4315,11 @@ class _FeaturePageState extends State<_FeaturePage> {
               ),
               const SizedBox(height: 12),
               TextFormField(
+                enabled: !_serviceFeeFlexible,
                 keyboardType: TextInputType.number,
                 textDirection: TextDirection.rtl,
                 decoration: InputDecoration(
-                  labelText: 'دستمزد پیشنهادی',
+                  labelText: 'بنا به تشخیص متخصص',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 validator: (value) => !_serviceFeeFlexible && (value == null || value.trim().isEmpty)
