@@ -1030,7 +1030,6 @@ void _applyBuildingStructure(_Building b, dynamic raw) {
 void _applyBuildingRecord(_Building b, RecordModel record) {
   final data = record.data;
   b.recordId = record.id;
-  b.initialBalance = (data['initial_balance'] as num?)?.toInt() ?? b.initialBalance;
   b.createdBy = (data['created_by'] ?? b.createdBy ?? '').toString();
   final code = (data['building_code'] ?? '').toString().trim();
   if (code.isNotEmpty) b.buildingCode = code;
@@ -1048,7 +1047,7 @@ Future<void> _persistBuilding(_Building b) async {
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_buildingCacheKey(b), jsonEncode({
-      'name': b.name, 'address': b.address, 'building_code': b.buildingCode, 'initial_balance': b.initialBalance,
+      'name': b.name, 'address': b.address, 'building_code': b.buildingCode,
       'province': b.province, 'city': b.city,
       'recordId': b.recordId, 'created_by': b.createdBy, 'floors_data': structure,
     }));
@@ -1058,7 +1057,7 @@ Future<void> _persistBuilding(_Building b) async {
   // Keep the JSON structure canonical on servers with a JSON field. For older
   // collections, the local durable cache still protects all floor/unit data.
   try {
-    await pb.collection('buildings').update(id, body: {'floors_data': structure, 'initial_balance': b.initialBalance});
+    await pb.collection('buildings').update(id, body: {'floors_data': structure});
   } catch (_) {
     try { await pb.collection('buildings').update(id, body: {'floors': structure['floors']}); } catch (_) {}
   }
@@ -1078,7 +1077,6 @@ Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
     b.recordId = (d['recordId'] ?? '').toString().isEmpty ? null : d['recordId'].toString();
     b.createdBy = (d['created_by'] ?? '').toString().isEmpty ? null : d['created_by'].toString();
     b.buildingCode = (d['building_code'] ?? '').toString();
-    b.initialBalance = (d['initial_balance'] as num?)?.toInt() ?? 0;
     b.province = (d['province'] ?? '').toString();
     b.city = (d['city'] ?? '').toString();
     _applyBuildingStructure(b, d['floors_data']);
@@ -2189,8 +2187,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
                 TextFormField(
                   controller: _nameController,
                   decoration: _deco(context, 'نام ساختمان (مثلاً برج آسمان)', Icons.location_city_outlined),
-      const SizedBox(height: 12),
-      TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
+                  const SizedBox(height: 12),
+                  TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
                   validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام ساختمان حداقل ۲ حرف باشد.',
                 ),
                 const SizedBox(height: 12),
@@ -3244,10 +3242,16 @@ class _BuildingDetailPage extends StatefulWidget {
 class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   DateTime _now = DateTime.now();
   Timer? _clockTimer;
-  @override void initState() { super.initState(); _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) { if (mounted) setState(() => _now = DateTime.now()); }); }
-  @override void dispose() { _clockTimer?.cancel(); super.dispose(); }
-  String get _dateTimeText => '\${_now.year.toString().toPersianDigits()}/\${_now.month.toString().padLeft(2, '0').toPersianDigits()}/\${_now.day.toString().padLeft(2, '0').toPersianDigits()}  •  '\${_now.hour.toString().padLeft(2, '0').toPersianDigits()}:\${_now.minute.toString().padLeft(2, '0').toPersianDigits()}:\${_now.second.toString().padLeft(2, '0').toPersianDigits()}';
-
+  @override
+  void initState() {
+    super.initState();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+  @override
+  void dispose() { _clockTimer?.cancel(); super.dispose(); }
+  String get _dateTimeText => '${_now.year.toString().toPersianDigits()}/${_now.month.toString().padLeft(2, '0').toPersianDigits()}/${_now.day.toString().padLeft(2, '0').toPersianDigits()}  •  ${_now.hour.toString().padLeft(2, '0').toPersianDigits()}:${_now.minute.toString().padLeft(2, '0').toPersianDigits()}:${_now.second.toString().padLeft(2, '0').toPersianDigits()}';
   _Building get b => widget.building;
 
   void _toast(String message, {bool error = false}) {
@@ -3606,12 +3610,14 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final totalUnits = b.floors.values.fold<int>(0, (sum, n) => sum + n);
     return Scaffold(
       appBar: AppBar(
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(b.name), Text(_dateTimeText, style: Theme.of(context).textTheme.labelSmall)]),
-       InkWell(onTap: _rename, borderRadius: BorderRadius.circular(10), child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-          const SizedBox(width: 6),
-          Icon(Icons.edit_rounded, size: 17, color: colors.onSurfaceVariant),
-        ])),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          InkWell(onTap: _rename, borderRadius: BorderRadius.circular(10), child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+            const SizedBox(width: 6),
+            Icon(Icons.edit_rounded, size: 17, color: colors.onSurfaceVariant),
+          ])),
+          Text(_dateTimeText, style: Theme.of(context).textTheme.labelSmall),
+        ]),
         centerTitle: true,
       ),
       body: ListView(padding: const EdgeInsets.all(16), children: [
