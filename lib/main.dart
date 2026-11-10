@@ -35,7 +35,7 @@ class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
-  static const List<Color> themeColors = [Color(0xFF0E8A62), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
+  static const List<Color> themeColors = [Color(0xFF12A889), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
   static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
   static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
   static const String managerPhone = '09907862453';
@@ -67,47 +67,10 @@ class BuildingApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
-            primary: seed,
-            onPrimary: Colors.white,
-            primaryContainer: const Color(0xFFE5F6EF),
-            surface: Colors.white,
-          ),
-          scaffoldBackgroundColor: const Color(0xFFF3F6F5),
+          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
+          scaffoldBackgroundColor: const Color(0xFFF5F7F8),
           fontFamily: 'Roboto',
-          appBarTheme: AppBarTheme(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: true,
-            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          navigationBarTheme: NavigationBarThemeData(
-            backgroundColor: Colors.white,
-            indicatorColor: seed.withOpacity(.12),
-            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-              fontSize: 11,
-              fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
-              color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
-            )),
-          ),
-          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          )),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFF7FAF9),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
-          ),
-          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE7EEEB)))),
+          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
@@ -706,11 +669,9 @@ void _goBack() {
       const SizedBox(height: 42),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
-      const Text('همخانه', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.4, color: Color(0xFF0E8A62))),
-      const SizedBox(height: 6),
-      const Text('مدیریت هوشمند ساختمان', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, height: 1.5)),
+      const Text('به خانه‌تان خوش آمدید', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, height: 1.5)),
       const SizedBox(height: 8),
-      Text('ساختمانتان همیشه منظم و آرام باشد', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14, height: 1.8)),
+      Text('سامانه مدیریت ساختمان؛ همه‌چیز برای زندگی آسوده‌تر', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14, height: 1.8)),
       const SizedBox(height: 34),
       Container(
         padding: const EdgeInsets.all(18),
@@ -1850,109 +1811,41 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             _ => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
           };
-    Widget navItem(int index, IconData icon, String label, {Widget? iconWidget}) {
-      final selected = selectedTab == index;
-      final color = selected ? colors.primary : const Color(0xFF8A9692);
-      return Expanded(child: InkWell(
-        onTap: () => setState(() { selectedTab = index; _savedSelectedTab = index; }),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 6),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            iconWidget ?? Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 11, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: color)),
-            const SizedBox(height: 4),
-            AnimatedContainer(duration: const Duration(milliseconds: 180), height: 3, width: selected ? 22 : 0, decoration: BoxDecoration(color: colors.primary, borderRadius: BorderRadius.circular(4))),
-          ]),
-        ),
-      ));
-    }
-    final onHome = selectedTab == 2;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: Column(children: [
-        if (onHome)
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 16),
-            color: _isManager ? const Color(0xFF0B6B4A) : const Color(0xFFF7FBF8),
-            child: _isManager
-                ? Row(children: [
-                    const Icon(Icons.notifications_none_rounded, color: Colors.white),
-                    const Spacer(),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text('سلام، ${widget.name} جان!', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 2),
-                      Text('به پنل مدیریت ساختمان خوش آمدید', style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12)),
-                    ]),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 42, height: 42,
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(.16), borderRadius: BorderRadius.circular(14)),
-                      child: const Icon(Icons.home_work_outlined, color: Colors.white),
-                    ),
-                  ])
-                : Row(children: [
-                    if (_joinedBuilding != null)
-                      IconButton(
-                        tooltip: 'خروج از ساختمان',
-                        icon: Icon(Icons.logout_rounded, color: colors.primary),
-                        onPressed: () => setState(() { _joinedBuilding = null; _myFloor = null; _myUnit = null; }),
-                      )
-                    else
-                      Icon(Icons.notifications_none_rounded, color: colors.primary),
-                    const Spacer(),
-                    Text('همخانه', style: TextStyle(color: colors.primary, fontWeight: FontWeight.w900, fontSize: 20)),
-                    const SizedBox(width: 6),
-                    Icon(Icons.home_work_outlined, color: colors.primary),
-                  ]),
-          )
-        else
-          Material(
-            color: Colors.white,
-            child: SafeArea(bottom: false, child: SizedBox(
-              height: 56,
-              child: Row(children: [
-                const SizedBox(width: 8),
-                if (!_isManager && _joinedBuilding != null && selectedTab == 4)
-                  IconButton(
-                    tooltip: 'خروج از ساختمان',
-                    icon: Icon(Icons.logout_rounded, color: colors.primary),
-                    onPressed: () => setState(() { _joinedBuilding = null; _myFloor = null; _myUnit = null; }),
-                  )
-                else
-                  const SizedBox(width: 40),
-                Expanded(child: Text(
-                  isServiceRole
-                      ? const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab]
-                      : const ['خدمات', 'درخواست‌ها', 'خانه', 'پرداخت‌ها', 'پروفایل'][selectedTab],
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF17352C)),
-                )),
-                const SizedBox(width: 48),
-              ]),
-            )),
-          ),
-        Expanded(child: body),
-      ]),
-      bottomNavigationBar: Material(
-        color: Colors.white,
-        elevation: 8,
-        child: SafeArea(top: false, child: Row(children: isServiceRole
+      appBar: AppBar(
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('سلام، ${widget.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(_isManager ? 'نقش شما: مدیر ساختمان' : _currentRole == 'خدماتی' ? 'نقش شما: نیروی خدماتی' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+        ]),
+        actions: [
+          if (!_isManager && _joinedBuilding != null)
+            IconButton(
+              tooltip: 'خروج از ساختمان',
+              icon: const Icon(Icons.logout_rounded),
+              onPressed: () => setState(() { _joinedBuilding = null; _myFloor = null; _myUnit = null; }),
+            ),
+
+        ],
+      ),
+      body: SafeArea(child: body),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selectedTab,
+        onDestinationSelected: (index) => setState(() { selectedTab = index; _savedSelectedTab = index; }),
+        destinations: isServiceRole
             ? [
-                navItem(2, Icons.home_outlined, 'خانه'),
-                navItem(0, Icons.grid_view_rounded, 'خدمات'),
-                navItem(1, Icons.campaign_outlined, 'اعلان‌ها', iconWidget: noticesIcon(Icons.campaign_outlined)),
-                navItem(3, Icons.receipt_long_outlined, 'پرداخت‌ها'),
-                navItem(4, Icons.settings_outlined, 'تنظیمات'),
+                const NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
+                NavigationDestination(icon: noticesIcon(Icons.campaign_outlined), selectedIcon: noticesIcon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
+                NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
+                NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
               ]
             : [
-                navItem(2, Icons.home_outlined, 'خانه'),
-                navItem(0, Icons.grid_view_rounded, 'خدمات'),
-                navItem(1, Icons.assignment_outlined, 'درخواست‌ها', iconWidget: noticesIcon(Icons.assignment_outlined)),
-                navItem(3, Icons.account_balance_wallet_outlined, 'پرداخت‌ها'),
-                navItem(4, Icons.person_outline_rounded, 'پروفایل'),
-              ])),
+                const NavigationDestination(icon: Icon(Icons.handyman_outlined), selectedIcon: Icon(Icons.handyman_rounded), label: 'خدمات'),
+                NavigationDestination(icon: noticesIcon(Icons.campaign_outlined), selectedIcon: noticesIcon(Icons.campaign_rounded), label: 'اطلاعیه‌ها'),
+                NavigationDestination(icon: Icon(Icons.home_outlined, size: 30), selectedIcon: Icon(Icons.home_rounded, size: 34), label: 'خانه'),
+                NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'امور مالی'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'تنظیمات'),
+              ],
       ),
     );
   }
@@ -2288,53 +2181,11 @@ class _ManagerHomeState extends State<_ManagerHome> {
   }
 
   @override
-  Widget _stat(String value, String label, IconData icon) => Expanded(child: Container(
-    padding: const EdgeInsets.symmetric(vertical: 14),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7EEEB))),
-    child: Column(children: [
-      Icon(icon, color: const Color(0xFF0E8A62), size: 22),
-      const SizedBox(height: 6),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-      Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7A75))),
-    ]),
-  ));
-
-  Widget _managerDashboard(BuildContext context, _Building b) {
-    final occupied = b.occupants.length;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-            const SizedBox(height: 4),
-            Text(b.address.isEmpty ? 'آدرس ثبت نشده' : b.address, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7A75))),
-          ])),
-          const SizedBox(width: 12),
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFFE5F6EF), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.apartment_rounded, color: Color(0xFF0E8A62))),
-        ]),
-      ),
-      const SizedBox(height: 10),
-      Row(children: [
-        _stat('${b.totalUnitCount}'.toPersianDigits(), 'واحد', Icons.door_front_door_outlined),
-        const SizedBox(width: 8),
-        _stat('$occupied'.toPersianDigits(), 'ساکن', Icons.groups_outlined),
-        const SizedBox(width: 8),
-        _stat('${b.floors.length}'.toPersianDigits(), 'طبقه', Icons.layers_outlined),
-      ]),
-    ]);
-  }
-
   Widget build(BuildContext context) {
     final b = _building;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (widget.building != null) ...[
-          _managerDashboard(context, widget.building!),
-          const SizedBox(height: 12),
-        ],
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -2424,8 +2275,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
                 const SizedBox(height: 8),
                 FilledButton.icon(
                   onPressed: _isCreatingBuilding ? null : _createBuildingWithFloors,
-                  icon: _isCreatingBuilding ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.person_add_alt_1_rounded),
-                  label: Text(_isCreatingBuilding ? 'در حال ثبت...' : 'افزودن و ثبت ساختمان'),
+                  icon: _isCreatingBuilding ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_business_rounded),
+                  label: Text(_isCreatingBuilding ? 'در حال ثبت...' : 'ثبت مجموعه'),
                 ),
               ]),
             ),
@@ -2457,158 +2308,35 @@ class _ResidentHome extends StatefulWidget {
   State<_ResidentHome> createState() => _ResidentHomeState();
 }
 
-// ... (بقیه کد اصلی بدون تغییر - importها، theme، LoginFlow و ...)
-
 class _ResidentHomeState extends State<_ResidentHome> {
-  // ... (تمام فیلدهای قبلی بدون تغییر)
+  final _searchKey = GlobalKey<FormState>();
+  final _searchController = TextEditingController();
+  final _joinedSearchController = TextEditingController();
+  final List<_Building> _joinedBuildings = [];
+  bool _isLoadingJoined = false;
+  String? _foundBuildingName;
+  final List<_Building> _searchResults = [];
+  _Building? _selectedBuilding;
+  bool _isSearching = false;
+  bool _searchByBuildingName = true;
+  bool _searchByUniqueCode = true;
+  bool _searchByCity = true;
+  bool _searchByProvince = true;
 
-  @override
-  Widget build(BuildContext context) {
-    if (widget.building != null && widget.myFloor != null) {
-      final b = widget.building!;
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Greeting
-          Row(
-            children: [
-              Icon(Icons.waving_hand, color: Theme.of(context).colorScheme.primary, size: 28),
-              const SizedBox(width: 12),
-              Text(
-                'سلام، جان! به دلیل مدیریت ساختمان خوش آمدید',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Building image card (دقیقاً مثل عکس)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 160,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: const DecorationImage(
-                        image: NetworkImage('https://picsum.photos/id/1015/600/400'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'ساختمان گلستان',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'خیابان آزادی، تهران',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name)),
-                    ),
-                    icon: const Icon(Icons.location_on_outlined),
-                    label: const Text('مشاهده جزئیات'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // آمار (دقیقاً مثل عکس)
-          Row(
-            children: [
-              Expanded(child: _StatCard(icon: Icons.people_outline, number: '۲۴', label: 'ساکنین', color: const Color(0xFF12A889))),
-              const SizedBox(width: 12),
-              Expanded(child: _StatCard(icon: Icons.build, number: '۳', label: 'درخواست خدمت', color: const Color(0xFF12A889))),
-              const SizedBox(width: 12),
-              Expanded(child: _StatCard(icon: Icons.receipt_long_outlined, number: '۲', label: 'صورت حساب فعال', color: const Color(0xFF12A889))),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // پرداخت‌های اخیر
-          Text('پرداخت‌های اخیر', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _PaymentCard(icon: Icons.water_drop_outlined, amount: '۲۵٬۰۰۰', title: 'آب', subtitle: 'ماهانه')),
-              const SizedBox(width: 12),
-              Expanded(child: _PaymentCard(icon: Icons.home_outlined, amount: '۵۰۰٬۰۰۰', title: 'ساختمان', subtitle: 'ماهانه')),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // پشتیبانی ۲۴ ساعته
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.headset_mic, color: Colors.cyan, size: 32),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('پشتیبانی ۲۴ ساعته', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text('در صورت نیاز با ما در ارتباط باشید', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // واحد شما
-          _UnitCard(building: b, name: widget.name, floor: widget.myFloor!, unit: widget.myUnit!),
-          const SizedBox(height: 16),
-
-          // چیدمان طبقات
-          _BuildingLayout(
-            building: b,
-            onUnitTap: (floor, unit) => _showResidentUnit(b, floor, unit),
-            highlightMemberName: widget.name,
-          ),
-          const SizedBox(height: 16),
-
-          // کارت شارژ
-          _ResidentChargeCard(
-            building: b,
-            unitId: b.unitId(widget.myFloor!, widget.myUnit!),
-            onChanged: () => setState(() {}),
-          ),
-          const SizedBox(height: 16),
-
-          // نظرسنجی‌ها
-          _ResidentPollsCard(
-            building: b,
-            unitId: b.unitId(widget.myFloor!, widget.myUnit!),
-            onChanged: () => setState(() {}),
-          ),
-        ],
-      );
-    }
-
-    // ... (بقیه منطق جستجو و عضویت واحد بدون تغییر)
+  bool _matchesSelectedSearchFields(_Building building, String query) {
+    final q = _normalizeSearchText(query);
+    if (q.isEmpty) return true;
+    final fields = <String>[
+      if (_searchByBuildingName) building.name,
+      if (_searchByUniqueCode) building.buildingCode,
+      if (_searchByCity) building.city,
+      if (_searchByProvince) building.province,
+    ];
+    return fields.any((field) {
+      final normalized = _normalizeSearchText(field);
+      return normalized.isNotEmpty && normalized.contains(q);
+    });
   }
-}
-
-// کارت‌های کمکی (همان‌طور که قبلاً استفاده می‌کردید)
-class _StatCard extends StatelessWidget { /* همان کد قبلی */ }
-class _PaymentCard extends StatelessWidget { /* همان کد قبلی */ }
 
   Widget _searchFieldFilters() => Wrap(
     spacing: 4,
@@ -2780,7 +2508,7 @@ class _PaymentCard extends StatelessWidget { /* همان کد قبلی */ }
   void _selectBuilding(_Building b) {
     setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name),
+      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name, onJoin: (floor, unit) => _joinUnit(b, floor, unit)),
     ));
   }
 
@@ -2827,39 +2555,33 @@ class _PaymentCard extends StatelessWidget { /* همان کد قبلی */ }
   Widget build(BuildContext context) {
     if (widget.building != null && widget.myFloor != null) {
       final b = widget.building!;
-      Widget mini(String v, String l) => Expanded(child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7EEEB))),
-        child: Column(children: [Text(v, style: const TextStyle(fontWeight: FontWeight.w800)), Text(l, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7A75)))]),
-      ));
       return ListView(padding: const EdgeInsets.all(16), children: [
-        Text('سلام، ${widget.name.isEmpty ? 'همسایه' : widget.name}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 4),
-        const Text('وضعیت ساختمان شما', style: TextStyle(color: Color(0xFF6B7A75))),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                Text('طبقه ${widget.myFloor!.toPersianDigits()} • واحد ${widget.myUnit!.toPersianDigits()} • ${widget.ownership}', style: const TextStyle(fontSize: 12, color: Color(0xFF6B7A75))),
-              ])),
-              const SizedBox(width: 10),
-              Container(width: 46, height: 46, decoration: BoxDecoration(color: const Color(0xFFE5F6EF), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.home_rounded, color: Color(0xFF0E8A62))),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.home_work_outlined, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(child: Text('واحد شما در «${b.name}»', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+              ]),
+              const SizedBox(height: 10),
+              Text('طبقه ${widget.myFloor!.toPersianDigits()} — واحد ${widget.myUnit!.toPersianDigits()}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 14),
+              Row(children: [
+                CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(widget.name.isNotEmpty ? widget.name.characters.first : '؟', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Text(widget.name.isNotEmpty ? widget.name : 'بدون نام', style: const TextStyle(fontWeight: FontWeight.w600))),
+              ]),
+              const SizedBox(height: 6),
+              Text(widget.ownership, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
             ]),
-          ]),
+          ),
         ),
-        const SizedBox(height: 10),
-        Row(children: [
-          mini('${b.totalUnitCount}'.toPersianDigits(), 'واحد'),
-          const SizedBox(width: 8),
-          mini('${b.occupants.length}'.toPersianDigits(), 'ساکن'),
-          const SizedBox(width: 8),
-          mini('${b.polls.where((p) => p.isActive).length}'.toPersianDigits(), 'رأی فعال'),
-        ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _BuildingLayout(
           building: b,
           onUnitTap: (floor, unit) => _showResidentUnit(b, floor, unit),
@@ -2972,25 +2694,15 @@ class _PaymentCard extends StatelessWidget { /* همان کد قبلی */ }
         }),
       ]),
       const SizedBox(height: 16),
-      if (found != null) ...[
-        Text('ساختمان: ${found.name}\nآدرس: ${found.address.isEmpty ? 'ثبت نشده' : found.address}\nکد: ${found.buildingCode.isEmpty ? 'در دسترس نیست' : found.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        const SizedBox(height: 10),
-        _BuildingLayout(
-          building: found,
-          onUnitTap: (floor, unit) => _showResidentUnit(found, floor, unit),
-          highlightMemberName: widget.name,
-        ),
-        const SizedBox(height: 12),
-        _ResidentPollsCard(building: found, unitId: null, onChanged: () { if (mounted) setState(() {}); }),
-      ],
     ]);
   }
 }
 
 class _ResidentBuildingDetailPage extends StatelessWidget {
-  const _ResidentBuildingDetailPage({required this.building, required this.residentName});
+  const _ResidentBuildingDetailPage({required this.building, required this.residentName, required this.onJoin});
   final _Building building;
   final String residentName;
+  final void Function(int floor, dynamic unit) onJoin;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -3003,7 +2715,14 @@ class _ResidentBuildingDetailPage extends StatelessWidget {
         if (member != null) {
           showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()}'), content: _MemberInfoContent(building: building, member: member, unitId: building.unitId(floor, unit)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
         } else {
-          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'), content: const Text('این واحد خالی است. برای ثبت‌نام به صفحهٔ جست‌وجو بازگردید.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
+          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+            title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+            content: const Text('وضعیت واحد: خالی\nبرای سکونت در این واحد ثبت‌نام می‌کنید؟'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('بستن')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('انتخاب این واحد')),
+            ],
+          )).then((join) { if (join == true) onJoin(floor, unit); });
         }
       }, highlightMemberName: residentName),
       const SizedBox(height: 12),
@@ -3276,26 +2995,20 @@ class _BuildingLayout extends StatelessWidget {
                   ],
                 ]),
                 const SizedBox(height: 12),
-                LayoutBuilder(builder: (context, constraints) {
-                  final tileWidth = (constraints.maxWidth - 8) / 2;
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final unit in (building.floorUnits[floor] ?? List<String>.generate(building.floors[floor]!, (i) => '${i + 1}')))
-                        SizedBox(
-                          width: tileWidth,
-                          child: _UnitTile(
-                            building: building,
-                            floor: floor,
-                            unit: unit,
-                            onTap: onUnitTap == null ? null : () => onUnitTap!(floor, unit),
-                            highlightMemberName: highlightMemberName,
-                          ),
-                        ),
-                    ],
-                  );
-                }),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final unit in (building.floorUnits[floor] ?? List<String>.generate(building.floors[floor]!, (i) => '${i + 1}')))
+                      _UnitTile(
+                        building: building,
+                        floor: floor,
+                        unit: unit,
+                        onTap: onUnitTap == null ? null : () => onUnitTap!(floor, unit),
+                        highlightMemberName: highlightMemberName,
+                      ),
+                  ],
+                ),
               ]),
             ),
           ),
@@ -3331,8 +3044,8 @@ class _UnitTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        width: 150,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: tileColor,
           borderRadius: BorderRadius.circular(14),
@@ -3791,50 +3504,21 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final financialController = TextEditingController();
     String? error;
     final result = await showDialog<_BuildingPoll>(context: context, builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => Dialog.fullscreen(
-        child: Directionality(textDirection: TextDirection.rtl, child: Scaffold(
-          backgroundColor: const Color(0xFFF4F7F6),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF0E8A62),
-            foregroundColor: Colors.white,
-            title: const Text('ثبت موضوع و نظرسنجی جدید', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(dialogContext)),
-          ),
-          body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 24), children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFFE5F6EF), borderRadius: BorderRadius.circular(18)),
-              child: const Column(children: [
-                Icon(Icons.how_to_vote_rounded, size: 56, color: Color(0xFF0E8A62)),
-                SizedBox(height: 8),
-                Text('ایجاد موضوع رأی‌گیری جدید توسط مدیر یا ساکن', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800)),
-                SizedBox(height: 4),
-                Text('لطفاً جزئیات موضوع، هزینه و مهلت رأی‌گیری را وارد کنید.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFF5E726B))),
-              ]),
-            ),
-            const SizedBox(height: 14),
-            TextField(controller: titleController, decoration: const InputDecoration(labelText: 'عنوان موضوع *', hintText: 'مثلاً: تعمیر آسانسور ساختمان', prefixIcon: Icon(Icons.subject_rounded))),
-            const SizedBox(height: 12),
-            TextField(controller: descriptionController, minLines: 3, maxLines: 5, decoration: const InputDecoration(labelText: 'توضیحات تکمیلی', hintText: 'توضیحات بیشتر درباره موضوع را وارد کنید...', prefixIcon: Icon(Icons.description_outlined))),
-            const SizedBox(height: 12),
-            TextField(controller: financialController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()], decoration: const InputDecoration(labelText: 'کل هزینه تخمینی اجرای تصمیم (تومان)', hintText: 'مثلاً: ۵٬۰۰۰٬۰۰۰', prefixIcon: Icon(Icons.payments_outlined))),
-            const SizedBox(height: 12),
-            TextField(controller: daysController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'مهلت رأی‌گیری (روز) *', hintText: 'حداقل ۳', prefixIcon: Icon(Icons.event_outlined))),
-            if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: () {
-                final days = int.tryParse(_latinDigits(daysController.text.trim()));
-                if (titleController.text.trim().isEmpty) { setDialogState(() => error = 'عنوان موضوع را وارد کنید.'); return; }
-                if (days == null || days < 3) { setDialogState(() => error = 'مهلت نظرسنجی باید حداقل ۳ روز باشد.'); return; }
-                final amount = parseTomanAmount(financialController.text.trim()) ?? 0;
-                Navigator.pop(dialogContext, _BuildingPoll(title: titleController.text.trim(), description: descriptionController.text.trim(), deadline: DateTime.now().add(Duration(days: days)), financialAmount: amount));
-              },
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('انتشار و آغاز رأی‌گیری ساختمان'),
-            ),
-          ]),
-        )),
+      builder: (context, setDialogState) => AlertDialog(
+        title: const Text('ایجاد نظرسنجی'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: titleController, autofocus: true, decoration: const InputDecoration(labelText: 'موضوع')),
+          TextField(controller: descriptionController, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'توضیح')),
+          TextField(controller: daysController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'مهلت شرکت در نظرسنجی (روز)')),
+          TextField(controller: financialController, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'بار مالی به تومان (اختیاری)', hintText: 'مثلاً ۳۰٬۰۰۰٬۰۰۰')),
+          if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+        ])),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
+          final days = int.tryParse(_latinDigits(daysController.text.trim()));
+          if (titleController.text.trim().isEmpty) { setDialogState(() => error = 'موضوع را وارد کنید.'); return; }
+          if (days == null || days < 3) { setDialogState(() => error = 'مهلت نظرسنجی باید حداقل ۳ روز باشد.'); return; }
+          Navigator.pop(dialogContext, _BuildingPoll(title: titleController.text.trim(), description: descriptionController.text.trim(), deadline: DateTime.now().add(Duration(days: days))));
+        }, child: const Text('ایجاد نظرسنجی'))],
       ),
     ));
     titleController.dispose(); descriptionController.dispose(); daysController.dispose(); financialController.dispose();
@@ -4374,19 +4058,7 @@ class _SettingsPageState extends State<_SettingsPage> {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(16),
     children: [
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(24)),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(widget.role, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
-            const SizedBox(height: 4),
-            Text(widget.phoneNumber, style: TextStyle(color: Colors.white.withOpacity(.85))),
-          ])),
-          const SizedBox(width: 12),
-          Container(width: 52, height: 52, decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.person_rounded, color: Colors.white)),
-        ]),
-      ),
+      Text('تنظیمات', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
       const SizedBox(height: 12),
       if (widget.role == 'خدماتی') ...[
         Card(child: ListTile(
@@ -4468,47 +4140,14 @@ class _FeatureHub extends StatelessWidget {
                 if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
                 const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
               ];
-    void open(_FeatureItem item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(item: item, building: building)));
-    final grid = index == 1
-        ? const [
-            _FeatureItem('رأی‌گیری', '', Icons.how_to_vote_outlined, 'vote'),
-            _FeatureItem('گفت‌وگو', '', Icons.forum_outlined, 'chat'),
-            _FeatureItem('درخواست خدمت', '', Icons.handyman_outlined, 'service'),
-            _FeatureItem('مدیریت ساختمان', '', Icons.apartment_rounded, 'specialists'),
-          ]
-        : const <_FeatureItem>[];
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
-        Text(index == 1 ? 'خدمات' : index == 2 ? 'اطلاعیه‌ها' : 'پرداخت‌ها',
+        Text(index == 1 ? 'خدمات و ارتباط' : index == 2 ? 'اطلاعیه‌ها' : 'امور مالی',
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        if (grid.isNotEmpty) ...[
-          GridView.count(
-            crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.35,
-            children: [
-              for (final item in grid)
-                Material(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(22),
-                    onTap: () => open(item),
-                    child: Container(
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
-                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(item.icon, color: const Color(0xFF0E8A62), size: 30),
-                        const SizedBox(height: 8),
-                        Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ]),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
+        const SizedBox(height: 6),
+        Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 16),
         if (index == 2) ...[
           if (announcementTasks.isEmpty)
             const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر اطلاعیهٔ سررسیدِ خوانده‌نشده‌ای وجود ندارد.')))),
@@ -4850,60 +4489,22 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _subscriptionContent(BuildContext context) {
     final plans = [
-      ('ماهانه', '۲۹۰٬۰۰۰', 'ماهانه', Icons.circle),
-      ('سه‌ماهه', '۷۵۰٬۰۰۰', 'سه‌ماهه', Icons.circle_outlined),
-      ('سالانه', '۲٬۷۰۰٬۰۰۰', 'سالانه', Icons.circle_outlined),
+      ('ماهانه', '۶۹۸ هزار', 'پرداخت ماه‌به‌ماه', Icons.calendar_month_outlined),
+      ('سه‌ماهه', '۱ میلیون و ۵۵۰ هزار', 'پرداخت برای سه ماه', Icons.date_range_outlined),
+      ('شش‌ماهه', '۳ میلیون و ۸۹۰ هزار', 'پرداخت برای شش ماه', Icons.workspace_premium_outlined),
     ];
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(
-        padding: const EdgeInsets.fromLTRB(16, 22, 16, 22),
-        decoration: BoxDecoration(color: const Color(0xFFDDF3EA), borderRadius: BorderRadius.circular(28)),
-        child: Column(children: [
-          Container(
-            width: 92, height: 92,
-            decoration: BoxDecoration(color: const Color(0xFF12A37A), borderRadius: BorderRadius.circular(22)),
-            child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 48),
-          ),
-          const SizedBox(height: 14),
-          const Text('۳ ماه رایگان', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF16352C))),
-          const SizedBox(height: 6),
-          Text('بدون هزینه در دوره آزمایشی؛ هر زمان قابل لغو است.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black.withOpacity(.55))),
-        ]),
-      ),
-      const SizedBox(height: 16),
+    return Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(18)), child: Row(children: [const Icon(Icons.card_giftcard_rounded, size: 32), const SizedBox(width: 12), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('۳ ماه استفادهٔ رایگان', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), Text('بدون هزینه در دورهٔ آزمایشی؛ هر زمان قابل لغو است.')]))])),
+      const SizedBox(height: 18), _sectionTitle('انتخاب طرح پس از دورهٔ آزمایشی', detail: 'همهٔ طرح‌ها شامل مدیریت ساختمان، گزارش و پشتیبانی هستند.'),
       for (var i = 0; i < plans.length; i++) _planCard(plans[i], i),
-      const SizedBox(height: 8),
-      FilledButton(onPressed: _choice == null ? null : () => _message('طرح $_choice پس از دورهٔ آزمایشی انتخاب شد.'), child: const Text('ادامه')),
-      const SizedBox(height: 8),
-      const Text('یادآوری پایان دورهٔ آزمایشی پیش از شروع پرداخت نمایش داده می‌شود.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-    ]);
+      const SizedBox(height: 8), FilledButton.icon(onPressed: _choice == null ? null : () => _message('طرح $_choice پس از دورهٔ آزمایشی انتخاب شد.'), icon: const Icon(Icons.lock_open_rounded), label: const Text('شروع دورهٔ آزمایشی رایگان')),
+      const SizedBox(height: 8), const Text('یادآوری پایان دورهٔ آزمایشی پیش از شروع پرداخت نمایش داده می‌شود.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+    ])));
   }
 
   Widget _planCard((String, String, String, IconData) plan, int index) {
     final selected = _choice == plan.$1;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: () => setState(() => _choice = plan.$1),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: selected ? const Color(0xFF0E8A62) : const Color(0xFFE6EEEA), width: selected ? 1.6 : 1),
-            ),
-            child: Row(children: [
-              Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off, color: const Color(0xFF0E8A62)),
-              const Spacer(),
-              Text('${plan.$3}  ${plan.$2} تومان', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            ]),
-          ),
-        ),
-      ),
-    );
+    return Card(color: selected ? Theme.of(context).colorScheme.primaryContainer.withOpacity(.55) : null, child: RadioListTile<String>(value: plan.$1, groupValue: _choice, onChanged: (v) => setState(() => _choice = v), secondary: Icon(plan.$4), title: Text('طرح ${plan.$1}', style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text('${plan.$3}\n${plan.$2} تومان پس از پایان دورهٔ رایگان'), isThreeLine: true));
   }
 
   Widget _voteContent(BuildContext context) {
