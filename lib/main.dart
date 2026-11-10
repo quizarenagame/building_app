@@ -35,8 +35,8 @@ class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
-  static const List<Color> themeColors = [Color(0xFF047857), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
-  static const List<String> themeNames = ['سبز زمردی', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
+  static const List<Color> themeColors = [Color(0xFF12A889), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
+  static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
   static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
   static const String managerPhone = '09907862453';
   static const String managerPin = '2731';
@@ -68,62 +68,14 @@ class BuildingApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-          scaffoldBackgroundColor: const Color(0xFFF4F8F6),
+          scaffoldBackgroundColor: const Color(0xFFF5F7F8),
           fontFamily: 'Roboto',
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFF4F8F6), foregroundColor: Color(0xFF123B31),
-            elevation: 0, centerTitle: false, surfaceTintColor: Colors.transparent,
-          ),
-          cardTheme: CardTheme(
-            color: Colors.white, elevation: 1, shadowColor: const Color(0x180B3D2E),
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true, fillColor: const Color(0xFFF8FBF9),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDCE9E2))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDCE9E2))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.8)),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50), elevation: 0),
-          ),
-          filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50)),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 48)),
-          ),
-          navigationBarTheme: NavigationBarThemeData(
-            height: 72, backgroundColor: Colors.white, elevation: 8,
-            indicatorColor: seed.withOpacity(.13),
-            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-              fontSize: 11, fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
-            )),
-          ),
-          dialogTheme: DialogTheme(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-          snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-          scaffoldBackgroundColor: const Color(0xFF0D1915),
-          appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF0D1915), foregroundColor: Color(0xFFE5F3EB), elevation: 0, surfaceTintColor: Colors.transparent),
-          cardTheme: CardTheme(color: const Color(0xFF17251F), elevation: 1, margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true, fillColor: const Color(0xFF17251F),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34483D))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.8)),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50), elevation: 0)),
-          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50))),
-          outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 48))),
-          navigationBarTheme: NavigationBarThemeData(height: 72, elevation: 8, backgroundColor: const Color(0xFF17251F)),
-          dialogTheme: DialogTheme(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-          snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
         ),
         themeMode: mode,
         home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
@@ -608,7 +560,7 @@ void _goBack() {
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(
           content: Text('تغییرات با موفقیت ذخیره شد'),
-          backgroundColor: Color(0xFF047857),
+          backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: 2),
         ));
@@ -697,9 +649,9 @@ void _goBack() {
   Widget _brandMark({double size = 86}) => Container(
     width: size, height: size,
     decoration: BoxDecoration(
-      gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF065F46), Color(0xFF10B981)]),
+      gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF117D70), Color(0xFF19B794)]),
       borderRadius: BorderRadius.circular(size * .31),
-      boxShadow: [BoxShadow(color: const Color(0xFF047857).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
+      boxShadow: [BoxShadow(color: const Color(0xFF11947A).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
     ),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(size * .31),
@@ -779,7 +731,7 @@ void _goBack() {
       const SizedBox(height: 20),
       const Text('کد تأیید را وارد کنید', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 9),
-      Text('کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
+      Text(_latinDigits(_phoneController.text).replaceAll(' ', '') == BuildingApp.managerPhone ? 'برای ورود مدیر، کد ثابت ۴ رقمی را وارد کنید؛ سایر شماره‌ها از کد پیامکی استفاده می‌کنند.' : 'کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
       const SizedBox(height: 15),
       Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی از طریق پیامک برای شمارهٔ شما ارسال می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
       const SizedBox(height: 25),
@@ -1861,9 +1813,8 @@ class _DashboardPageState extends State<DashboardPage> {
           };
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 76,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('سلام، ${widget.name} جان', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          Text('سلام، ${widget.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           Text(_isManager ? 'نقش شما: مدیر ساختمان' : _currentRole == 'خدماتی' ? 'نقش شما: نیروی خدماتی' : 'نقش شما: ساکن', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
         ]),
         actions: [
@@ -1878,7 +1829,6 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       body: SafeArea(child: body),
       bottomNavigationBar: NavigationBar(
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         selectedIndex: selectedTab,
         onDestinationSelected: (index) => setState(() { selectedTab = index; _savedSelectedTab = index; }),
         destinations: isServiceRole
@@ -2558,7 +2508,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
   void _selectBuilding(_Building b) {
     setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name, onJoin: (floor, unit) => _joinUnit(b, floor, unit)),
+      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name),
     ));
   }
 
@@ -2744,15 +2694,25 @@ class _ResidentHomeState extends State<_ResidentHome> {
         }),
       ]),
       const SizedBox(height: 16),
+      if (found != null) ...[
+        Text('ساختمان: ${found.name}\nآدرس: ${found.address.isEmpty ? 'ثبت نشده' : found.address}\nکد: ${found.buildingCode.isEmpty ? 'در دسترس نیست' : found.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 10),
+        _BuildingLayout(
+          building: found,
+          onUnitTap: (floor, unit) => _showResidentUnit(found, floor, unit),
+          highlightMemberName: widget.name,
+        ),
+        const SizedBox(height: 12),
+        _ResidentPollsCard(building: found, unitId: null, onChanged: () { if (mounted) setState(() {}); }),
+      ],
     ]);
   }
 }
 
 class _ResidentBuildingDetailPage extends StatelessWidget {
-  const _ResidentBuildingDetailPage({required this.building, required this.residentName, required this.onJoin});
+  const _ResidentBuildingDetailPage({required this.building, required this.residentName});
   final _Building building;
   final String residentName;
-  final void Function(int floor, dynamic unit) onJoin;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -2765,14 +2725,7 @@ class _ResidentBuildingDetailPage extends StatelessWidget {
         if (member != null) {
           showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()}'), content: _MemberInfoContent(building: building, member: member, unitId: building.unitId(floor, unit)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
         } else {
-          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-            title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
-            content: const Text('وضعیت واحد: خالی\nبرای سکونت در این واحد ثبت‌نام می‌کنید؟'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('بستن')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('انتخاب این واحد')),
-            ],
-          )).then((join) { if (join == true) onJoin(floor, unit); });
+          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'), content: const Text('این واحد خالی است. برای ثبت‌نام به صفحهٔ جست‌وجو بازگردید.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
         }
       }, highlightMemberName: residentName),
       const SizedBox(height: 12),
@@ -2826,7 +2779,7 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
           Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Expanded(child: Text('موضوع تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)))]),
           const SizedBox(height: 8),
           const Text('پیشنهادهای همه به‌صورت عمومی نمایش داده می‌شود، اما رأی هر واحد محرمانه می‌ماند. مبلغ تصویب‌شده به‌صورت خودکار و منصفانه با میانهٔ رأی‌ها محاسبه می‌شود.', style: TextStyle(color: Color(0xFF6B7280), height: 1.7)),
-          if (approved != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text('شارژ ماهانهٔ تصویب‌شده (میانه): ${formatTomanAmount(approved)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF047857))))
+          if (approved != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text('شارژ ماهانهٔ تصویب‌شده (میانه): ${formatTomanAmount(approved)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF12A889))))
           else const Padding(padding: EdgeInsets.only(top: 12), child: Text('هنوز رأی یا پیشنهادی ثبت نشده است.')),
         ]))),
         const SizedBox(height: 12),
@@ -3841,60 +3794,47 @@ extension _PersianDigits on int {
   }
 }
 
-Future<List<Map<String, dynamic>>> _loadServiceRequests() async {
-  final prefs = await SharedPreferences.getInstance();
-  final raw = prefs.getString('service_requests');
-  if (raw == null) return <Map<String, dynamic>>[];
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is List) return decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
-  } catch (_) {}
-  return <Map<String, dynamic>>[];
-}
-
 class _ServiceHome extends StatelessWidget {
   const _ServiceHome({required this.name, required this.specialties, this.showRequestsOnly = false});
   final String name;
   final List<String> specialties;
   final bool showRequestsOnly;
 
-
+  static const List<Map<String, String>> _requests = <Map<String, String>>[
+    {'block': 'بلوک A', 'address': 'تهران، خیابان بهار، کوچه یاس', 'requester': 'مریم رضایی', 'phone': '۰۹۱۲۳۴۵۶۷۸۹', 'specialty': 'لوله‌کشی و تأسیسات', 'description': 'نشتی آب زیر سینک آشپزخانه نیاز به بررسی دارد.'},
+    {'block': 'بلوک B', 'address': 'تهران، خیابان آزادی، پلاک ۲۴', 'requester': 'علی محمدی (مدیر)', 'phone': '۰۹۳۵۱۲۳۴۵۶۷', 'specialty': 'برق‌کاری ساختمان', 'description': 'چراغ‌های راهروی طبقه سوم روشن نمی‌شوند.'},
+    {'block': 'بلوک C', 'address': 'کرج، گوهردشت، خیابان پنجم', 'requester': 'زهرا احمدی', 'phone': '۰۹۱۰۹۸۷۶۵۴۳', 'specialty': 'نظافت مشاعات', 'description': 'برای نظافت راه‌پله و ورودی ساختمان درخواست نیرو داریم.'},
+  ];
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     if (showRequestsOnly) {
-      return FutureBuilder<List<Map<String, dynamic>>>(
-        future: _loadServiceRequests(),
-        builder: (context, snapshot) {
-          final requests = snapshot.data ?? <Map<String, dynamic>>[];
-          return ListView(
+      return ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
           Text('درخواست‌های دریافتی', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           Text('درخواست‌های مدیران و ساکنان ساختمان‌ها', style: TextStyle(color: colors.onSurfaceVariant)),
           const SizedBox(height: 12),
-          ...requests.map((request) => Card(
+          ..._requests.map((request) => Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
               padding: const EdgeInsets.all(15),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [const Icon(Icons.apartment_rounded, color: Color(0xFF047857)), const SizedBox(width: 8), Expanded(child: Text((request['block'] ?? '').toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text((request['specialty'] ?? '').toString()), visualDensity: VisualDensity.compact)]),
+                Row(children: [const Icon(Icons.apartment_rounded, color: Colors.teal), const SizedBox(width: 8), Expanded(child: Text(request['block']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text(request['specialty']!), visualDensity: VisualDensity.compact)]),
                 const Divider(height: 18),
-                _requestLine(Icons.location_on_outlined, 'آدرس', (request['address'] ?? '').toString()),
-                _requestLine(Icons.person_outline, 'درخواست‌دهنده', (request['requester'] ?? '').toString()),
-                _requestLine(Icons.phone_outlined, 'شماره تماس', (request['phone'] ?? '').toString()),
-                _requestLine(Icons.handyman_outlined, 'تخصص درخواست‌شده', (request['specialty'] ?? '').toString()),
-                _requestLine(Icons.notes_rounded, 'شرح درخواست', (request['description'] ?? '').toString()),
+                _requestLine(Icons.location_on_outlined, 'آدرس', request['address']!),
+                _requestLine(Icons.person_outline, 'درخواست‌دهنده', request['requester']!),
+                _requestLine(Icons.phone_outlined, 'شماره تماس', request['phone']!),
+                _requestLine(Icons.handyman_outlined, 'تخصص درخواست‌شده', request['specialty']!),
+                _requestLine(Icons.notes_rounded, 'شرح درخواست', request['description']!),
                 const SizedBox(height: 8),
                 Align(alignment: Alignment.centerLeft, child: FilledButton.tonalIcon(onPressed: () {}, icon: const Icon(Icons.mark_chat_read_outlined), label: const Text('مشاهدهٔ درخواست'))),
               ]),
             ),
           )),
         ],
-      );
-        },
       );
     }
     return ListView(
@@ -3916,7 +3856,7 @@ class _ServiceHome extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(child: Text('${i + 1}')),
                           title: Text(specialties[i], style: const TextStyle(fontWeight: FontWeight.w600)),
-                          trailing: const Icon(Icons.check_circle_outline, color: Color(0xFF047857)),
+                          trailing: const Icon(Icons.check_circle_outline, color: Colors.teal),
                         ),
                     ],
                   ),
@@ -3929,7 +3869,7 @@ class _ServiceHome extends StatelessWidget {
   static Widget _requestLine(IconData icon, String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icon, size: 19, color: Color(0xFF047857)), const SizedBox(width: 8),
+      Icon(icon, size: 19, color: Colors.teal), const SizedBox(width: 8),
       Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
       Expanded(child: Text(value, style: const TextStyle(height: 1.4))),
     ]),
@@ -3997,17 +3937,6 @@ class _TicketSupportPageState extends State<_TicketSupportPage> {
         _loading = false;
       });
       await _saveLocal();
-      final prefs = await SharedPreferences.getInstance();
-      final noticesKey = 'ticket_reply_notices_${widget.phone}';
-      final noticeRaw = prefs.getString(noticesKey);
-      final notices = <Map<String, dynamic>>[];
-      if (noticeRaw != null) { try { final d = jsonDecode(noticeRaw); if (d is List) notices.addAll(d.whereType<Map>().map((e) => Map<String, dynamic>.from(e))); } catch (_) {} }
-      for (final ticket in _tickets) {
-        final reply = (ticket['reply'] ?? ticket['admin_reply'] ?? ticket['response'] ?? '').toString().trim();
-        final id = (ticket['id'] ?? ticket['created'] ?? ticket['subject'] ?? '').toString();
-        if (reply.isNotEmpty && !notices.any((n) => n['ticketId'] == id)) notices.add({'ticketId': id, 'title': 'پاسخ جدید تیکت', 'message': reply, 'created': DateTime.now().toIso8601String(), 'read': false});
-      }
-      await prefs.setString(noticesKey, jsonEncode(notices));
     }
   }
 
@@ -4214,10 +4143,7 @@ class _FeatureHub extends StatelessWidget {
                 if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
                 const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
               ];
-    return RefreshIndicator(
-      onRefresh: () async { await Future<void>.delayed(const Duration(milliseconds: 250)); },
-      child: ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
         Text(index == 1 ? 'خدمات و ارتباط' : index == 2 ? 'اطلاعیه‌ها' : 'امور مالی',
@@ -4226,12 +4152,6 @@ class _FeatureHub extends StatelessWidget {
         Text('برای مشاهده یا ثبت اطلاعات، یکی از بخش‌های زیر را انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
         if (index == 2) ...[
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _loadReplyNotices(userId),
-            builder: (context, snapshot) => Column(children: [
-              for (final notice in snapshot.data ?? <Map<String, dynamic>>[]) Card(child: ListTile(leading: const Icon(Icons.mark_chat_unread_outlined), title: Text((notice['title'] ?? 'پاسخ تیکت').toString()), subtitle: Text((notice['message'] ?? '').toString()))),
-            ]),
-          ),
           if (announcementTasks.isEmpty)
             const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر اطلاعیهٔ سررسیدِ خوانده‌نشده‌ای وجود ندارد.')))),
           ...announcementTasks.map((task) => Padding(
@@ -4260,16 +4180,8 @@ class _FeatureHub extends StatelessWidget {
           )),
         )),
       ],
-    ));
+    );
   }
-}
-
-Future<List<Map<String, dynamic>>> _loadReplyNotices(String userId) async {
-  final prefs = await SharedPreferences.getInstance();
-  final raw = prefs.getString('ticket_reply_notices_$userId');
-  if (raw == null) return <Map<String, dynamic>>[];
-  try { final d = jsonDecode(raw); if (d is List) return d.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList(); } catch (_) {}
-  return <Map<String, dynamic>>[];
 }
 
 class _FeaturePage extends StatefulWidget {
