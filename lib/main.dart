@@ -5176,4 +5176,33 @@ class _FeaturePageState extends State<_FeaturePage> {
         for (var i = 0; i < _meters.length; i++) {
           shares.add(equalShare + (i < remainder ? 1 : 0));
         }
- 
+      }
+      for (var i = 0; i < _meters.length; i++) {
+        building.waterDebtByUnitAndBill
+            .putIfAbsent(_meters[i].unitId, () => <String, int>{})[billId] = shares[i];
+      }
+      setState(() => _billAmount = amount);
+      _message('سهم‌بندی قبض $billId برای ${_meters.length} واحد ثبت شد.');
+    } else if (kind == 'withdraw') {
+      setState(() => _withdrawals.add('${_values['مبلغ درخواستی (تومان)'] ?? '—'} تومان • ${_values['شماره شبا'] ?? ''}'));
+      _message('درخواست برداشت برای بررسی ثبت شد.');
+    } else if (kind == 'vote') {
+      _message('پیشنهاد «${_values['عنوان موضوع رأی‌گیری'] ?? ''}» در فهرست بررسی قرار گرفت.');
+    } else if (kind == 'service') {
+      final request = <String, String>{
+        ..._values,
+        'تخصص درخواستی': _values['تخصص درخواستی'] ?? _registeredServiceSpecialties.first,
+        'قابل انتخاب (بنا به تشخیص متخصص)': _serviceFeeFlexible.toString(),
+        'وضعیت': 'در انتظار بررسی',
+      };
+      setState(() => _myServiceRequests.add(request));
+      _message('درخواست خدمت شما ثبت شد.');
+    } else {
+      _message('ارزیابی شما با موفقیت ثبت شد.');
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+}
