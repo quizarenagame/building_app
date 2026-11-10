@@ -35,8 +35,8 @@ class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
-  static const List<Color> themeColors = [Color(0xFF12A889), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
-  static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
+  static const List<Color> themeColors = [Color(0xFF047857), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
+  static const List<String> themeNames = ['سبز زمردی', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
   static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
   static const String managerPhone = '09907862453';
   static const String managerPin = '2731';
@@ -68,16 +68,32 @@ class BuildingApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-          scaffoldBackgroundColor: const Color(0xFFF4F8F7),
+          scaffoldBackgroundColor: const Color(0xFFF4F8F6),
           fontFamily: 'Roboto',
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFF4F8F7), foregroundColor: Color(0xFF173A36),
+            backgroundColor: Color(0xFFF4F8F6), foregroundColor: Color(0xFF123B31),
             elevation: 0, centerTitle: false, surfaceTintColor: Colors.transparent,
           ),
           cardTheme: CardTheme(
-            color: Colors.white, elevation: 1, shadowColor: const Color(0x1A17443D),
+            color: Colors.white, elevation: 1, shadowColor: const Color(0x180B3D2E),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true, fillColor: const Color(0xFFF8FBF9),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDCE9E2))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDCE9E2))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.8)),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50), elevation: 0),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50)),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 48)),
           ),
           navigationBarTheme: NavigationBarThemeData(
             height: 72, backgroundColor: Colors.white, elevation: 8,
@@ -86,14 +102,28 @@ class BuildingApp extends StatelessWidget {
               fontSize: 11, fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
             )),
           ),
+          dialogTheme: DialogTheme(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+          snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-          scaffoldBackgroundColor: const Color(0xFF101A18),
-          appBarTheme: const AppBarTheme(elevation: 0, surfaceTintColor: Colors.transparent),
-          cardTheme: CardTheme(elevation: 1, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-          navigationBarTheme: NavigationBarThemeData(height: 72, elevation: 8),
+          scaffoldBackgroundColor: const Color(0xFF0D1915),
+          appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF0D1915), foregroundColor: Color(0xFFE5F3EB), elevation: 0, surfaceTintColor: Colors.transparent),
+          cardTheme: CardTheme(color: const Color(0xFF17251F), elevation: 1, margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true, fillColor: const Color(0xFF17251F),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF34483D))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.8)),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50), elevation: 0)),
+          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 50))),
+          outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), minimumSize: const Size(0, 48))),
+          navigationBarTheme: NavigationBarThemeData(height: 72, elevation: 8, backgroundColor: const Color(0xFF17251F)),
+          dialogTheme: DialogTheme(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+          snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
         ),
         themeMode: mode,
         home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
@@ -578,7 +608,7 @@ void _goBack() {
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(
           content: Text('تغییرات با موفقیت ذخیره شد'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF047857),
           behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: 2),
         ));
@@ -667,9 +697,9 @@ void _goBack() {
   Widget _brandMark({double size = 86}) => Container(
     width: size, height: size,
     decoration: BoxDecoration(
-      gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF117D70), Color(0xFF19B794)]),
+      gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF065F46), Color(0xFF10B981)]),
       borderRadius: BorderRadius.circular(size * .31),
-      boxShadow: [BoxShadow(color: const Color(0xFF11947A).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
+      boxShadow: [BoxShadow(color: const Color(0xFF047857).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
     ),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(size * .31),
@@ -2796,7 +2826,7 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
           Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Expanded(child: Text('موضوع تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)))]),
           const SizedBox(height: 8),
           const Text('پیشنهادهای همه به‌صورت عمومی نمایش داده می‌شود، اما رأی هر واحد محرمانه می‌ماند. مبلغ تصویب‌شده به‌صورت خودکار و منصفانه با میانهٔ رأی‌ها محاسبه می‌شود.', style: TextStyle(color: Color(0xFF6B7280), height: 1.7)),
-          if (approved != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text('شارژ ماهانهٔ تصویب‌شده (میانه): ${formatTomanAmount(approved)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF12A889))))
+          if (approved != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text('شارژ ماهانهٔ تصویب‌شده (میانه): ${formatTomanAmount(approved)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF047857))))
           else const Padding(padding: EdgeInsets.only(top: 12), child: Text('هنوز رأی یا پیشنهادی ثبت نشده است.')),
         ]))),
         const SizedBox(height: 12),
@@ -3850,7 +3880,7 @@ class _ServiceHome extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(15),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [const Icon(Icons.apartment_rounded, color: Colors.teal), const SizedBox(width: 8), Expanded(child: Text((request['block'] ?? '').toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text((request['specialty'] ?? '').toString()), visualDensity: VisualDensity.compact)]),
+                Row(children: [const Icon(Icons.apartment_rounded, color: Color(0xFF047857)), const SizedBox(width: 8), Expanded(child: Text((request['block'] ?? '').toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Chip(label: Text((request['specialty'] ?? '').toString()), visualDensity: VisualDensity.compact)]),
                 const Divider(height: 18),
                 _requestLine(Icons.location_on_outlined, 'آدرس', (request['address'] ?? '').toString()),
                 _requestLine(Icons.person_outline, 'درخواست‌دهنده', (request['requester'] ?? '').toString()),
@@ -3886,7 +3916,7 @@ class _ServiceHome extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(child: Text('${i + 1}')),
                           title: Text(specialties[i], style: const TextStyle(fontWeight: FontWeight.w600)),
-                          trailing: const Icon(Icons.check_circle_outline, color: Colors.teal),
+                          trailing: const Icon(Icons.check_circle_outline, color: Color(0xFF047857)),
                         ),
                     ],
                   ),
@@ -3899,7 +3929,7 @@ class _ServiceHome extends StatelessWidget {
   static Widget _requestLine(IconData icon, String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icon, size: 19, color: Colors.teal), const SizedBox(width: 8),
+      Icon(icon, size: 19, color: Color(0xFF047857)), const SizedBox(width: 8),
       Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
       Expanded(child: Text(value, style: const TextStyle(height: 1.4))),
     ]),
