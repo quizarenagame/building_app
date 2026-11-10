@@ -2003,13 +2003,30 @@ class _AddressPrefixFormatter extends TextInputFormatter {
   }
 }
 
-class _ManagerHomeState extends State<_ManagerHome> {
+
+
+/// صفحهٔ مستقل ایجاد ساختمان و تعریف طبقات/واحدها.
+class _CreateBuildingPage extends StatefulWidget {
+  const _CreateBuildingPage({required this.managerName, required this.onBuildingChanged});
+  final String managerName;
+  final ValueChanged<_Building> onBuildingChanged;
+
+  @override
+  State<_CreateBuildingPage> createState() => _CreateBuildingPageState();
+}
+
+class _CreateBuildingPageState extends State<_CreateBuildingPage> {
   late final TextEditingController _nameController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _initialBalanceController = TextEditingController(text: '0');
-  late String _addressPrefix;
+  final TextEditingController _floorController = TextEditingController();
+  final TextEditingController _unitsController = TextEditingController();
   final _createFormKey = GlobalKey<FormState>();
+  late String _addressPrefix;
   bool _isCreatingBuilding = false;
+  bool _continueUnitNumbers = false;
+  String _unitNamingPattern = 'standard';
+  bool _isGroundPilot = false;
 
   @override
   void initState() {
@@ -2027,20 +2044,11 @@ class _ManagerHomeState extends State<_ManagerHome> {
       }
       return fallback;
     }
-
-    final province = accountLocation(
-        ['province', 'state', 'province_name'], 'استان ثبت‌نشده');
-    final city = accountLocation(
-        ['city', 'town', 'city_name'], 'شهر ثبت‌نشده');
+    final province = accountLocation(['province', 'state', 'province_name'], 'استان ثبت‌نشده');
+    final city = accountLocation(['city', 'town', 'city_name'], 'شهر ثبت‌نشده');
     _addressPrefix = '$province - $city - ';
     _addressController.text = _addressPrefix;
   }
-
-  final _floorController = TextEditingController();
-  final _unitsController = TextEditingController();
-  bool _continueUnitNumbers = false;
-  String _unitNamingPattern = 'standard';
-  bool _isGroundPilot = false;
 
   @override
   void dispose() {
@@ -2051,6 +2059,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
     _unitsController.dispose();
     super.dispose();
   }
+
   void _toast(String message, {bool error = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -2059,8 +2068,13 @@ class _ManagerHomeState extends State<_ManagerHome> {
     ));
   }
 
-
-  _Building? get _building => widget.building;
+  InputDecoration _deco(BuildContext context, String hint, IconData icon) => InputDecoration(
+    hintText: hint, prefixIcon: Icon(icon),
+    filled: true, fillColor: Theme.of(context).colorScheme.surface,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.8)),
+  );
 
   /// ثبت مجموعه در PocketBase و سپس به‌روزرسانی مدل محلی و طبقات.
   Future<void> _createBuildingWithFloors() async {
@@ -2142,6 +2156,128 @@ class _ManagerHomeState extends State<_ManagerHome> {
     return DateTime.now().microsecondsSinceEpoch.toString().substring(7, 13);
   }
 
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('ایجاد ساختمان جدید')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _createFormKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Row(children: [
+                  Icon(Icons.apartment_rounded, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  const Text('مشخصات مجموعه', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ]),
+                const SizedBox(height: 6),
+                Text('نام ساختمان، طبقات و تعداد واحدها را در همین یک فرم وارد کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.6)),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: _deco(context, 'نام ساختمان (مثلاً برج آسمان)', Icons.location_city_outlined),
+                  validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام ساختمان حداقل ۲ حرف باشد.',
+                ),
+                const SizedBox(height: 12),
+                TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').replaceAll(',', '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _addressController,
+                  inputFormatters: [_AddressPrefixFormatter(_addressPrefix)],
+                  decoration: _deco(context, 'آدرس کامل و الزامی ساختمان', Icons.place_outlined),
+                  maxLines: 2,
+                  validator: (v) => (v?.trim().length ?? 0) >= 5 ? null : 'آدرس ساختمان را کامل و الزامی وارد کنید.',
+                ),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _floorController,
+                      keyboardType: TextInputType.number,
+                      textDirection: TextDirection.ltr,
+                      decoration: _deco(context, 'تعداد طبقات', Icons.format_list_numbered_rounded),
+                      validator: (v) {
+                        final n = int.tryParse(_latinDigits((v ?? '').trim()));
+                        return (n != null && n >= 1 && n <= 200) ? null : 'بین ۱ تا ۲۰۰';
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _unitsController,
+                      keyboardType: TextInputType.number,
+                      textDirection: TextDirection.ltr,
+                      decoration: _deco(context, 'واحد در هر طبقه', Icons.door_sliding_outlined),
+                      validator: (v) {
+                        final n = int.tryParse(_latinDigits((v ?? '').trim()));
+                        if (n == null || n < 1 || n > 50) return 'بین ۱ تا ۵۰';
+                        return null;
+                      },
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                const Text('وضعیت همکف', style: TextStyle(fontWeight: FontWeight.w600)),
+                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: true, groupValue: _isGroundPilot,
+                  onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
+                  title: const Text('همکف پیلوت است (بدون واحد)')),
+                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: false, groupValue: _isGroundPilot,
+                  onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
+                  title: const Text('همکف دارای واحد مسکونی است')),
+                DropdownButtonFormField<String>(
+                  value: _unitNamingPattern,
+                  decoration: const InputDecoration(labelText: 'الگوی نام‌گذاری واحدها'),
+                  items: const [
+                    DropdownMenuItem(value: 'standard', child: Text('استاندارد (عددی: ۱، ۲، ...)')),
+                    DropdownMenuItem(value: 'east_west', child: Text('شرقی/غربی (۱ شرقی، ۱ غربی، ...)')),
+                    DropdownMenuItem(value: 'north_south', child: Text('شمالی/جنوبی (۱ جنوبی، ۱ شمالی، ...)')),
+                    DropdownMenuItem(value: 'letter_number', child: Text('حرف و عدد (A1, B1, ...)')),
+                  ],
+                  onChanged: (value) { if (value != null) setState(() => _unitNamingPattern = value); },
+                ),
+                const SizedBox(height: 8),
+                const Text('شماره‌گذاری واحدها', style: TextStyle(fontWeight: FontWeight.w600)),
+                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: false, groupValue: _continueUnitNumbers,
+                  onChanged: (value) => setState(() => _continueUnitNumbers = value ?? false),
+                  title: const Text('شروع از ۱ در هر طبقه')),
+                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: true, groupValue: _continueUnitNumbers,
+                  onChanged: (value) => setState(() => _continueUnitNumbers = value ?? true),
+                  title: const Text('ادامه از شمارهٔ آخر طبقهٔ قبل')),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: _isCreatingBuilding ? null : _createBuildingWithFloors,
+                  icon: _isCreatingBuilding ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.person_add_alt_1_rounded),
+                  label: Text(_isCreatingBuilding ? 'در حال ثبت...' : 'افزودن و ثبت ساختمان'),
+                ),
+              ]),
+            ),
+          ),
+        ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ManagerHomeState extends State<_ManagerHome> {
+  void _toast(String message, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: error ? Theme.of(context).colorScheme.error : null,
+    ));
+  }
+
+
+  _Building? get _building => widget.building;
+
   Future<void> _renameBuilding() async {
     final b = _building;
     if (b == null) return;
@@ -2163,7 +2299,6 @@ class _ManagerHomeState extends State<_ManagerHome> {
     controller.dispose();
     if (newName == null || newName.trim() == b.name) return;
     setState(() => b.rename(newName.trim()));
-    _nameController.text = b.name;
     widget.onBuildingChanged(b);
     _toast('نام ساختمان به «${b.name}» تغییر کرد.');
   }
@@ -2385,8 +2520,8 @@ class _ManagerHomeState extends State<_ManagerHome> {
     ]),
   );
 
+  @override
   Widget build(BuildContext context) {
-    final b = _building;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -2395,105 +2530,26 @@ class _ManagerHomeState extends State<_ManagerHome> {
           const SizedBox(height: 12),
         ],
         Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _createFormKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Row(children: [
-                  Icon(Icons.apartment_rounded, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 8),
-                  const Text('مشخصات مجموعه', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ]),
-                const SizedBox(height: 6),
-                Text('نام ساختمان، طبقات و تعداد واحدها را در همین یک فرم وارد کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.6)),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: _deco(context, 'نام ساختمان (مثلاً برج آسمان)', Icons.location_city_outlined),
-                  validator: (v) => (v?.trim().length ?? 0) >= 2 ? null : 'نام ساختمان حداقل ۲ حرف باشد.',
-                ),
-                const SizedBox(height: 12),
-                TextFormField(controller: _initialBalanceController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()], decoration: const InputDecoration(labelText: 'موجودی مالی اولیه ساختمان (تومان)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (v) => int.tryParse(_latinDigits((v ?? '').replaceAll(',', '').trim())) == null ? 'مبلغ معتبر وارد کنید.' : null),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _addressController,
-                  inputFormatters: [_AddressPrefixFormatter(_addressPrefix)],
-                  decoration: _deco(context, 'آدرس کامل و الزامی ساختمان', Icons.place_outlined),
-                  maxLines: 2,
-                  validator: (v) => (v?.trim().length ?? 0) >= 5 ? null : 'آدرس ساختمان را کامل و الزامی وارد کنید.',
-                ),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _floorController,
-                      keyboardType: TextInputType.number,
-                      textDirection: TextDirection.ltr,
-                      decoration: _deco(context, 'تعداد طبقات', Icons.format_list_numbered_rounded),
-                      validator: (v) {
-                        final n = int.tryParse(_latinDigits((v ?? '').trim()));
-                        return (n != null && n >= 1 && n <= 200) ? null : 'بین ۱ تا ۲۰۰';
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _unitsController,
-                      keyboardType: TextInputType.number,
-                      textDirection: TextDirection.ltr,
-                      decoration: _deco(context, 'واحد در هر طبقه', Icons.door_sliding_outlined),
-                      validator: (v) {
-                        final n = int.tryParse(_latinDigits((v ?? '').trim()));
-                        if (n == null || n < 1 || n > 50) return 'بین ۱ تا ۵۰';
-                        return null;
-                      },
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 8),
-                const Text('وضعیت همکف', style: TextStyle(fontWeight: FontWeight.w600)),
-                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: true, groupValue: _isGroundPilot,
-                  onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
-                  title: const Text('همکف پیلوت است (بدون واحد)')),
-                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: false, groupValue: _isGroundPilot,
-                  onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
-                  title: const Text('همکف دارای واحد مسکونی است')),
-                DropdownButtonFormField<String>(
-                  value: _unitNamingPattern,
-                  decoration: const InputDecoration(labelText: 'الگوی نام‌گذاری واحدها'),
-                  items: const [
-                    DropdownMenuItem(value: 'standard', child: Text('استاندارد (عددی: ۱، ۲، ...)')),
-                    DropdownMenuItem(value: 'east_west', child: Text('شرقی/غربی (۱ شرقی، ۱ غربی، ...)')),
-                    DropdownMenuItem(value: 'north_south', child: Text('شمالی/جنوبی (۱ جنوبی، ۱ شمالی، ...)')),
-                    DropdownMenuItem(value: 'letter_number', child: Text('حرف و عدد (A1, B1, ...)')),
-                  ],
-                  onChanged: (value) { if (value != null) setState(() => _unitNamingPattern = value); },
-                ),
-                const SizedBox(height: 8),
-                const Text('شماره‌گذاری واحدها', style: TextStyle(fontWeight: FontWeight.w600)),
-                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: false, groupValue: _continueUnitNumbers,
-                  onChanged: (value) => setState(() => _continueUnitNumbers = value ?? false),
-                  title: const Text('شروع از ۱ در هر طبقه')),
-                RadioListTile<bool>(contentPadding: EdgeInsets.zero, dense: true, value: true, groupValue: _continueUnitNumbers,
-                  onChanged: (value) => setState(() => _continueUnitNumbers = value ?? true),
-                  title: const Text('ادامه از شمارهٔ آخر طبقهٔ قبل')),
-                const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: _isCreatingBuilding ? null : _createBuildingWithFloors,
-                  icon: _isCreatingBuilding ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.person_add_alt_1_rounded),
-                  label: Text(_isCreatingBuilding ? 'در حال ثبت...' : 'افزودن و ثبت ساختمان'),
-                ),
-              ]),
-            ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            leading: Icon(Icons.add_business_rounded, color: Theme.of(context).colorScheme.primary, size: 30),
+            title: const Text('ایجاد ساختمان جدید', style: TextStyle(fontWeight: FontWeight.w800)),
+            subtitle: const Text('ثبت مشخصات، طبقات و واحدهای ساختمان'),
+            trailing: const Icon(Icons.chevron_left_rounded),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => _CreateBuildingPage(
+                managerName: widget.managerName,
+                onBuildingChanged: widget.onBuildingChanged,
+              ),
+            )),
           ),
         ),
+        const SizedBox(height: 8),
         _myBuildingsSection(context),
       ],
     );
   }
+
 }
 
 /// ------------------------------- ساکن -------------------------------
@@ -4488,7 +4544,6 @@ class _FeatureHub extends StatelessWidget {
         : <_ScheduledTask>[];
     final items = index == 1
         ? <_FeatureItem>[
-            const _FeatureItem('درخواست‌های من', '', Icons.handyman_rounded, 'service'),
             const _FeatureItem('متخصصین', 'لیست افراد خدماتی، تخصص‌ها و شماره تماس', Icons.people_alt_rounded, 'specialists'),
           ]
         : index == 2
@@ -4503,7 +4558,6 @@ class _FeatureHub extends StatelessWidget {
             _FeatureItem('رأی‌گیری', '', Icons.how_to_vote_outlined, 'vote'),
             _FeatureItem('گفت‌وگو', '', Icons.forum_outlined, 'chat'),
             _FeatureItem('درخواست خدمت', '', Icons.handyman_outlined, 'service'),
-            _FeatureItem('مدیریت ساختمان', '', Icons.apartment_rounded, 'specialists'),
           ]
         : const <_FeatureItem>[];
     return ListView(
