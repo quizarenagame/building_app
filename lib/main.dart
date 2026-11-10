@@ -86,10 +86,10 @@ class BuildingApp extends StatelessWidget {
           navigationBarTheme: NavigationBarThemeData(
             backgroundColor: Colors.white,
             indicatorColor: seed.withOpacity(.12),
-            labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
               fontSize: 11,
-              fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-              color: states.contains(WidgetState.selected) ? seed : const Color(0xFF8A9692),
+              fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
+              color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
             )),
           ),
           filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
