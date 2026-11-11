@@ -4679,6 +4679,10 @@ class _FeaturePageState extends State<_FeaturePage> {
   final List<Map<String, String>> _myServiceRequests = [];
   final TextEditingController _chatController = TextEditingController();
   final TextEditingController _billIdController = TextEditingController();
+  final TextEditingController _billDaysController = TextEditingController(text: '30');
+  final TextEditingController _waterRateController = TextEditingController(text: '143000');
+  final TextEditingController _monthlyPatternController = TextEditingController(text: '11');
+  bool _hasSewer = true;
   late final List<_MeterReading> _meters;
   late final Future<List<dynamic>> _specialistsFuture;
   String? _choice;
@@ -4751,6 +4755,9 @@ class _FeaturePageState extends State<_FeaturePage> {
   void dispose() {
     _chatController.dispose();
     _billIdController.dispose();
+    _billDaysController.dispose();
+    _waterRateController.dispose();
+    _monthlyPatternController.dispose();
     for (final meter in _meters) { meter.dispose(); }
     super.dispose();
   }
@@ -5056,22 +5063,79 @@ class _FeaturePageState extends State<_FeaturePage> {
     return Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(children: [Expanded(child: Text(criterion)), DropdownButton<int>(value: value, items: List.generate(5, (i) => i + 1).map((n) => DropdownMenuItem(value: n, child: Text('$n از ۵'))).toList(), onChanged: (v) => setState(() => _ratings[criterion] = v ?? 4))]));
   }
 
+  int _waterInputValue(TextEditingController controller, int fallback) {
+    final normalized = _latinDigits(controller.text).replaceAll(',', '').replaceAll('٬', '').trim();
+    return int.tryParse(normalized) ?? fallback;
+  }
+
+  // Excel model: J = unit usage / billing days * 30; K applies the
+  // consumption-pattern price tiers, multiplied by actual unit usage and
+  // the Excel 1.55/1.70 factor. Net bill (after per-unit subscriptions)
+  // is allocated according to K, then each unit's subscription is added.
+  List<int> _excelWaterShares({required int amount, required int days, required int rate, required int pattern}) {
+    if (_meters.isEmpty) return <int>[];
+    final safeDays = days > 0 ? days : 1;
+    final safeRate = rate > 0 ? rate : 0;
+    final safePattern = pattern > 0 ? pattern : 0;
+    final gross = _meters.map((meter) {
+      final usage = meter.usage;
+      if (usage <= 0) return 0.0;
+      final monthlyAverage = usage / safeDays * 30;
+      final base = 0.01 * safeRate * monthlyAverage;
+      final surchargeRate = monthlyAverage <= safePattern ? 0.0 : (monthlyAverage <= 3 * safePattern ? 0.02 : 0.03);
+      final preFactor = base + surchargeRate * safeRate * (monthlyAverage - safePattern);
+      return preFactor * usage * (monthlyAverage <= safePattern ? 1.55 : 1.70);
+    }).toList();
+    final grossTotal = gross.fold<double>(0, (sum, value) => sum + value);
+    // Excel B22/B24 = 85% of the non-subsidized tariff; F15 adds 10% tax.
+    // Convert the Excel rial amounts into this app's toman amounts.
+    final subscriptionPerUnit = (safeDays / 30 * safeRate * 0.85 * 1.1 * (_hasSewer ? 2 : 1) / 10).round();
+    final netBill = amount - subscriptionPerUnit * _meters.length;
+    final shares = List<int>.generate(_meters.length, (i) {
+      if (grossTotal <= 0) return subscriptionPerUnit;
+      return (gross[i] / grossTotal * netBill + subscriptionPerUnit).round();
+    });
+    if (grossTotal > 0 && shares.isNotEmpty) {
+      final difference = amount - shares.fold<int>(0, (sum, share) => sum + share);
+      shares[shares.length - 1] += difference;
+    }
+    return shares;
+  }
+
   Widget _waterContent(BuildContext context) {
     final usageSum = _meters.fold<int>(0, (sum, m) => sum + m.usage);
-    final allocations = _meters.isEmpty
-        ? <int>[]
-        : _meters.map((m) => usageSum == 0 ? _billAmount ~/ _meters.length : (_billAmount * m.usage / usageSum).round()).toList();
+    final days = _waterInputValue(_billDaysController, 30);
+    final rate = _waterInputValue(_waterRateController, 143000);
+    final pattern = _waterInputValue(_monthlyPatternController, 11);
+    final allocations = _excelWaterShares(amount: _billAmount, days: days, rate: rate, pattern: pattern);
+    Widget numericSetting(String label, TextEditingController controller) => SizedBox(
+      width: 145,
+      child: TextField(controller: controller, keyboardType: TextInputType.number,
+        decoration: InputDecoration(isDense: true, labelText: label, border: const OutlineInputBorder()),
+        onChanged: (_) => setState(() {})),
+    );
+    final subscription = (days / 30 * rate * 0.85 * 1.1 * (_hasSewer ? 2 : 1) / 10).round();
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _sectionTitle('محاسبهٔ قبض با کنتور فرعی', detail: 'قرائت‌ها را ویرایش کنید؛ سهم هر واحد لحظه‌ای محاسبه می‌شود.', icon: Icons.water_drop_outlined),
+      _sectionTitle('محاسبهٔ قبض با کنتور فرعی', detail: 'سهم‌بندی مطابق فرمول پلکانی فایل اکسل؛ مقادیر تعرفه را در صورت نیاز ویرایش کنید.', icon: Icons.water_drop_outlined),
       if (_meters.isEmpty) const Text('برای این ساختمان هنوز واحدی ثبت نشده است.'),
-      Text('مبلغ قبض: ${_billAmount.toString()} تومان  •  مصرف کل: $usageSum مترمکعب', style: const TextStyle(fontWeight: FontWeight.w600)),
+      Text('مبلغ قبض: ${_billAmount.toString()} تومان  •  مصرف ثبت‌شدهٔ واحدها: $usageSum مترمکعب', style: const TextStyle(fontWeight: FontWeight.w600)),
       const SizedBox(height: 10),
-      SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columnSpacing: 18, columns: const [DataColumn(label: Text('واحد')), DataColumn(label: Text('قبلی')), DataColumn(label: Text('فعلی')), DataColumn(label: Text('مصرف')), DataColumn(label: Text('سهم قبض'))], rows: List<DataRow>.generate(_meters.length, (i) {
+      Wrap(spacing: 10, runSpacing: 10, children: [
+        numericSetting('روزهای قبض', _billDaysController),
+        numericSetting('تعرفه آب (ریال/م³)', _waterRateController),
+        numericSetting('الگوی ماهانه (م³)', _monthlyPatternController),
+      ]),
+      CheckboxListTile(value: _hasSewer, contentPadding: EdgeInsets.zero,
+        title: const Text('ساختمان به فاضلاب متصل است'),
+        onChanged: (value) => setState(() => _hasSewer = value ?? false)),
+      Text('آبونمان هر واحد با مالیات: $subscription تومان', style: const TextStyle(fontSize: 12)),
+      const SizedBox(height: 8),
+      SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columnSpacing: 18, columns: const [DataColumn(label: Text('واحد')), DataColumn(label: Text('قبلی')), DataColumn(label: Text('فعلی')), DataColumn(label: Text('مصرف')), DataColumn(label: Text('سهم نهایی قبض'))], rows: List<DataRow>.generate(_meters.length, (i) {
         final meter = _meters[i];
         return DataRow(cells: [DataCell(Text(meter.label)), DataCell(_meterInput(meter.previousController, i, 'previous')), DataCell(_meterInput(meter.currentController, i, 'current')), DataCell(Text('${meter.usage}')), DataCell(Text('${allocations[i]} تومان'))]);
       }))),
       const SizedBox(height: 10),
-      Row(children: [const Icon(Icons.info_outline, size: 18), const SizedBox(width: 7), Expanded(child: Text('روش محاسبه: مبلغ قبض × مصرف واحد ÷ مصرف کل. سهم‌ها بر اساس مصرف واقعی تقسیم شده‌اند.', style: const TextStyle(fontSize: 12, height: 1.5)))]),
+      Row(children: [const Icon(Icons.info_outline, size: 18), const SizedBox(width: 7), Expanded(child: Text('مبنای سهم هر واحد: میانگین ماهانه مصرف (مصرف دوره ÷ روزهای قبض × ۳۰)، تعرفه پلکانی اکسل و ضریب ۱٫۵۵ یا ۱٫۷۰؛ سپس مبلغ خالص قبض به نسبت آب‌بهای ناخالص تخصیص می‌یابد و آبونمان آب/فاضلاب با مالیات افزوده می‌شود. مقادیر تعرفه و الگو بر حسب ریال در اکسل‌اند؛ مبلغ قبض و سهم‌ها در برنامه تومان هستند.', style: const TextStyle(fontSize: 12, height: 1.5)))]),
     ])));
   }
 
@@ -5234,21 +5298,14 @@ class _FeaturePageState extends State<_FeaturePage> {
         _message('ساختمان یا واحدی برای ثبت سهم قبض انتخاب نشده است.');
         return;
       }
-      final usageTotal = _meters.fold<int>(0, (sum, meter) => sum + meter.usage);
-      final shares = <int>[];
-      if (usageTotal > 0) {
-        for (final meter in _meters) {
-          shares.add((amount * meter.usage / usageTotal).round());
-        }
-        final difference = amount - shares.fold<int>(0, (sum, share) => sum + share);
-        shares[shares.length - 1] += difference;
-      } else {
-        final equalShare = amount ~/ _meters.length;
-        final remainder = amount % _meters.length;
-        for (var i = 0; i < _meters.length; i++) {
-          shares.add(equalShare + (i < remainder ? 1 : 0));
-        }
+      final days = _waterInputValue(_billDaysController, 30);
+      final rate = _waterInputValue(_waterRateController, 143000);
+      final pattern = _waterInputValue(_monthlyPatternController, 11);
+      if (days <= 0 || rate <= 0 || pattern <= 0) {
+        _message('روزهای قبض، تعرفه و الگوی مصرف باید عددی بزرگ‌تر از صفر باشند.');
+        return;
       }
+      final shares = _excelWaterShares(amount: amount, days: days, rate: rate, pattern: pattern);
       for (var i = 0; i < _meters.length; i++) {
         building.waterDebtByUnitAndBill
             .putIfAbsent(_meters[i].unitId, () => <String, int>{})[billId] = shares[i];
