@@ -648,6 +648,7 @@ void _goBack() {
         title: Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
+        foregroundColor: const Color(0xFF17352C),
       ) : null,
       body: SafeArea(
         top: !showBar,
@@ -738,7 +739,6 @@ void _goBack() {
       const SizedBox(height: 22),
       const Text('شماره همراهتان را وارد کنید', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 9),
-      Text('برای ادامه، شماره موبایل ایران خود را بنویسید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
       const SizedBox(height: 28),
       _fieldLabel('شماره موبایل'),
       const SizedBox(height: 8),
@@ -770,7 +770,7 @@ void _goBack() {
       const SizedBox(height: 20),
       const Text('کد تأیید را وارد کنید', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 9),
-      Text(_latinDigits(_phoneController.text).replaceAll(' ', '') == BuildingApp.managerPhone ? 'برای ورود مدیر، کد ثابت ۴ رقمی را وارد کنید؛ سایر شماره‌ها از کد پیامکی استفاده می‌کنند.' : 'کد تأیید ۴ رقمی برای شماره ${_phoneController.text} پیامک شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
+      Text('کد تأیید برای شماره ${_phoneController.text} ارسال شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
       const SizedBox(height: 15),
       Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی از طریق پیامک برای شمارهٔ شما ارسال می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
       const SizedBox(height: 25),
@@ -1563,7 +1563,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   static int _savedSelectedTab = 2;
-  int selectedTab = _savedSelectedTab;
+  int selectedTab = 2;
   _Building? _joinedBuilding;
   int? _myFloor;
   int? _myUnit;
@@ -1947,7 +1947,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Expanded(child: Text(
                   isServiceRole
                       ? const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab]
-                      : const ['خدمات', 'درخواست‌ها', 'خانه', 'پرداخت‌ها', 'پروفایل'][selectedTab],
+                      : const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab],
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF17352C)),
                 )),
@@ -1971,9 +1971,9 @@ class _DashboardPageState extends State<DashboardPage> {
             : [
                 navItem(2, Icons.home_outlined, 'خانه'),
                 navItem(0, Icons.grid_view_rounded, 'خدمات'),
-                navItem(1, Icons.assignment_outlined, 'درخواست‌ها', iconWidget: noticesIcon(Icons.assignment_outlined)),
+                navItem(1, Icons.campaign_outlined, 'اعلان‌ها', iconWidget: noticesIcon(Icons.campaign_outlined)),
                 navItem(3, Icons.account_balance_wallet_outlined, 'پرداخت‌ها'),
-                navItem(4, Icons.person_outline_rounded, 'پروفایل'),
+                navItem(4, Icons.settings_outlined, 'تنظیمات'),
               ])),
       ),
     );
@@ -4552,7 +4552,17 @@ class _FeatureHub extends StatelessWidget {
                 if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
                 const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
               ];
-    void open(_FeatureItem item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(item: item, building: building)));
+    void open(_FeatureItem item) {
+      if (item.kind == 'chat' && building == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('برای ورود به گفت‌وگو ابتدا وارد یک ساختمان شوید.')),
+        );
+        return;
+      }
+      Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => _FeaturePage(item: item, building: building),
+      ));
+    }
     final grid = index == 1
         ? const [
             _FeatureItem('رأی‌گیری', '', Icons.how_to_vote_outlined, 'vote'),
@@ -4617,7 +4627,7 @@ class _FeatureHub extends StatelessWidget {
             title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(item.subtitle)),
             trailing: const Icon(Icons.chevron_left_rounded),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FeaturePage(item: item, building: building))),
+            onTap: () => open(item),
           )),
         )),
       ],
