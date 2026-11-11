@@ -70,10 +70,9 @@ class BuildingApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
             primary: seed,
             onPrimary: Colors.white,
-            primaryContainer: const Color(0xFFE5F6EF),
+            primaryContainer: seed.withValues(alpha: .12),
             surface: Colors.white,
           ),
-          scaffoldBackgroundColor: const Color(0xFFF3F6F5),
           fontFamily: 'Roboto',
           appBarTheme: AppBarTheme(
             backgroundColor: seed,
@@ -101,14 +100,19 @@ class BuildingApp extends StatelessWidget {
           )),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
-            fillColor: const Color(0xFFF7FAF9),
+            fillColor: seed.withValues(alpha: .06),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withValues(alpha: .2)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withValues(alpha: .2)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
           ),
-          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE7EEEB)))),
-        ),
+            cardTheme: CardTheme(
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: seed.withValues(alpha: .15)),
+    ),
+  ),
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
@@ -707,7 +711,7 @@ void _goBack() {
       const SizedBox(height: 42),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
-      const Text('همخانه', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.4, color: Color(0xFF0E8A62))),
+      const Text('ساختمان ما', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.4, color: Color(0xFF0E8A62))),
       const SizedBox(height: 6),
       const Text('مدیریت هوشمند ساختمان', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, height: 1.5)),
       const SizedBox(height: 8),
@@ -1895,19 +1899,18 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final onHome = selectedTab == 2;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
       body: Column(children: [
         if (onHome)
           Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 16),
-            color: _isManager ? const Color(0xFF0B6B4A) : const Color(0xFFF7FBF8),
+              color: _isManager ? colors.primary : colors.primaryContainer.withValues(alpha: .3),
             child: _isManager
                 ? Row(children: [
                     const Icon(Icons.notifications_none_rounded, color: Colors.white),
                     const Spacer(),
                     Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text('سلام، ${widget.name} جان!', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                      Text('سلام، ${widget.name} عزیز!', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 2),
                       Text('به پنل مدیریت ساختمان خوش آمدید', style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12)),
                     ]),
@@ -1935,7 +1938,7 @@ class _DashboardPageState extends State<DashboardPage> {
           )
         else
           Material(
-            color: Colors.white,
+            color: Colors.surface,
             child: SafeArea(bottom: false, child: SizedBox(
               height: 56,
               child: Row(children: [
@@ -1953,7 +1956,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ? const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab]
                       : const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab],
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF17352C)),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, Color: Colors.onSurface),
                 )),
                 const SizedBox(width: 48),
               ]),
@@ -3984,11 +3987,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(18)),
-        child: const Row(children: [
-          Icon(Icons.support_agent_rounded, color: Colors.white),
-          SizedBox(width: 10),
-          Expanded(child: Text('پشتیبانی ۲۴ ساعته ساکنان و مدیر ساختمان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
-        ]),
       ),
       const SizedBox(height: 14),
     ]);
@@ -4464,7 +4462,10 @@ class _SettingsPageState extends State<_SettingsPage> {
     children: [
       Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(24)),
+          decoration: BoxDecoration(
+    color: colors.primary,
+    borderRadius: BorderRadius.circular(24),
+  ),
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(widget.role, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
@@ -4540,7 +4541,7 @@ class _FeatureHub extends StatelessWidget {
   final String userId;
   final Future<void> Function(_ScheduledTask task)? onTaskSeen;
   final Future<void> Function()? onRefresh;
-  
+
   @override
   Widget build(BuildContext context) {
     final announcementTasks = index == 2
@@ -4586,13 +4587,13 @@ class _FeatureHub extends StatelessWidget {
             children: [
               for (final item in grid)
                 Material(
-                  color: Colors.white,
+                  color: colors.surface
                   borderRadius: BorderRadius.circular(22),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(22),
                     onTap: () => open(item),
                     child: Container(
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: .2)),
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         Icon(item.icon, color: Theme.of(context).colorScheme.primary, size: 30),
                         const SizedBox(height: 8),
