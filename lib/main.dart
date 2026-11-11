@@ -1580,6 +1580,16 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mounted) setState(() {});
   }
 
+  // متد جدید برای بازسازی و دریافت اطلاعات تازه از سرور
+  Future<void> _refreshDashboard() async {
+    if (_isManager && pb.authStore.isValid) {
+      await _loadManagerBuildings();
+    } else {
+      await _restoreResidentMembership();
+    }
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1607,7 +1617,6 @@ class _DashboardPageState extends State<DashboardPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_serviceSpecialtiesKey, cleaned);
-      // Keep specialties in the locally cached auth metadata as well.
       final token = pb.authStore.token;
       final record = pb.authStore.record;
       if (token.isNotEmpty && record != null) {
@@ -1630,7 +1639,6 @@ class _DashboardPageState extends State<DashboardPage> {
       }
     } catch (_) {}
 
-    // Query the durable member record and let the server copy supersede local cache.
     if (pb.authStore.isValid) {
       try {
         final records = await pb.collection('members').getFullList(
@@ -1669,7 +1677,6 @@ class _DashboardPageState extends State<DashboardPage> {
       if (building.recordId == null && buildingId.isNotEmpty) building.recordId = buildingId;
       building.buildingCode = (membership['building_code'] ?? building.buildingCode).toString();
     }
-    // Fetch authoritative building structure if it isn't already known locally.
     if (building != null && building.floors.isEmpty && building.recordId != null && pb.authStore.isValid) {
       try {
         final record = await pb.collection('buildings').getOne(building.recordId!);
@@ -1692,7 +1699,6 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _loadManagerBuildings() async {
     final userId = pb.authStore.record?.id;
     if (userId == null || userId.isEmpty) return;
-    // Restore the durable local cache first, so management remains usable offline.
     try {
       final prefs = await SharedPreferences.getInstance();
       for (final key in prefs.getKeys().where((k) => k.startsWith('b_floors_'))) {
@@ -1718,11 +1724,10 @@ class _DashboardPageState extends State<DashboardPage> {
         await _persistBuilding(building);
         loaded.add(building);
       }
-      if (mounted && loaded.isNotEmpty && _joinedBuilding == null) {
+      if (mounted && loaded.isNotEmpty) {
         setState(() => _joinedBuilding = loaded.first);
       }
     } catch (_) {
-      // The locally cached buildings above are still available offline.
       if (mounted && _joinedBuilding == null) {
         final userBuildings = AppSharedState.instance.buildings.values.where((b) => b.createdBy == userId).toList();
         if (userBuildings.isNotEmpty) setState(() => _joinedBuilding = userBuildings.first);
@@ -1837,7 +1842,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final body = isServiceRole
         ? switch (selectedTab) {
             0 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true),
-            1 => _FeatureHub(index: 2, isManager: false, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen),
+            1 => _FeatureHub(index: 2, isManager: false, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen, onRefresh: _refreshDashboard),
             2 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties),
             3 => _FeatureHub(index: 3, isManager: false, building: _joinedBuilding),
             4 => _SettingsPage(
@@ -1853,7 +1858,7 @@ class _DashboardPageState extends State<DashboardPage> {
           }
         : switch (selectedTab) {
             0 => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
-            1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen),
+            1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen, onRefresh: _refreshDashboard),
             2 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
               building: _joinedBuilding, name: widget.name, myFloor: _myFloor, myUnit: _myUnit,
               ownership: widget.ownership,
@@ -4080,6 +4085,10 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           ),
         ),
         const SizedBox(height: 14),
+                _buildingFeatureCard(context, colors,
+          item: const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
+          building: b),
+        const SizedBox(height: 14),
         const Text('اطلاعات مالی و قوانین', style: TextStyle(fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         Wrap(spacing: 10, runSpacing: 10, children: [
@@ -4524,7 +4533,7 @@ class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
 }
 
 class _FeatureHub extends StatelessWidget {
-  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen});
+  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen , this.onRefresh});
   final int index;
   final bool isManager;
   final _Building? building;
@@ -4544,7 +4553,6 @@ class _FeatureHub extends StatelessWidget {
             ? <_FeatureItem>[]
             : <_FeatureItem>[
                 if (isManager) const _FeatureItem('درخواست برداشت', 'درخواست و پیگیری تسویهٔ موجودی ساختمان', Icons.account_balance_wallet_rounded, 'withdraw'),
-                const _FeatureItem('قبض آب و کنتورها', 'ثبت قبض اصلی، قرائت و سهم هر واحد', Icons.water_drop_rounded, 'water'),
               ];
     void open(_FeatureItem item) {
       if (item.kind == 'chat' && building == null) {
@@ -4564,7 +4572,7 @@ class _FeatureHub extends StatelessWidget {
             _FeatureItem('درخواست خدمت', '', Icons.handyman_outlined, 'service'),
           ]
         : const <_FeatureItem>[];
-    return ListView(
+        final listView = ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
         Text(index == 1 ? 'خدمات' : index == 2 ? 'اطلاعیه‌ها' : 'پرداخت‌ها',
@@ -4585,7 +4593,7 @@ class _FeatureHub extends StatelessWidget {
                     child: Container(
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(item.icon, color: const Color(0xFF0E8A62), size: 30),
+                        Icon(item.icon, color: Theme.of(context).colorScheme.primary, size: 30),
                         const SizedBox(height: 8),
                         Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                       ]),
@@ -4626,6 +4634,11 @@ class _FeatureHub extends StatelessWidget {
         )),
       ],
     );
+
+    if (index == 2 && onRefresh != null) {
+      return RefreshIndicator(onRefresh: onRefresh!, child: listView);
+    }
+    return listView;
   }
 }
 
