@@ -59,69 +59,70 @@ class BuildingApp extends StatelessWidget {
     return ValueListenableBuilder<int>(
       valueListenable: themeColorIndex,
       builder: (context, colorIndex, _) => ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeMode,
-      builder: (context, mode, _) {
-        final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
-        return MaterialApp(
-        title: 'سامانه مدیریت ساختمان',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
-            primary: seed,
-            onPrimary: Colors.white,
-            primaryContainer: seed.withValues(alpha: .12),
-            surface: Colors.white,
-          ),
-          fontFamily: 'Roboto',
-          appBarTheme: AppBarTheme(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: true,
-            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          navigationBarTheme: NavigationBarThemeData(
-            backgroundColor: Colors.white,
-            indicatorColor: seed.withOpacity(.12),
-            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-              fontSize: 11,
-              fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
-              color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
-            )),
-          ),
-          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          )),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: seed.withValues(alpha: .06),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withValues(alpha: .2)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withValues(alpha: .2)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
-          ),
-            cardTheme: CardTheme(
-    elevation: 0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: BorderSide(color: seed.withValues(alpha: .15)),
-    ),
-  ),
-        darkTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
-        ),
-        themeMode: mode,
-        home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
-      );
-      },
+        valueListenable: themeMode,
+        builder: (context, mode, _) {
+          final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
+          return MaterialApp(
+            title: 'سامانه مدیریت ساختمان',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
+                primary: seed,
+                onPrimary: Colors.white,
+                primaryContainer: seed.withOpacity(.12),
+              ),
+              scaffoldBackgroundColor: const Color(0xFFF3F6F5),
+              fontFamily: 'Roboto',
+              appBarTheme: AppBarTheme(
+                backgroundColor: seed,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                centerTitle: true,
+                titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                iconTheme: const IconThemeData(color: Colors.white),
+              ),
+              navigationBarTheme: NavigationBarThemeData(
+                backgroundColor: Colors.white,
+                indicatorColor: seed.withOpacity(.12),
+                labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+                  fontSize: 11,
+                  fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+                  color: states.contains(WidgetState.selected) ? seed : const Color(0xFF8A9692),
+                )),
+              ),
+              filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+                backgroundColor: seed,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              )),
+              inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: seed.withOpacity(.06),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withOpacity(.2))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withOpacity(.2))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
+              ),
+              cardTheme: CardThemeData(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: seed.withOpacity(.15)),
+                ),
+              ),
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
+              cardTheme: const CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(22)))),
+            ),
+            themeMode: mode,
+            home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
+          );
+        },
       ),
     );
   }
@@ -3984,11 +3985,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       if (b.sharedWaterDebt == 0 && b.sharedPowerDebt == 0 && b.monthlyChargeAmount == 0)
         const Text('قبض فعالی ثبت نشده است.', style: TextStyle(color: Color(0xFF6B7A75), fontSize: 12)),
       const SizedBox(height: 12),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(18)),
-      ),
-      const SizedBox(height: 14),
     ]);
   }
 
