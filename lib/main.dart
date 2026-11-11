@@ -4412,7 +4412,6 @@ class _TicketSupportPageState extends State<_TicketSupportPage> {
       else ..._tickets.map(_ticketCard),
     ])),
   );
-  }
 }
 
 class _SettingsPage extends StatefulWidget {
