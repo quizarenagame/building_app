@@ -4539,7 +4539,8 @@ class _FeatureHub extends StatelessWidget {
   final _Building? building;
   final String userId;
   final Future<void> Function(_ScheduledTask task)? onTaskSeen;
-
+  final Future<void> Function()? onRefresh;
+  
   @override
   Widget build(BuildContext context) {
     final announcementTasks = index == 2
