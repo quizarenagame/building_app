@@ -85,10 +85,10 @@ class BuildingApp extends StatelessWidget {
               navigationBarTheme: NavigationBarThemeData(
                 backgroundColor: Colors.white,
                 indicatorColor: seed.withOpacity(.12),
-                labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+                labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
                   fontSize: 11,
-                  fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-                  color: states.contains(WidgetState.selected) ? seed : const Color(0xFF8A9692),
+                  fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
+                  color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
                 )),
               ),
               filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
@@ -106,7 +106,7 @@ class BuildingApp extends StatelessWidget {
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withOpacity(.2))),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
               ),
-              cardTheme: CardThemeData(
+              cardTheme: CardTheme(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -117,7 +117,7 @@ class BuildingApp extends StatelessWidget {
             darkTheme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-              cardTheme: const CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(22)))),
+              cardTheme: const CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(22)))),
             ),
             themeMode: mode,
             home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
@@ -127,6 +127,7 @@ class BuildingApp extends StatelessWidget {
     );
   }
 }
+
 
 String _normalizeRole(String? value) => const {'مدیر', 'ساکن', 'خدماتی'}.contains(value) ? value! : 'ساکن';
 
