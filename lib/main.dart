@@ -616,8 +616,8 @@ void _goBack() {
 }
 
   String get _stepTitle => switch (_step) {
-    _LoginStep.phone => 'شماره همراه',
-    _LoginStep.otp => 'تأیید شماره',
+    _LoginStep.phone => '',
+    _LoginStep.otp => '',
     _LoginStep.account => 'ساخت حساب کاربری',
     _LoginStep.managerChoice => 'انتخاب نقش مدیر',
     _ => '',
@@ -711,7 +711,6 @@ void _goBack() {
       const SizedBox(height: 6),
       const Text('مدیریت هوشمند ساختمان', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, height: 1.5)),
       const SizedBox(height: 8),
-      Text('ساختمانتان همیشه منظم و آرام باشد', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14, height: 1.8)),
       const SizedBox(height: 34),
       Container(
         padding: const EdgeInsets.all(18),
@@ -772,7 +771,7 @@ void _goBack() {
       const SizedBox(height: 9),
       Text('کد تأیید برای شماره ${_phoneController.text} ارسال شد.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.8)),
       const SizedBox(height: 15),
-      Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی از طریق پیامک برای شمارهٔ شما ارسال می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
+      Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: const Color(0xFFFFF4DD), borderRadius: BorderRadius.circular(15)), child: const Text('کد ۴ رقمی پیامک شده را در کادر زیر وارد نمایید.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF805A17), fontSize: 12, height: 1.7, fontWeight: FontWeight.w600))),
       const SizedBox(height: 25),
       TextFormField(
         controller: _otpController,
@@ -791,7 +790,7 @@ void _goBack() {
       Center(child: TextButton.icon(
         onPressed: _secondsLeft == 0 && !_isSendingOtp ? _resendOtp : null,
         icon: const Icon(Icons.refresh_rounded, size: 19),
-        label: Text(_isSendingOtp ? 'در حال ارسال پیامک...' : (_secondsLeft == 0 ? 'ارسال دوباره کد پیامکی' : 'ارسال دوباره تا ${_secondsLeft} ثانیه دیگر')),
+        label: Text(_isSendingOtp ? 'در حال ارسال پیامک...' : (_secondsLeft == 0 ? 'ارسال مجدد رمز یکبار مصرف' : 'ارسال مجدد تا ${_secondsLeft} ثانیه دیگر')),
       )),
       Center(child: TextButton(onPressed: () { _timer?.cancel(); setState(() => _step = _LoginStep.phone); }, child: const Text('ویرایش شماره همراه'))),
     ]),
@@ -2159,7 +2158,9 @@ class _CreateBuildingPageState extends State<_CreateBuildingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
       appBar: AppBar(title: const Text('ایجاد ساختمان جدید')),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -2261,6 +2262,7 @@ class _CreateBuildingPageState extends State<_CreateBuildingPage> {
           ),
         ),
         ],
+      ),
       ),
     );
   }
@@ -2446,89 +2448,10 @@ class _ManagerHomeState extends State<_ManagerHome> {
   }
 
   @override
-  Widget _stat(String value, String label, IconData icon) => Expanded(child: Container(
-    padding: const EdgeInsets.symmetric(vertical: 14),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7EEEB))),
-    child: Column(children: [
-      Icon(icon, color: const Color(0xFF0E8A62), size: 22),
-      const SizedBox(height: 6),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-      Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7A75))),
-    ]),
-  ));
-
-  Widget _managerDashboard(BuildContext context, _Building b) {
-    final activeBills = b.polls.where((p) => p.isActive).length + (b.sharedWaterDebt > 0 ? 1 : 0) + (b.sharedPowerDebt > 0 ? 1 : 0);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-            const SizedBox(height: 4),
-            Text(b.address.isEmpty ? 'آدرس ثبت نشده' : b.address, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7A75))),
-            const SizedBox(height: 8),
-            Align(alignment: Alignment.centerRight, child: FilledButton(
-              onPressed: () => _openBuildingDetail(b),
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0E8A62), minimumSize: const Size(0, 36), padding: const EdgeInsets.symmetric(horizontal: 14)),
-              child: const Text('مشاهده جزئیات'),
-            )),
-          ])),
-          const SizedBox(width: 12),
-          ClipRRect(borderRadius: BorderRadius.circular(16), child: Container(width: 92, height: 78, color: const Color(0xFFE5F6EF), child: const Icon(Icons.apartment_rounded, color: Color(0xFF0E8A62), size: 36))),
-        ]),
-      ),
-      const SizedBox(height: 10),
-      Row(children: [
-        _stat('${b.occupants.length}'.toPersianDigits(), 'ساکنان', Icons.groups_outlined),
-        const SizedBox(width: 8),
-        _stat('${b.tasks.length}'.toPersianDigits(), 'درخواست خدماتی', Icons.home_repair_service_outlined),
-        const SizedBox(width: 8),
-        _stat('$activeBills'.toPersianDigits(), 'قبوض فعال', Icons.receipt_long_outlined),
-      ]),
-      const SizedBox(height: 14),
-      const Text('قبوض فعال', style: TextStyle(fontWeight: FontWeight.w800)),
-      const SizedBox(height: 8),
-      if (b.sharedWaterDebt > 0) _billRow('آب مشاع', formatTomanAmount(b.sharedWaterDebt)),
-      if (b.sharedPowerDebt > 0) _billRow('برق مشاع', formatTomanAmount(b.sharedPowerDebt)),
-      if (b.monthlyChargeAmount > 0) _billRow('شارژ ماهانه', formatTomanAmount(b.monthlyChargeAmount)),
-      if (b.sharedWaterDebt == 0 && b.sharedPowerDebt == 0 && b.monthlyChargeAmount == 0)
-        const Text('قبض فعالی ثبت نشده است.', style: TextStyle(color: Color(0xFF6B7A75), fontSize: 12)),
-      const SizedBox(height: 12),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(18)),
-        child: const Row(children: [
-          Icon(Icons.support_agent_rounded, color: Colors.white),
-          SizedBox(width: 10),
-          Expanded(child: Text('پشتیبانی ۲۴ ساعته ساکنان و مدیر ساختمان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
-        ]),
-      ),
-    ]);
-  }
-
-  Widget _billRow(String title, String amount) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7EEEB))),
-    child: Row(children: [
-      const Icon(Icons.receipt_outlined, color: Color(0xFF0E8A62)),
-      const SizedBox(width: 8),
-      Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700))),
-      Text(amount, style: const TextStyle(fontWeight: FontWeight.w800)),
-    ]),
-  );
-
-  @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (widget.building != null) ...[
-          _managerDashboard(context, widget.building!),
-          const SizedBox(height: 12),
-        ],
         Card(
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
@@ -3996,6 +3919,76 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   }
 
 
+  Widget _managerStat(String value, String label, IconData icon) => Expanded(child: Container(
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7EEEB))),
+    child: Column(children: [
+      Icon(icon, color: const Color(0xFF0E8A62), size: 22),
+      const SizedBox(height: 6),
+      Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+      Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7A75))),
+    ]),
+  ));
+
+  Widget _activeBillRow(String title, String amount) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7EEEB))),
+    child: Row(children: [
+      const Icon(Icons.receipt_outlined, color: Color(0xFF0E8A62)),
+      const SizedBox(width: 8),
+      Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700))),
+      Text(amount, style: const TextStyle(fontWeight: FontWeight.w800)),
+    ]),
+  );
+
+  Widget _managerDashboardSection() {
+    final activeBills = b.polls.where((p) => p.isActive).length +
+        (b.sharedWaterDebt > 0 ? 1 : 0) + (b.sharedPowerDebt > 0 ? 1 : 0);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
+        child: Row(children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+            const SizedBox(height: 4),
+            Text(b.address.isEmpty ? 'آدرس ثبت نشده' : b.address, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7A75))),
+          ])),
+          const SizedBox(width: 12),
+          ClipRRect(borderRadius: BorderRadius.circular(16), child: Container(width: 92, height: 78, color: const Color(0xFFE5F6EF), child: const Icon(Icons.apartment_rounded, color: Color(0xFF0E8A62), size: 36))),
+        ]),
+      ),
+      const SizedBox(height: 10),
+      Row(children: [
+        _managerStat('${b.occupants.length}'.toPersianDigits(), 'ساکنان', Icons.groups_outlined),
+        const SizedBox(width: 8),
+        _managerStat('${b.tasks.length}'.toPersianDigits(), 'درخواست خدماتی', Icons.home_repair_service_outlined),
+        const SizedBox(width: 8),
+        _managerStat('$activeBills'.toPersianDigits(), 'قبوض فعال', Icons.receipt_long_outlined),
+      ]),
+      const SizedBox(height: 14),
+      const Text('قبوض فعال', style: TextStyle(fontWeight: FontWeight.w800)),
+      const SizedBox(height: 8),
+      if (b.sharedWaterDebt > 0) _activeBillRow('آب مشاع', formatTomanAmount(b.sharedWaterDebt)),
+      if (b.sharedPowerDebt > 0) _activeBillRow('برق مشاع', formatTomanAmount(b.sharedPowerDebt)),
+      if (b.monthlyChargeAmount > 0) _activeBillRow('شارژ ماهانه', formatTomanAmount(b.monthlyChargeAmount)),
+      if (b.sharedWaterDebt == 0 && b.sharedPowerDebt == 0 && b.monthlyChargeAmount == 0)
+        const Text('قبض فعالی ثبت نشده است.', style: TextStyle(color: Color(0xFF6B7A75), fontSize: 12)),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(18)),
+        child: const Row(children: [
+          Icon(Icons.support_agent_rounded, color: Colors.white),
+          SizedBox(width: 10),
+          Expanded(child: Text('پشتیبانی ۲۴ ساعته ساکنان و مدیر ساختمان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+        ]),
+      ),
+      const SizedBox(height: 14),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -4014,6 +4007,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         centerTitle: true,
       ),
       body: ListView(padding: const EdgeInsets.all(16), children: [
+        _managerDashboardSection(),
         const SizedBox(height: 14),
         const SizedBox(height: 14),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
