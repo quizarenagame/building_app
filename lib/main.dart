@@ -1586,7 +1586,6 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mounted) setState(() {});
   }
 
-  // متد جدید برای بازسازی و دریافت اطلاعات تازه از سرور
   Future<void> _refreshDashboard() async {
     if (_isManager && pb.authStore.isValid) {
       await _loadManagerBuildings();
@@ -1623,7 +1622,7 @@ class _DashboardPageState extends State<DashboardPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_serviceSpecialtiesKey, cleaned);
-      final token = pb.authStore.token;
+      const token = 'pb.authStore.token';
       final record = pb.authStore.record;
       if (token.isNotEmpty && record != null) {
         record.data['service_specialties'] = cleaned;
@@ -1667,7 +1666,7 @@ class _DashboardPageState extends State<DashboardPage> {
       } catch (_) {}
     }
     if (membership == null) return;
-    final floor = int.tryParse((membership!['floor'] ?? '').toString());
+    final floor = int.tryParse((membership['floor'] ?? '').toString());
     final unit = int.tryParse((membership['unit'] ?? '').toString());
     if (floor == null || unit == null) return;
     _Building? building;
@@ -1758,7 +1757,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final previousRole = _currentRole;
     final data = Map<String, dynamic>.from(record.data);
-    final token = pb.authStore.token;
+    const token = 'pb.authStore.token';
     setState(() {
       _isChangingRole = true;
       _roleOverride = newRole;
@@ -1906,7 +1905,7 @@ class _DashboardPageState extends State<DashboardPage> {
           Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 16),
-              color: _isManager ? colors.primary : colors.primaryContainer.withValues(alpha: .3),
+            color: _isManager ? colors.primary : colors.primaryContainer.withOpacity(.3),
             child: _isManager
                 ? Row(children: [
                     const Icon(Icons.notifications_none_rounded, color: Colors.white),
@@ -1940,7 +1939,7 @@ class _DashboardPageState extends State<DashboardPage> {
           )
         else
           Material(
-            color: Colors.surface,
+            color: colors.surface,
             child: SafeArea(bottom: false, child: SizedBox(
               height: 56,
               child: Row(children: [
@@ -1958,7 +1957,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ? const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab]
                       : const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab],
                   textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, Color: Colors.onSurface),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: colors.onSurface),
                 )),
                 const SizedBox(width: 48),
               ]),
@@ -4423,7 +4422,7 @@ class _SettingsPage extends StatefulWidget {
   State<_SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<_SettingsPage> {
+class _SettingsPageState extends State<SettingsPage> {
   void _showSuccess() {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
@@ -4436,6 +4435,33 @@ class _SettingsPageState extends State<_SettingsPage> {
       margin: const EdgeInsets.all(16),
     ));
   }
+  
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colors.primary,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(widget.role, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+              const SizedBox(height: 4),
+              Text(widget.phoneNumber, style: TextStyle(color: Colors.white.withOpacity(.85))),
+            ])),
+            const SizedBox(width: 12),
+            Container(width: 52, height: 52, decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.person_rounded, color: Colors.white)),
+          ]),
+        ),
+      ],
+    );
+  }
+}
 
   Future<void> _openSpecialties() async {
     final result = await Navigator.of(context).push<List<String>>(MaterialPageRoute<List<String>>(
@@ -4531,7 +4557,7 @@ class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
 }
 
 class _FeatureHub extends StatelessWidget {
-  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen , this.onRefresh});
+  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen, this.onRefresh});
   final int index;
   final bool isManager;
   final _Building? building;
@@ -4541,6 +4567,7 @@ class _FeatureHub extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final announcementTasks = index == 2
         ? (building?.tasks.where((task) => task.isInAnnouncementWindow && !task.seenByUsers.contains(userId)).toList() ?? <_ScheduledTask>[])
         : <_ScheduledTask>[];
@@ -4571,7 +4598,7 @@ class _FeatureHub extends StatelessWidget {
             _FeatureItem('درخواست خدمت', '', Icons.handyman_outlined, 'service'),
           ]
         : const <_FeatureItem>[];
-        final listView = ListView(
+    final listView = ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
         Text(index == 1 ? 'خدمات' : index == 2 ? 'اطلاعیه‌ها' : 'پرداخت‌ها',
@@ -4584,15 +4611,18 @@ class _FeatureHub extends StatelessWidget {
             children: [
               for (final item in grid)
                 Material(
-                  color: colors.surface
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(22),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(22),
                     onTap: () => open(item),
                     child: Container(
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: .2)),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: colors.primary.withOpacity(.2)),
+                      ),
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(item.icon, color: Theme.of(context).colorScheme.primary, size: 30),
+                        Icon(item.icon, color: colors.primary, size: 30),
                         const SizedBox(height: 8),
                         Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                       ]),
@@ -4609,7 +4639,7 @@ class _FeatureHub extends StatelessWidget {
           ...announcementTasks.map((task) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Card(child: ListTile(
-              leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? Theme.of(context).colorScheme.error : null)),
+              leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? colors.error : null)),
               title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text('${task.isDue ? 'یادآور فعال — سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)}\nتاریخ و ساعت ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
               isThreeLine: true,
