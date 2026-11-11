@@ -59,75 +59,69 @@ class BuildingApp extends StatelessWidget {
     return ValueListenableBuilder<int>(
       valueListenable: themeColorIndex,
       builder: (context, colorIndex, _) => ValueListenableBuilder<ThemeMode>(
-        valueListenable: themeMode,
-        builder: (context, mode, _) {
-          final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
-          return MaterialApp(
-            title: 'سامانه مدیریت ساختمان',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
-                primary: seed,
-                onPrimary: Colors.white,
-                primaryContainer: seed.withOpacity(.12),
-              ),
-              scaffoldBackgroundColor: const Color(0xFFF3F6F5),
-              fontFamily: 'Roboto',
-              appBarTheme: AppBarTheme(
-                backgroundColor: seed,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                centerTitle: true,
-                titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-                iconTheme: const IconThemeData(color: Colors.white),
-              ),
-              navigationBarTheme: NavigationBarThemeData(
-                backgroundColor: Colors.white,
-                indicatorColor: seed.withOpacity(.12),
-                labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-                  fontSize: 11,
-                  fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
-                  color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
-                )),
-              ),
-              filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-                backgroundColor: seed,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-              )),
-              inputDecorationTheme: InputDecorationTheme(
-                filled: true,
-                fillColor: seed.withOpacity(.06),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withOpacity(.2))),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed.withOpacity(.2))),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
-              ),
-              cardTheme: CardTheme(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: seed.withOpacity(.15)),
-                ),
-              ),
-            ),
-            darkTheme: ThemeData(
-              useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-              cardTheme: const CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(22)))),
-            ),
-            themeMode: mode,
-            home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
-          );
-        },
+      valueListenable: themeMode,
+      builder: (context, mode, _) {
+        final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
+        return MaterialApp(
+        title: 'سامانه مدیریت ساختمان',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
+            primary: seed,
+            onPrimary: Colors.white,
+            primaryContainer: const Color(0xFFE5F6EF),
+            surface: Colors.white,
+          ),
+          scaffoldBackgroundColor: const Color(0xFFF3F6F5),
+          fontFamily: 'Roboto',
+          appBarTheme: AppBarTheme(
+            backgroundColor: seed,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          navigationBarTheme: NavigationBarThemeData(
+            backgroundColor: Colors.white,
+            indicatorColor: seed.withOpacity(.12),
+            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
+              fontSize: 11,
+              fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
+              color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
+            )),
+          ),
+          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+            backgroundColor: seed,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          )),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: const Color(0xFFF7FAF9),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
+          ),
+          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE7EEEB)))),
+        ),
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
+          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+        ),
+        themeMode: mode,
+        home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
+      );
+      },
       ),
     );
   }
 }
-
 
 String _normalizeRole(String? value) => const {'مدیر', 'ساکن', 'خدماتی'}.contains(value) ? value! : 'ساکن';
 
@@ -1586,6 +1580,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mounted) setState(() {});
   }
 
+  // متد جدید برای بازسازی و دریافت اطلاعات تازه از سرور
   Future<void> _refreshDashboard() async {
     if (_isManager && pb.authStore.isValid) {
       await _loadManagerBuildings();
@@ -1622,7 +1617,7 @@ class _DashboardPageState extends State<DashboardPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_serviceSpecialtiesKey, cleaned);
-      const token = 'pb.authStore.token';
+      final token = pb.authStore.token;
       final record = pb.authStore.record;
       if (token.isNotEmpty && record != null) {
         record.data['service_specialties'] = cleaned;
@@ -1666,7 +1661,7 @@ class _DashboardPageState extends State<DashboardPage> {
       } catch (_) {}
     }
     if (membership == null) return;
-    final floor = int.tryParse((membership['floor'] ?? '').toString());
+    final floor = int.tryParse((membership!['floor'] ?? '').toString());
     final unit = int.tryParse((membership['unit'] ?? '').toString());
     if (floor == null || unit == null) return;
     _Building? building;
@@ -1757,7 +1752,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final previousRole = _currentRole;
     final data = Map<String, dynamic>.from(record.data);
-    const token = 'pb.authStore.token';
+    final token = pb.authStore.token;
     setState(() {
       _isChangingRole = true;
       _roleOverride = newRole;
@@ -1900,12 +1895,13 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final onHome = selectedTab == 2;
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7F6),
       body: Column(children: [
         if (onHome)
           Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 16),
-            color: _isManager ? colors.primary : colors.primaryContainer.withOpacity(.3),
+            color: _isManager ? const Color(0xFF0B6B4A) : const Color(0xFFF7FBF8),
             child: _isManager
                 ? Row(children: [
                     const Icon(Icons.notifications_none_rounded, color: Colors.white),
@@ -1939,7 +1935,7 @@ class _DashboardPageState extends State<DashboardPage> {
           )
         else
           Material(
-            color: colors.surface,
+            color: Colors.white,
             child: SafeArea(bottom: false, child: SizedBox(
               height: 56,
               child: Row(children: [
@@ -1957,7 +1953,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ? const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab]
                       : const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab],
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: colors.onSurface),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF17352C)),
                 )),
                 const SizedBox(width: 48),
               ]),
@@ -3985,6 +3981,16 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       if (b.sharedWaterDebt == 0 && b.sharedPowerDebt == 0 && b.monthlyChargeAmount == 0)
         const Text('قبض فعالی ثبت نشده است.', style: TextStyle(color: Color(0xFF6B7A75), fontSize: 12)),
       const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(18)),
+        child: const Row(children: [
+          Icon(Icons.support_agent_rounded, color: Colors.white),
+          SizedBox(width: 10),
+          Expanded(child: Text('پشتیبانی ۲۴ ساعته ساکنان و مدیر ساختمان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+        ]),
+      ),
+      const SizedBox(height: 14),
     ]);
   }
 
@@ -4406,6 +4412,7 @@ class _TicketSupportPageState extends State<_TicketSupportPage> {
       else ..._tickets.map(_ticketCard),
     ])),
   );
+  }
 }
 
 class _SettingsPage extends StatefulWidget {
@@ -4422,7 +4429,7 @@ class _SettingsPage extends StatefulWidget {
   State<_SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<_SettingsPage> {
   void _showSuccess() {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
@@ -4435,33 +4442,6 @@ class _SettingsPageState extends State<SettingsPage> {
       margin: const EdgeInsets.all(16),
     ));
   }
-  
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colors.primary,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(widget.role, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
-              const SizedBox(height: 4),
-              Text(widget.phoneNumber, style: TextStyle(color: Colors.white.withOpacity(.85))),
-            ])),
-            const SizedBox(width: 12),
-            Container(width: 52, height: 52, decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.person_rounded, color: Colors.white)),
-          ]),
-        ),
-      ],
-    );
-  }
-}
 
   Future<void> _openSpecialties() async {
     final result = await Navigator.of(context).push<List<String>>(MaterialPageRoute<List<String>>(
@@ -4485,10 +4465,7 @@ class _SettingsPageState extends State<SettingsPage> {
     children: [
       Container(
         padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-    color: colors.primary,
-    borderRadius: BorderRadius.circular(24),
-  ),
+        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(24)),
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(widget.role, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
@@ -4557,7 +4534,7 @@ class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
 }
 
 class _FeatureHub extends StatelessWidget {
-  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen, this.onRefresh});
+  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen , this.onRefresh});
   final int index;
   final bool isManager;
   final _Building? building;
@@ -4567,7 +4544,6 @@ class _FeatureHub extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final announcementTasks = index == 2
         ? (building?.tasks.where((task) => task.isInAnnouncementWindow && !task.seenByUsers.contains(userId)).toList() ?? <_ScheduledTask>[])
         : <_ScheduledTask>[];
@@ -4598,7 +4574,7 @@ class _FeatureHub extends StatelessWidget {
             _FeatureItem('درخواست خدمت', '', Icons.handyman_outlined, 'service'),
           ]
         : const <_FeatureItem>[];
-    final listView = ListView(
+        final listView = ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       children: [
         Text(index == 1 ? 'خدمات' : index == 2 ? 'اطلاعیه‌ها' : 'پرداخت‌ها',
@@ -4611,18 +4587,15 @@ class _FeatureHub extends StatelessWidget {
             children: [
               for (final item in grid)
                 Material(
-                  color: colors.surface,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(22),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(22),
                     onTap: () => open(item),
                     child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: colors.primary.withOpacity(.2)),
-                      ),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(item.icon, color: colors.primary, size: 30),
+                        Icon(item.icon, color: Theme.of(context).colorScheme.primary, size: 30),
                         const SizedBox(height: 8),
                         Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                       ]),
@@ -4639,7 +4612,7 @@ class _FeatureHub extends StatelessWidget {
           ...announcementTasks.map((task) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Card(child: ListTile(
-              leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? colors.error : null)),
+              leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? Theme.of(context).colorScheme.error : null)),
               title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text('${task.isDue ? 'یادآور فعال — سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)}\nتاریخ و ساعت ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
               isThreeLine: true,
