@@ -36,10 +36,12 @@ class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
 
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
-  static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+  static final ValueNotifier<ThemeMode> themeMode =
+      ValueNotifier<ThemeMode>(ThemeMode.light);
 
   /// لیست پویای رنگ‌های تم
-  static final ValueNotifier<List<Color>> themeColors = ValueNotifier<List<Color>>([
+  static final ValueNotifier<List<Color>> themeColors =
+      ValueNotifier<List<Color>>([
     const Color(0xFF0E8A62), // سبز
     const Color(0xFF2196F3), // آبی
     const Color(0xFF3F51B5), // سرمه‌ای
@@ -47,12 +49,18 @@ class BuildingApp extends StatelessWidget {
     const Color(0xFF9C27B0), // بنفش
   ]);
 
-  static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
+  static const List<String> themeNames = [
+    'سبز پیش‌فرض',
+    'آبی',
+    'نیلی',
+    'نارنجی',
+    'بنفش',
+  ];
+
   static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
   static const String managerPhone = '09907862453';
   static const String managerPin = '2731';
 
-  // کلیدهای ذخیره‌سازی در SharedPreferences
   static const String _keyThemeColors = 'app_custom_theme_colors';
   static const String _keyThemeColorIndex = 'app_selected_theme_color_index';
 
@@ -61,72 +69,105 @@ class BuildingApp extends StatelessWidget {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // خواندن رنگ‌ها
-      final List<String>? savedColorStrings = prefs.getStringList(_keyThemeColors);
+      final List<String>? savedColorStrings =
+          prefs.getStringList(_keyThemeColors);
+      final List<Color> loadedColors = [];
+
       if (savedColorStrings != null && savedColorStrings.isNotEmpty) {
-        final loadedColors = savedColorStrings.map((str) => Color(int.parse(str))).toList();
+        for (final entry in savedColorStrings) {
+          final parsed = int.tryParse(entry);
+          if (parsed != null) {
+            loadedColors.add(Color(parsed));
+          }
+        }
+      }
+
+      if (loadedColors.isNotEmpty) {
         themeColors.value = loadedColors;
       }
 
-      // خواندن ایندکس رنگ انتخاب‌شده
-      final int? savedIndex = prefs.getInt(_keyThemeColorIndex);
-      if (savedIndex != null && savedIndex >= 0 && savedIndex < themeColors.value.length) {
-        themeColorIndex.value = savedIndex;
-      }
-    } catch (_) {}
+      final int savedIndex = prefs.getInt(_keyThemeColorIndex) ?? 0;
+      themeColorIndex.value =
+          (savedIndex >= 0 && savedIndex < themeColors.value.length)
+              ? savedIndex
+              : 0;
+    } catch (_) {
+      // خطای خواندن تنظیمات؛ با رنگ‌های پیش‌فرض ادامه
+    }
   }
 
-  /// متد کمکی برای ذخیرهٔ لیست رنگ‌ها روی دیسک
   static Future<void> _saveColorsToPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final List<String> colorStrings = themeColors.value
-          .map((c) => c.toARGB32().toString())
-          .toList();
+      final List<String> colorStrings =
+          themeColors.value.map((color) => color.value.toString()).toList();
       await prefs.setStringList(_keyThemeColors, colorStrings);
-    } catch (_) {}
+    } catch (_) {
+      // خطای ذخیره‌سازی؛ رنگ‌ها در اجرای فعلی همچنان اعمال می‌شوند
+    }
+  }
+
+  static Future<void> _saveSelectedColorIndex() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_keyThemeColorIndex, themeColorIndex.value);
+    } catch (_) {
+      // در صورت خطا، انتخاب فعلی فقط در اجرای فعلی باقی می‌ماند
+    }
   }
 
   /// ۲. افزودن رنگ جدید به لیست و ذخیره آن
   static Future<void> addCustomColor(Color color) async {
     // جلوگیری از ثبت رنگ تکراری
-    final existingIndex = themeColors.value.indexWhere((c) => c.toARGB32() == color.toARGB32());
+    final existingIndex = themeColors.value
+        .indexWhere((existing) => existing.value == color.value);
     if (existingIndex != -1) {
-      themeColorIndex.value = existingIndex;
+      await selectThemeColor(existingIndex);
       return;
     }
 
     final updatedList = List<Color>.from(themeColors.value)..add(color);
     themeColors.value = updatedList;
-    themeColorIndex.value = updatedList.length - 1; // رنگ جدید بلافاصله انتخاب شود
+    themeColorIndex.value = updatedList.length - 1; // رنگ جدید انتخاب شود
 
     await _saveColorsToPrefs();
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyThemeColorIndex, themeColorIndex.value);
+    await _saveSelectedColorIndex();
   }
 
   /// ۳. حذف رنگ با ضربدر و ذخیره تغییرات
   static Future<void> removeCustomColor(int index) async {
     // حداقل یک رنگ باید در لیست بماند
-    if (themeColors.value.length <= 1 || index < 0 || index >= themeColors.value.length) {
+    if (themeColors.value.length <= 1 ||
+        index < 0 ||
+        index >= themeColors.value.length) {
       return;
     }
 
+    final sharedIndex = themeColorIndex.value;
     final updatedList = List<Color>.from(themeColors.value)..removeAt(index);
-    themeColors.value = updatedList;
 
-    // تنظیم مجدد ایندکس انتخابی در صورت لزوم
-    if (themeColorIndex.value >= updatedList.length) {
-      themeColorIndex.value = updatedList.length - 1;
-    } else if (themeColorIndex.value == index) {
-      themeColorIndex.value = 0;
+    // محاسبه ایندکس جدید پره‌از خطا
+    late int newIndex;
+    if (sharedIndex > index) {
+      newIndex = sharedIndex - 1;
+    } else if (sharedIndex == index) {
+      newIndex = index < updatedList.length ? index : updatedList.length - 1;
+    } else {
+      newIndex = sharedIndex;
     }
 
-    await _saveColorsToPrefs();
+    themeColors.value = updatedList;
+    themeColorIndex.value = newIndex;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyThemeColorIndex, themeColorIndex.value);
+    await _saveColorsToPrefs();
+    await _saveSelectedColorIndex();
+  }
+
+  static Future<void> selectThemeColor(int index) async {
+    if (index < 0 || index >= themeColors.value.length) return;
+
+    themeColorIndex.value = index;
+    await _saveSelectedColorIndex();
   }
 
   /// بررسی روشن/تاریک مؤثر (ThemeMode.light را هم در نظر می‌گیرد)
@@ -139,84 +180,135 @@ class BuildingApp extends StatelessWidget {
 
   /// تغییر فوری تم با اولین کلیک (حالت system هم به‌درستی هندل می‌شود)
   static void toggleTheme(BuildContext context) {
-    themeMode.value = isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
+    themeMode.value =
+        isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: themeColorIndex,
-      builder: (context, colorIndex, _) => ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeMode,
-      builder: (context, mode, _) {
-        final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
-        return MaterialApp(
-        title: 'سامانه مدیریت ساختمان',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
-            primary: seed,
-            onPrimary: Colors.white,
-            primaryContainer: seed.withValues(alpha: 0.12),
-            surface: Colors.white,
-          ),
-          scaffoldBackgroundColor: const Color(0xFFF3F6F5),
-          fontFamily: 'Roboto',
-          appBarTheme: AppBarTheme(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: true,
-            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          navigationBarTheme: NavigationBarThemeData(
-            backgroundColor: Colors.white,
-            indicatorColor: seed.withOpacity(.12),
-            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-              fontSize: 11,
-              fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
-              color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
-            )),
-          ),
-          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          )),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFF7FAF9),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
-          ),
-          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE7EEEB)))),
-        ),
-        darkTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-          cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
-        ),
-        themeMode: mode,
-        home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
-      );
+    return ValueListenableBuilder<List<Color>>(
+      valueListenable: themeColors,
+      builder: (context, colors, _) {
+        final safeIndex =
+            (themeColorIndex.value >= 0 && themeColorIndex.value < colors.length)
+                ? themeColorIndex.value
+                : 0;
+        final seed = colors.isEmpty
+            ? const Color(0xFF0E8A62)
+            : colors[safeIndex];
+
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeMode,
+          builder: (context, mode, _) {
+            return MaterialApp(
+              title: 'سامانه مدیریت ساختمان',
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: seed,
+                  brightness: Brightness.light,
+                ).copyWith(
+                  primary: seed,
+                  onPrimary: Colors.white,
+                  primaryContainer: seed.withOpacity(0.12),
+                  surface: Colors.white,
+                ),
+                scaffoldBackgroundColor: const Color(0xFFF3F6F5),
+                fontFamily: 'Roboto',
+                appBarTheme: AppBarTheme(
+                  backgroundColor: seed,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  centerTitle: true,
+                  titleTextStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  iconTheme: const IconThemeData(color: Colors.white),
+                ),
+                navigationBarTheme: NavigationBarThemeData(
+                  backgroundColor: Colors.white,
+                  indicatorColor: seed.withOpacity(0.12),
+                  labelTextStyle:
+                      MaterialStateProperty.resolveWith((states) => TextStyle(
+                    fontSize: 11,
+                    fontWeight: states.contains(MaterialState.selected)
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: states.contains(MaterialState.selected)
+                        ? seed
+                        : const Color(0xFF8A9692),
+                  )),
+                ),
+                filledButtonTheme: FilledButtonThemeData(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: seed,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                inputDecorationTheme: InputDecorationTheme(
+                  filled: true,
+                  fillColor: const Color(0xFFF7FAF9),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFE3EBE7)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFE3EBE7)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: seed, width: 1.6),
+                  ),
+                ),
+                cardTheme: CardTheme(
+                  color: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    side: const BorderSide(color: Color(0xFFE7EEEB)),
+                  ),
+                ),
+              ),
+              darkTheme: ThemeData(
+                useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: seed,
+                  brightness: Brightness.dark,
+                ),
+                cardTheme: CardTheme(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                ),
+              ),
+              themeMode: mode,
+              home: Builder(
+                builder: (homeContext) => Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: _initialHome(homeContext),
+                ),
+              ),
+            );
+          },
+        );
       },
-      ),
     );
   }
-  static Future<void> selectThemeColor(int index) async {
-  if (index < 0 || index >= themeColors.value.length) return;
-
-  themeColorIndex.value = index;
-
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setInt(_keyThemeColorIndex, index);
-}
 }
 
 String _normalizeRole(String? value) => const {'مدیر', 'ساکن', 'خدماتی'}.contains(value) ? value! : 'ساکن';
