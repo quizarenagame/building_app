@@ -67,10 +67,10 @@ class BuildingApp extends StatelessWidget {
   static const String _keyThemeColorIndex = 'app_selected_theme_color_index';
   static const String _keyThemeMode = 'app_theme_mode'; // کلید ذخیره حالت تم
 
-  /// ۱. خواندن رنگ‌ها و ایندکس انتخابی و حالت تم از SharedPreferences
+  /// ۱. خواندن رنگ‌ها، ایندکس انتخابی و حالت تم از SharedPreferences
   static Future<void> loadSavedTheme() async {
     try {
-      final prefs = appPrefs; // استفاده از متغیر سراسری موجود در main
+      final prefs = appPrefs; // استفاده از متغیر سراسری appPrefs
 
       final List<String>? savedColorStrings =
           prefs.getStringList(_keyThemeColors);
@@ -95,7 +95,7 @@ class BuildingApp extends StatelessWidget {
               ? savedIndex
               : 0;
 
-      // خواندن حالت تم (تاریک/روشن)
+      // خواندن و اعمال حالت تم (تاریک/روشن/سیستم)
       final String? savedMode = prefs.getString(_keyThemeMode);
       if (savedMode == 'dark') {
         themeMode.value = ThemeMode.dark;
@@ -105,7 +105,7 @@ class BuildingApp extends StatelessWidget {
         themeMode.value = ThemeMode.system;
       }
     } catch (_) {
-      // خطای خواندن تنظیمات؛ با مقادیر پیش‌فرض ادامه
+      // در صورت بروز خطا با تنظیمات پیش‌فرض ادامه می‌یابد
     }
   }
 
@@ -313,8 +313,12 @@ class BuildingApp extends StatelessWidget {
                       brightness: Brightness.dark,
                     ).copyWith(
                       primary: seed,
-                      onPrimary: Colors.black,
+                      onPrimary: Colors.white, // اصلاح تناقض رنگ متن دکمه‌ها در حالت تاریک
+                      primaryContainer: seed.withOpacity(0.28),
+                      onPrimaryContainer: Colors.white,
                       surface: const Color(0xFF1B2320),
+                      surfaceContainer: const Color(0xFF182019),
+                      surfaceContainerHigh: const Color(0xFF1F2A24),
                     ),
                     scaffoldBackgroundColor: const Color(0xFF121816),
                     fontFamily: 'Roboto',
@@ -333,6 +337,17 @@ class BuildingApp extends StatelessWidget {
                     navigationBarTheme: NavigationBarThemeData(
                       backgroundColor: const Color(0xFF1B2320),
                       indicatorColor: seed.withOpacity(0.24),
+                      labelTextStyle: MaterialStateProperty.resolveWith(
+                        (states) => TextStyle(
+                          fontSize: 11,
+                          fontWeight: states.contains(MaterialState.selected)
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: states.contains(MaterialState.selected)
+                              ? seed
+                              : const Color(0xFF9BA6A1),
+                        ),
+                      ),
                     ),
                     filledButtonTheme: FilledButtonThemeData(
                       style: FilledButton.styleFrom(
@@ -342,11 +357,17 @@ class BuildingApp extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                     inputDecorationTheme: InputDecorationTheme(
                       filled: true,
                       fillColor: const Color(0xFF1B2320),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -365,7 +386,8 @@ class BuildingApp extends StatelessWidget {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22),
-                        side: BorderSide(color: Colors.white.withOpacity(0.06)),
+                        side: BorderSide(
+                            color: Colors.white.withOpacity(0.06)),
                       ),
                     ),
                   ),
