@@ -30,6 +30,8 @@ Future<void> main() async {
       clear: () async { await appPrefs.remove('pb_auth'); },
     ),
   );
+  
+   runApp(const BuildingApp());
 }
 
 class BuildingApp extends StatelessWidget {
