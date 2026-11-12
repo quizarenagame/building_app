@@ -1799,7 +1799,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final hasUnreadDueTasks = _joinedBuilding?.tasks.any((task) =>
         task.isInAnnouncementWindow && !task.seenByUsers.contains(currentUserId)) ?? false;
     Widget noticesIcon(IconData icon) => Stack(clipBehavior: Clip.none, children: [
-      Icon(icon, color: colors.primary),
+      Icon(icon, color: selectedTab == 1 ? colors.primary : const Color(0xFF8A9692)),
       if (hasUnreadDueTasks) Positioned(top: -2, right: -3, child: Container(
         width: 10, height: 10, decoration: BoxDecoration(
           color: colors.error, shape: BoxShape.circle,
@@ -3916,50 +3916,8 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   );
 
   Widget _managerDashboardSection() {
-    final activeBills = b.polls.where((p) => p.isActive).length +
-        (b.sharedWaterDebt > 0 ? 1 : 0) + (b.sharedPowerDebt > 0 ? 1 : 0);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-            const SizedBox(height: 4),
-            Text(b.address.isEmpty ? 'آدرس ثبت نشده' : b.address, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ])),
-          const SizedBox(width: 12),
-          ClipRRect(borderRadius: BorderRadius.circular(16), child: Container(width: 92, height: 78, color: Theme.of(context).colorScheme.primaryContainer, child: Icon(Icons.apartment_rounded, color: Theme.of(context).colorScheme.primary, size: 36))),
-        ]),
-      ),
-      const SizedBox(height: 10),
-      Row(children: [
-        _managerStat('${b.occupants.length}'.toPersianDigits(), 'ساکنان', Icons.groups_outlined),
-        const SizedBox(width: 8),
-        _managerStat('${b.tasks.length}'.toPersianDigits(), 'درخواست خدماتی', Icons.home_repair_service_outlined),
-        const SizedBox(width: 8),
-        _managerStat('$activeBills'.toPersianDigits(), 'قبوض فعال', Icons.receipt_long_outlined),
-      ]),
-      const SizedBox(height: 14),
-      const Text('قبوض فعال', style: TextStyle(fontWeight: FontWeight.w800)),
-      const SizedBox(height: 8),
-      if (b.sharedWaterDebt > 0) _activeBillRow('آب مشاع', formatTomanAmount(b.sharedWaterDebt)),
-      if (b.sharedPowerDebt > 0) _activeBillRow('برق مشاع', formatTomanAmount(b.sharedPowerDebt)),
-      if (b.monthlyChargeAmount > 0) _activeBillRow('شارژ ماهانه', formatTomanAmount(b.monthlyChargeAmount)),
-      if (b.sharedWaterDebt == 0 && b.sharedPowerDebt == 0 && b.monthlyChargeAmount == 0)
-        Text('قبض فعالی ثبت نشده است.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
-      const SizedBox(height: 12),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(18)),
-        child: const Row(children: [
-          Icon(Icons.support_agent_rounded, color: Colors.white),
-          SizedBox(width: 10),
-          Expanded(child: Text('پشتیبانی ۲۴ ساعته ساکنان و مدیر ساختمان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
-        ]),
-      ),
-      const SizedBox(height: 14),
-    ]);
+  return const SizedBox.shrink();
+}
   }
 
   @override
