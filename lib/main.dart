@@ -204,7 +204,7 @@ class BuildingApp extends StatelessWidget {
     await _saveThemeMode();
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<List<Color>>(
       valueListenable: themeColors,
@@ -313,12 +313,8 @@ class BuildingApp extends StatelessWidget {
                       brightness: Brightness.dark,
                     ).copyWith(
                       primary: seed,
-                      onPrimary: Colors.white, // اصلاح تناقض رنگ متن دکمه‌ها در حالت تاریک
-                      primaryContainer: seed.withOpacity(0.28),
-                      onPrimaryContainer: Colors.white,
+                      onPrimary: Colors.white,
                       surface: const Color(0xFF1B2320),
-                      surfaceVariant: const Color(0xFF182019),
-                      surfaceVariant: const Color(0xFF1F2A24),
                     ),
                     scaffoldBackgroundColor: const Color(0xFF121816),
                     fontFamily: 'Roboto',
@@ -337,17 +333,6 @@ class BuildingApp extends StatelessWidget {
                     navigationBarTheme: NavigationBarThemeData(
                       backgroundColor: const Color(0xFF1B2320),
                       indicatorColor: seed.withOpacity(0.24),
-                      labelTextStyle: MaterialStateProperty.resolveWith(
-                        (states) => TextStyle(
-                          fontSize: 11,
-                          fontWeight: states.contains(MaterialState.selected)
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: states.contains(MaterialState.selected)
-                              ? seed
-                              : const Color(0xFF9BA6A1),
-                        ),
-                      ),
                     ),
                     filledButtonTheme: FilledButtonThemeData(
                       style: FilledButton.styleFrom(
@@ -357,17 +342,11 @@ class BuildingApp extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        textStyle: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
                       ),
                     ),
                     inputDecorationTheme: InputDecorationTheme(
                       filled: true,
                       fillColor: const Color(0xFF1B2320),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -386,8 +365,7 @@ class BuildingApp extends StatelessWidget {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22),
-                        side: BorderSide(
-                            color: Colors.white.withOpacity(0.06)),
+                        side: BorderSide(color: Colors.white.withOpacity(0.06)),
                       ),
                     ),
                   ),
