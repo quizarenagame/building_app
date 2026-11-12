@@ -851,22 +851,32 @@ void _goBack() {
   );
 
   Widget _success(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SizedBox(height: 32),
-      Center(child: Container(width: 86, height: 86, decoration: BoxDecoration(color: colors.primaryContainer, shape: BoxShape.circle), child: Icon(Icons.person_outline, size: 48, color: colors.primary))),
-      const SizedBox(height: 20),
-      const Text('انتخاب نقش', textAlign: TextAlign.center, style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 8),
-      Text('${_nameController.text.trim()}، نقش خود را انتخاب کنید.', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, height: 1.8)),
-      const SizedBox(height: 26),
-      FilledButton.icon(onPressed: () => _selectRole('مدیر'), icon: const Icon(Icons.manage_accounts_outlined), label: const Text('مدیر')),
-      const SizedBox(height: 12),
-      OutlinedButton.icon(onPressed: () => _selectRole('ساکن'), icon: const Icon(Icons.people_outline), label: const Text('ساکنین')),
-      const SizedBox(height: 12),
-      OutlinedButton.icon(onPressed: () => _selectRole('خدماتی'), icon: const Icon(Icons.handyman_outlined), label: const Text('نیروی خدماتی')),
-    ]);
-  }
+  final colors = Theme.of(context).colorScheme;
+  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    const SizedBox(height: 32),
+    Center(child: Container(width: 86, height: 86, decoration: BoxDecoration(color: colors.primaryContainer, shape: BoxShape.circle), child: Icon(Icons.person_outline, size: 48, color: colors.primary))),
+    const SizedBox(height: 20),
+    const Text('انتخاب نقش', textAlign: TextAlign.center, style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+    const SizedBox(height: 8),
+    Text('${_nameController.text.trim()}، نقش خود را انتخاب کنید.', textAlign: TextAlign.center, style: TextStyle(color: colors.onSurfaceVariant, height: 1.8)),
+    const SizedBox(height: 26),
+    FilledButton.icon(onPressed: () => _selectRole('مدیر'), icon: const Icon(Icons.manage_accounts_outlined), label: const Text('مدیر')),
+    const SizedBox(height: 12),
+    OutlinedButton.icon(onPressed: () => _selectRole('ساکن'), icon: const Icon(Icons.people_outline), label: const Text('ساکنین')),
+    const SizedBox(height: 12),
+
+    // ---- نیروی خدماتی: خاکستری و غیرفعال (بدون حذف) ----
+    Opacity(
+      opacity: 0.5,
+      child: OutlinedButton.icon(
+        onPressed: null, // غیرفعال
+        icon: const Icon(Icons.handyman_outlined, color: Colors.grey),
+        label: const Text('نیروی خدماتی (به‌زودی)', style: TextStyle(color: Colors.grey)),
+      ),
+    ),
+    // ----------------------------------------------------
+  ]);
+}
 
   void _selectRole(String role) {
     setState(() {
