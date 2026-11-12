@@ -31,7 +31,7 @@ Future<void> main() async {
     ),
   );
   
-   runApp(const BuildingApp());
+runApp(BuildingApp());
 }
 
 class BuildingApp extends StatelessWidget {
