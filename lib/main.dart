@@ -16,30 +16,118 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
 }
 
 late final PocketBase pb;
+late final SharedPreferences appPrefs;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
+     appPrefs = await SharedPreferences.getInstance();
+     await BuildingApp.loadSavedTheme();
   pb = PocketBase(
     'https://api.pgem.ir',
     authStore: AsyncAuthStore(
-      save: (String data) async { await prefs.setString('pb_auth', data); },
-      initial: prefs.getString('pb_auth'),
-      clear: () async { await prefs.remove('pb_auth'); },
+      save: (String data) async { await appPrefs.setString('pb_auth', data); },
+      initial: appPrefs.getString('pb_auth'),
+      clear: () async { await appPrefs.remove('pb_auth'); },
     ),
   );
-  runApp(BuildingApp());
 }
 
 class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
+
   /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
-  static const List<Color> themeColors = [Color(0xFF0E8A62), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
+
+  /// لیست پویای رنگ‌های تم
+  static final ValueNotifier<List<Color>> themeColors = ValueNotifier<List<Color>>([
+    const Color(0xFF0E8A62), // سبز
+    const Color(0xFF2196F3), // آبی
+    const Color(0xFF3F51B5), // سرمه‌ای
+    const Color(0xFFFF9800), // نارنجی
+    const Color(0xFF9C27B0), // بنفش
+  ]);
+
   static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
   static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
   static const String managerPhone = '09907862453';
   static const String managerPin = '2731';
+
+  // کلیدهای ذخیره‌سازی در SharedPreferences
+  static const String _keyThemeColors = 'app_custom_theme_colors';
+  static const String _keyThemeColorIndex = 'app_selected_theme_color_index';
+
+  /// ۱. خواندن رنگ‌ها و ایندکس انتخابی از SharedPreferences
+  static Future<void> loadSavedTheme() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // خواندن رنگ‌ها
+      final List<String>? savedColorStrings = prefs.getStringList(_keyThemeColors);
+      if (savedColorStrings != null && savedColorStrings.isNotEmpty) {
+        final loadedColors = savedColorStrings.map((str) => Color(int.parse(str))).toList();
+        themeColors.value = loadedColors;
+      }
+
+      // خواندن ایندکس رنگ انتخاب‌شده
+      final int? savedIndex = prefs.getInt(_keyThemeColorIndex);
+      if (savedIndex != null && savedIndex >= 0 && savedIndex < themeColors.value.length) {
+        themeColorIndex.value = savedIndex;
+      }
+    } catch (_) {}
+  }
+
+  /// متد کمکی برای ذخیرهٔ لیست رنگ‌ها روی دیسک
+  static Future<void> _saveColorsToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> colorStrings = themeColors.value
+          .map((c) => c.toARGB32().toString())
+          .toList();
+      await prefs.setStringList(_keyThemeColors, colorStrings);
+    } catch (_) {}
+  }
+
+  /// ۲. افزودن رنگ جدید به لیست و ذخیره آن
+  static Future<void> addCustomColor(Color color) async {
+    // جلوگیری از ثبت رنگ تکراری
+    final existingIndex = themeColors.value.indexWhere((c) => c.toARGB32() == color.toARGB32());
+    if (existingIndex != -1) {
+      themeColorIndex.value = existingIndex;
+      return;
+    }
+
+    final updatedList = List<Color>.from(themeColors.value)..add(color);
+    themeColors.value = updatedList;
+    themeColorIndex.value = updatedList.length - 1; // رنگ جدید بلافاصله انتخاب شود
+
+    await _saveColorsToPrefs();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyThemeColorIndex, themeColorIndex.value);
+  }
+
+  /// ۳. حذف رنگ با ضربدر و ذخیره تغییرات
+  static Future<void> removeCustomColor(int index) async {
+    // حداقل یک رنگ باید در لیست بماند
+    if (themeColors.value.length <= 1 || index < 0 || index >= themeColors.value.length) {
+      return;
+    }
+
+    final updatedList = List<Color>.from(themeColors.value)..removeAt(index);
+    themeColors.value = updatedList;
+
+    // تنظیم مجدد ایندکس انتخابی در صورت لزوم
+    if (themeColorIndex.value >= updatedList.length) {
+      themeColorIndex.value = updatedList.length - 1;
+    } else if (themeColorIndex.value == index) {
+      themeColorIndex.value = 0;
+    }
+
+    await _saveColorsToPrefs();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyThemeColorIndex, themeColorIndex.value);
+  }
 
   /// بررسی روشن/تاریک مؤثر (ThemeMode.light را هم در نظر می‌گیرد)
   static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
@@ -70,7 +158,7 @@ class BuildingApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
             primary: seed,
             onPrimary: Colors.white,
-            primaryContainer: const Color(0xFFE5F6EF),
+            primaryContainer: seed.withValues(alpha: 0.12),
             surface: Colors.white,
           ),
           scaffoldBackgroundColor: const Color(0xFFF3F6F5),
@@ -121,6 +209,14 @@ class BuildingApp extends StatelessWidget {
       ),
     );
   }
+  static Future<void> selectThemeColor(int index) async {
+  if (index < 0 || index >= themeColors.value.length) return;
+
+  themeColorIndex.value = index;
+
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt(_keyThemeColorIndex, index);
+}
 }
 
 String _normalizeRole(String? value) => const {'مدیر', 'ساکن', 'خدماتی'}.contains(value) ? value! : 'ساکن';
@@ -240,30 +336,196 @@ class _ThemeToggle extends StatelessWidget {
 }
 
 class _ThemeColorSelector extends StatelessWidget {
-  const _ThemeColorSelector();
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<int>(
-    valueListenable: BuildingApp.themeColorIndex,
-    builder: (context, selected, _) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('رنگ برنامه', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Wrap(spacing: 12, runSpacing: 8, children: List.generate(BuildingApp.themeColors.length, (index) => Tooltip(
-          message: BuildingApp.themeNames[index],
-          child: InkWell(
-            onTap: () => BuildingApp.themeColorIndex.value = index,
-            customBorder: const CircleBorder(),
-            child: CircleAvatar(
-              radius: 19,
-              backgroundColor: BuildingApp.themeColors[index],
-              child: selected == index ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
+  const _ThemeColorSelector({super.key});
+
+  static const List<Color> _presetColors = [
+    Color(0xFFE53935), // قرمز
+    Color(0xFFD81B60), // صورتی
+    Color(0xFF8E24AA), // بنفش
+    Color(0xFF5E35B1), // بنفش تیره
+    Color(0xFF3949AB), // نیلی
+    Color(0xFF1E88E5), // آبی
+    Color(0xFF039BE5), // آبی روشن
+    Color(0xFF00ACC1), // فیروزه‌ای
+    Color(0xFF00897B), // سبزآبی
+    Color(0xFF43A047), // سبز
+    Color(0xFF7CB342), // سبز روشن
+    Color(0xFFC0CA33), // لیمویی
+    Color(0xFFFDD835), // زرد
+    Color(0xFFFFB300), // کهربایی
+    Color(0xFFFB8C00), // نارنجی
+    Color(0xFFF4511E), // نارنجی تیره
+    Color(0xFF6D4C41), // قهوه‌ای
+    Color(0xFF757575), // خاکستری
+    Color(0xFF546E7A), // آبی‌خاکستری
+    Color(0xFFEC407A), // سرخابی
+  ];
+
+  void _showColorPicker(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('انتخاب رنگ جدید'),
+          content: SizedBox(
+            width: 300,
+            height: 270,
+            child: GridView.builder(
+              itemCount: _presetColors.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemBuilder: (context, index) {
+                final color = _presetColors[index];
+
+                return InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () async {
+                    await BuildingApp.addCustomColor(color);
+
+                    if (dialogContext.mounted) {
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                  child: CircleAvatar(
+                    backgroundColor: color,
+                    child: const Icon(
+                      Icons.add,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-        ))),
-      ]),
-    ),
-  );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('بستن'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<List<Color>>(
+      valueListenable: BuildingApp.themeColors,
+      builder: (context, colors, _) {
+        return ValueListenableBuilder<int>(
+          valueListenable: BuildingApp.themeColorIndex,
+          builder: (context, selectedIndex, _) {
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (int index = 0; index < colors.length; index++)
+                  _buildColorItem(
+                    context: context,
+                    color: colors[index],
+                    index: index,
+                    selectedIndex: selectedIndex,
+                  ),
+
+                // دکمهٔ افزودن رنگ
+                InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => _showColorPicker(context),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.add,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildColorItem({
+    required BuildContext context,
+    required Color color,
+    required int index,
+    required int selectedIndex,
+  }) {
+    final isSelected = index == selectedIndex;
+
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () async {
+              await BuildingApp.selectThemeColor(index);
+            },
+            child: Container(
+              width: 44,
+              height: 44,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: CircleAvatar(backgroundColor: color),
+            ),
+          ),
+
+          // پنج رنگ اول پیش‌فرض‌اند؛ ضربدر فقط روی رنگ سفارشیِ غیرفعال می‌آید.
+          if (index >= 5 && !isSelected)
+            Positioned(
+              top: -5,
+              right: -5,
+              child: GestureDetector(
+                onTap: () async {
+                  await BuildingApp.removeCustomColor(index);
+                },
+                child: Container(
+                  width: 19,
+                  height: 19,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 13,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class LoginFlow extends StatefulWidget {
@@ -1432,20 +1694,48 @@ class _Building {
     }
   }
   int? get monthlyCharge => chargeSettingTopic?.approvedAmount;
+  // نگهداری جداگانه مالکان و مستأجران برای هر واحد
+  final Map<String, _Member> owners = {};
+  final Map<String, _Member> tenants = {};
+
   String unitId(int floor, dynamic unit) => '$floor/${unit.toString()}';
 
-  bool isOccupied(int floor, dynamic unit) => occupants.containsKey(unitId(floor, unit));
-  _Member? occupantOf(int floor, dynamic unit) => occupants[unitId(floor, unit)];
+  // بررسی اینکه آیا واحد مالک دارد یا مستأجر
+  bool isOccupied(int floor, dynamic unit) {
+    final id = unitId(floor, unit);
+    return owners.containsKey(id) || tenants.containsKey(id);
+  }
 
+  // متدهای دریافت مالک و مستأجر
+  _Member? ownerOf(int floor, dynamic unit) => owners[unitId(floor, unit)];
+  _Member? tenantOf(int floor, dynamic unit) => tenants[unitId(floor, unit)];
+
+  // متد سازگاری به عقب (برای جاهایی که هنوز occupantOf صدا می‌زنند)
+  _Member? occupantOf(int floor, dynamic unit) {
+    return tenantOf(floor, unit) ?? ownerOf(floor, unit);
+  }
+
+  // بررسی عدم تکراری بودن شماره تلفن در کل مالکان و مستأجران
   bool hasOccupantWithPhone(String phone, {String? excludeKey}) {
     final clean = _latinDigits(phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
     if (clean.isEmpty) return false;
-    for (final entry in occupants.entries) {
+
+    // بررسی در مالکان
+    for (final entry in owners.entries) {
       if (excludeKey != null && entry.key == excludeKey) continue;
       final p = _latinDigits(entry.value.phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
       if (p.isNotEmpty && p == clean) return true;
     }
+
+    // بررسی در مستأجران
+    for (final entry in tenants.entries) {
+      if (excludeKey != null && entry.key == excludeKey) continue;
+      final p = _latinDigits(entry.value.phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
+      if (p.isNotEmpty && p == clean) return true;
+    }
+
     return false;
+  }
   }
 
   String? assign(int floor, dynamic unit, _Member member) {
