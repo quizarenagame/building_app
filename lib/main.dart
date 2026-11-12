@@ -1828,7 +1828,6 @@ class _Building {
 
     return false;
   }
-  }
 
   String? assign(int floor, dynamic unit, _Member member) {
     final key = unitId(floor, unit);
