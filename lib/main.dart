@@ -31,7 +31,7 @@ Future<void> main() async {
     ),
   );
   
-runApp(BuildingApp());
+  runApp(BuildingApp());
 }
 
 class BuildingApp extends StatelessWidget {
@@ -65,11 +65,12 @@ class BuildingApp extends StatelessWidget {
 
   static const String _keyThemeColors = 'app_custom_theme_colors';
   static const String _keyThemeColorIndex = 'app_selected_theme_color_index';
+  static const String _keyThemeMode = 'app_theme_mode'; // کلید ذخیره حالت تم
 
-  /// ۱. خواندن رنگ‌ها و ایندکس انتخابی از SharedPreferences
+  /// ۱. خواندن رنگ‌ها و ایندکس انتخابی و حالت تم از SharedPreferences
   static Future<void> loadSavedTheme() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = appPrefs; // استفاده از متغیر سراسری موجود در main
 
       final List<String>? savedColorStrings =
           prefs.getStringList(_keyThemeColors);
@@ -93,34 +94,52 @@ class BuildingApp extends StatelessWidget {
           (savedIndex >= 0 && savedIndex < themeColors.value.length)
               ? savedIndex
               : 0;
+
+      // خواندن حالت تم (تاریک/روشن)
+      final String? savedMode = prefs.getString(_keyThemeMode);
+      if (savedMode == 'dark') {
+        themeMode.value = ThemeMode.dark;
+      } else if (savedMode == 'light') {
+        themeMode.value = ThemeMode.light;
+      } else {
+        themeMode.value = ThemeMode.system;
+      }
     } catch (_) {
-      // خطای خواندن تنظیمات؛ با رنگ‌های پیش‌فرض ادامه
+      // خطای خواندن تنظیمات؛ با مقادیر پیش‌فرض ادامه
     }
   }
 
   static Future<void> _saveColorsToPrefs() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = appPrefs;
       final List<String> colorStrings =
           themeColors.value.map((color) => color.value.toString()).toList();
       await prefs.setStringList(_keyThemeColors, colorStrings);
-    } catch (_) {
-      // خطای ذخیره‌سازی؛ رنگ‌ها در اجرای فعلی همچنان اعمال می‌شوند
-    }
+    } catch (_) {}
   }
 
   static Future<void> _saveSelectedColorIndex() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = appPrefs;
       await prefs.setInt(_keyThemeColorIndex, themeColorIndex.value);
-    } catch (_) {
-      // در صورت خطا، انتخاب فعلی فقط در اجرای فعلی باقی می‌ماند
-    }
+    } catch (_) {}
+  }
+
+  static Future<void> _saveThemeMode() async {
+    try {
+      final prefs = appPrefs;
+      String modeStr = 'light';
+      if (themeMode.value == ThemeMode.dark) {
+        modeStr = 'dark';
+      } else if (themeMode.value == ThemeMode.system) {
+        modeStr = 'system';
+      }
+      await prefs.setString(_keyThemeMode, modeStr);
+    } catch (_) {}
   }
 
   /// ۲. افزودن رنگ جدید به لیست و ذخیره آن
   static Future<void> addCustomColor(Color color) async {
-    // جلوگیری از ثبت رنگ تکراری
     final existingIndex = themeColors.value
         .indexWhere((existing) => existing.value == color.value);
     if (existingIndex != -1) {
@@ -130,15 +149,14 @@ class BuildingApp extends StatelessWidget {
 
     final updatedList = List<Color>.from(themeColors.value)..add(color);
     themeColors.value = updatedList;
-    themeColorIndex.value = updatedList.length - 1; // رنگ جدید انتخاب شود
+    themeColorIndex.value = updatedList.length - 1;
 
     await _saveColorsToPrefs();
     await _saveSelectedColorIndex();
   }
 
-  /// ۳. حذف رنگ با ضربدر و ذخیره تغییرات
+  /// ۳. حذف رنگ و ذخیره تغییرات
   static Future<void> removeCustomColor(int index) async {
-    // حداقل یک رنگ باید در لیست بماند
     if (themeColors.value.length <= 1 ||
         index < 0 ||
         index >= themeColors.value.length) {
@@ -148,7 +166,6 @@ class BuildingApp extends StatelessWidget {
     final sharedIndex = themeColorIndex.value;
     final updatedList = List<Color>.from(themeColors.value)..removeAt(index);
 
-    // محاسبه ایندکس جدید پره‌از خطا
     late int newIndex;
     if (sharedIndex > index) {
       newIndex = sharedIndex - 1;
@@ -172,7 +189,7 @@ class BuildingApp extends StatelessWidget {
     await _saveSelectedColorIndex();
   }
 
-  /// بررسی روشن/تاریک مؤثر (ThemeMode.light را هم در نظر می‌گیرد)
+  /// بررسی روشن/تاریک مؤثر
   static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
     if (mode == ThemeMode.system) {
       return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
@@ -180,10 +197,11 @@ class BuildingApp extends StatelessWidget {
     return mode == ThemeMode.dark;
   }
 
-  /// تغییر فوری تم با اولین کلیک (حالت system هم به‌درستی هندل می‌شود)
-  static void toggleTheme(BuildContext context) {
-    themeMode.value =
-        isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
+  /// تغییر فوری تم و ذخیره در حافظه
+  static Future<void> toggleTheme(BuildContext context) async {
+    final isDark = isEffectiveDark(context, themeMode.value);
+    themeMode.value = isDark ? ThemeMode.light : ThemeMode.dark;
+    await _saveThemeMode();
   }
 
   @override
@@ -191,120 +209,175 @@ class BuildingApp extends StatelessWidget {
     return ValueListenableBuilder<List<Color>>(
       valueListenable: themeColors,
       builder: (context, colors, _) {
-        final safeIndex =
-            (themeColorIndex.value >= 0 && themeColorIndex.value < colors.length)
-                ? themeColorIndex.value
-                : 0;
-        final seed = colors.isEmpty
-            ? const Color(0xFF0E8A62)
-            : colors[safeIndex];
+        return ValueListenableBuilder<int>(
+          valueListenable: themeColorIndex,
+          builder: (context, colorIndex, _) {
+            final safeIndex =
+                (colorIndex >= 0 && colorIndex < colors.length)
+                    ? colorIndex
+                    : 0;
+            final seed = colors.isEmpty
+                ? const Color(0xFF0E8A62)
+                : colors[safeIndex];
 
-        return ValueListenableBuilder<ThemeMode>(
-          valueListenable: themeMode,
-          builder: (context, mode, _) {
-            return MaterialApp(
-              title: 'سامانه مدیریت ساختمان',
-              debugShowCheckedModeBanner: false,
-              theme: ThemeData(
-                useMaterial3: true,
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: seed,
-                  brightness: Brightness.light,
-                ).copyWith(
-                  primary: seed,
-                  onPrimary: Colors.white,
-                  primaryContainer: seed.withOpacity(0.12),
-                  surface: Colors.white,
-                ),
-                scaffoldBackgroundColor: const Color(0xFFF3F6F5),
-                fontFamily: 'Roboto',
-                appBarTheme: AppBarTheme(
-                  backgroundColor: seed,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  centerTitle: true,
-                  titleTextStyle: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  iconTheme: const IconThemeData(color: Colors.white),
-                ),
-                navigationBarTheme: NavigationBarThemeData(
-                  backgroundColor: Colors.white,
-                  indicatorColor: seed.withOpacity(0.12),
-                  labelTextStyle:
-                      MaterialStateProperty.resolveWith((states) => TextStyle(
-                    fontSize: 11,
-                    fontWeight: states.contains(MaterialState.selected)
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    color: states.contains(MaterialState.selected)
-                        ? seed
-                        : const Color(0xFF8A9692),
-                  )),
-                ),
-                filledButtonTheme: FilledButtonThemeData(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: seed,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
+            return ValueListenableBuilder<ThemeMode>(
+              valueListenable: themeMode,
+              builder: (context, mode, _) {
+                return MaterialApp(
+                  title: 'سامانه مدیریت ساختمان',
+                  debugShowCheckedModeBanner: false,
+                  theme: ThemeData(
+                    useMaterial3: true,
+                    colorScheme: ColorScheme.fromSeed(
+                      seedColor: seed,
+                      brightness: Brightness.light,
+                    ).copyWith(
+                      primary: seed,
+                      onPrimary: Colors.white,
+                      primaryContainer: seed.withOpacity(0.12),
+                      surface: Colors.white,
                     ),
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                    scaffoldBackgroundColor: const Color(0xFFF3F6F5),
+                    fontFamily: 'Roboto',
+                    appBarTheme: AppBarTheme(
+                      backgroundColor: seed,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      centerTitle: true,
+                      titleTextStyle: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      iconTheme: const IconThemeData(color: Colors.white),
+                    ),
+                    navigationBarTheme: NavigationBarThemeData(
+                      backgroundColor: Colors.white,
+                      indicatorColor: seed.withOpacity(0.12),
+                      labelTextStyle:
+                          MaterialStateProperty.resolveWith((states) => TextStyle(
+                        fontSize: 11,
+                        fontWeight: states.contains(MaterialState.selected)
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: states.contains(MaterialState.selected)
+                            ? seed
+                            : const Color(0xFF8A9692),
+                      )),
+                    ),
+                    filledButtonTheme: FilledButtonThemeData(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: seed,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    inputDecorationTheme: InputDecorationTheme(
+                      filled: true,
+                      fillColor: const Color(0xFFF7FAF9),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFFE3EBE7)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFFE3EBE7)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: seed, width: 1.6),
+                      ),
+                    ),
+                    cardTheme: CardTheme(
+                      color: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                        side: const BorderSide(color: Color(0xFFE7EEEB)),
+                      ),
                     ),
                   ),
-                ),
-                inputDecorationTheme: InputDecorationTheme(
-                  filled: true,
-                  fillColor: const Color(0xFFF7FAF9),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFE3EBE7)),
+                  darkTheme: ThemeData(
+                    useMaterial3: true,
+                    colorScheme: ColorScheme.fromSeed(
+                      seedColor: seed,
+                      brightness: Brightness.dark,
+                    ).copyWith(
+                      primary: seed,
+                      onPrimary: Colors.black,
+                      surface: const Color(0xFF1B2320),
+                    ),
+                    scaffoldBackgroundColor: const Color(0xFF121816),
+                    fontFamily: 'Roboto',
+                    appBarTheme: AppBarTheme(
+                      backgroundColor: const Color(0xFF1B2320),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      centerTitle: true,
+                      titleTextStyle: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      iconTheme: const IconThemeData(color: Colors.white),
+                    ),
+                    navigationBarTheme: NavigationBarThemeData(
+                      backgroundColor: const Color(0xFF1B2320),
+                      indicatorColor: seed.withOpacity(0.24),
+                    ),
+                    filledButtonTheme: FilledButtonThemeData(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: seed,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
+                    ),
+                    inputDecorationTheme: InputDecorationTheme(
+                      filled: true,
+                      fillColor: const Color(0xFF1B2320),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: seed, width: 1.6),
+                      ),
+                    ),
+                    cardTheme: CardTheme(
+                      color: const Color(0xFF1B2320),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                        side: BorderSide(color: Colors.white.withOpacity(0.06)),
+                      ),
+                    ),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFE3EBE7)),
+                  themeMode: mode,
+                  home: Builder(
+                    builder: (homeContext) => Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: _initialHome(homeContext),
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: seed, width: 1.6),
-                  ),
-                ),
-                cardTheme: CardTheme(
-                  color: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    side: const BorderSide(color: Color(0xFFE7EEEB)),
-                  ),
-                ),
-              ),
-              darkTheme: ThemeData(
-                useMaterial3: true,
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: seed,
-                  brightness: Brightness.dark,
-                ),
-                cardTheme: CardTheme(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                ),
-              ),
-              themeMode: mode,
-              home: Builder(
-                builder: (homeContext) => Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: _initialHome(homeContext),
-                ),
-              ),
+                );
+              },
             );
           },
         );
