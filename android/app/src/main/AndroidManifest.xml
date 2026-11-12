@@ -5,8 +5,8 @@
     <application
         android:label="ساختمان ما"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher">
+        android:icon="@mipmap/app_icon"
+        android:roundIcon="@mipmap/app_icon">
 
         <activity
             android:name=".MainActivity"
