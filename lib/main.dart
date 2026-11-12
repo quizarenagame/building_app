@@ -3725,7 +3725,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(18)),
-              child: const Column(children: [
+              child: Column(children: [
                 Icon(Icons.how_to_vote_rounded, size: 56, color: Theme.of(context).colorScheme.primary),
                 SizedBox(height: 8),
                 Text('ایجاد موضوع رأی‌گیری جدید توسط مدیر یا ساکن', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800)),
