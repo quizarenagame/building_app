@@ -1875,7 +1875,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     const Icon(Icons.notifications_none_rounded, color: Colors.white),
                     const Spacer(),
                     Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text('سلام، ${widget.name} جان!', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                      Text('سلام، ${widget.name} عزیز!', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 2),
                       Text('به پنل مدیریت ساختمان خوش آمدید', style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12)),
                     ]),
@@ -3938,50 +3938,47 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       ),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         _managerDashboardSection(),
-        const SizedBox(height: 14),
-        const SizedBox(height: 14),
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Icon(Icons.apartment_rounded, color: colors.primary),
-            const SizedBox(width: 8),
-            Expanded(child: Text('جزئیات «${b.name}»', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17))),
-            IconButton(tooltip: 'ویرایش نام ساختمان', icon: const Icon(Icons.edit_rounded, size: 20), onPressed: _rename),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            _statChip(context, Icons.stairs_outlined, '${b.floors.length.toPersianDigits()} طبقه'),
+const SizedBox(height: 14),
+Card(
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            _statChip(
+              context,
+              Icons.stairs_outlined,
+              '${b.floors.length.toPersianDigits()} طبقه',
+            ),
             const SizedBox(width: 10),
-            _statChip(context, Icons.door_sliding_outlined, '${totalUnits.toPersianDigits()} واحد'),
+            _statChip(
+              context,
+              Icons.door_sliding_outlined,
+              '${totalUnits.toPersianDigits()} واحد',
+            ),
             const SizedBox(width: 10),
-            _statChip(context, Icons.people_outline, '${b.occupants.length.toPersianDigits()} عضو'),
-          ]),
-          if (b.monthlyCharge != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text('شارژ ماهانهٔ تصویب‌شده: ${formatTomanAmount(b.monthlyCharge!)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-        ]))),
-        const SizedBox(height: 14),
-        Card(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: (_) => _FeaturePage(
-                item: const _FeatureItem('گفت‌وگوی ساختمان', 'گفت‌وگوی عمومی اعضای ساختمان', Icons.forum_rounded, 'chat'),
-                building: b,
-              ),
-            )),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(children: [
-                Icon(Icons.forum_outlined, color: colors.primary),
-                const SizedBox(width: 12),
-                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('گفت‌وگوی ساختمان', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  SizedBox(height: 4),
-                  Text('ورود به گفت‌وگوی عمومی اعضای این ساختمان'),
-                ])),
-                const Icon(Icons.chevron_left_rounded),
-              ]),
+            _statChip(
+              context,
+              Icons.people_outline,
+              '${b.occupants.length.toPersianDigits()} عضو',
+            ),
+          ],
+        ),
+        if (b.monthlyCharge != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(
+              'شارژ ماهانهٔ تصویب‌شده: ${formatTomanAmount(b.monthlyCharge!)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-        ),
+      ],
+    ),
+  ),
+),
+  
         const SizedBox(height: 14),
         Card(
           child: InkWell(
@@ -4498,7 +4495,6 @@ class _FeatureHub extends StatelessWidget {
     final grid = index == 1
         ? const [
             _FeatureItem('رأی‌گیری', '', Icons.how_to_vote_outlined, 'vote'),
-            _FeatureItem('گفت‌وگو', '', Icons.forum_outlined, 'chat'),
             _FeatureItem('درخواست خدمت', '', Icons.handyman_outlined, 'service'),
           ]
         : const <_FeatureItem>[];
@@ -4606,12 +4602,8 @@ class _FeaturePageState extends State<_FeaturePage> {
   final Map<String, String> _values = {};
   final Map<String, int> _ratings = {};
   final Map<int, String> _votes = {};
-  final List<Map<String, String>> _messages = [
-    {'text': 'به گفت‌وگوی ساختمان خوش آمدید.', 'mine': 'false', 'name': 'مدیر'},
-    {'text': 'اطلاعیه تعمیرات مشاعات را اینجا می‌بینیم.', 'mine': 'false', 'name': 'سارا'},
-    {'text': 'ممنون، زمان‌بندی را بررسی می‌کنم.', 'mine': 'true', 'name': 'شما'},
-  ];
   final List<String> _withdrawals = [];
+  final List<Map<String, String>> _messages = [];
   final List<Map<String, String>> _myServiceRequests = [];
   final TextEditingController _chatController = TextEditingController();
   final TextEditingController _billIdController = TextEditingController();
@@ -4698,7 +4690,12 @@ class _FeaturePageState extends State<_FeaturePage> {
       appBar: AppBar(title: Text(kind == 'chat'
           ? 'گفت‌وگوی ساختمان ${widget.building?.name ?? ''}'
           : widget.item.title)),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
+      body: kind == 'chat'
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              child: _chatInterface(context),
+            )
+          : ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
         if (kind == 'service') _requestForm(kind),
         if (kind == 'service') const SizedBox(height: 12),
         if (kind == 'service') _myServiceRequestsSection(),
@@ -4716,7 +4713,6 @@ class _FeaturePageState extends State<_FeaturePage> {
         if (kind == 'water') _waterContent(context),
         if (kind == 'withdraw') _withdrawSummary(context),
         if (kind == 'specialists') _specialistsContent(context),
-        if (kind == 'chat') _chatInterface(context),
         if (_fields.isNotEmpty && kind != 'service') ...[
           const SizedBox(height: 12),
           _requestForm(kind),
@@ -5129,10 +5125,9 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     _sectionTitle('گفت‌وگوی ساختمان ${widget.building?.name ?? ''}', detail: 'گفت‌وگوی گروهی و اطلاعیه‌های اعضای این ساختمان', icon: Icons.forum_outlined),
-        Container(height: 330, padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
-      const Center(child: Chip(avatar: Icon(Icons.lock_outline, size: 16), label: Text('گفت‌وگوی اعضای ساختمان'))),
+        Expanded(child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
       for (final message in _messages) _chatBubble(message),
-    ])),
+    ]))),
     const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _chatController, minLines: 1, maxLines: 4, textInputAction: TextInputAction.send, onSubmitted: (_) => _sendChat(), decoration: InputDecoration(hintText: 'پیام خود را بنویسید…', border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)))), const SizedBox(width: 8), IconButton.filled(onPressed: _sendChat, tooltip: 'ارسال پیام', icon: const Icon(Icons.send_rounded))]),
   ])));
 
