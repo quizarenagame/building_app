@@ -20,6 +20,8 @@ late final PocketBase pb;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  final savedThemeColorIndex = prefs.getInt('theme_color_index') ?? 0;
+  BuildingApp.themeColorIndex.value = savedThemeColorIndex.clamp(0, BuildingApp.themeColors.length - 1);
   pb = PocketBase(
     'https://api.pgem.ir',
     authStore: AsyncAuthStore(
@@ -33,150 +35,76 @@ Future<void> main() async {
 
 class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
-  /// حالت تم سراسری؛ با دکمهٔ نوار بالای داشبورد تغییر می‌کند.
-  static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
   static const List<Color> themeColors = [Color(0xFF0E8A62), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
   static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
+  static const String themeColorPreferenceKey = 'theme_color_index';
   static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
   static const String managerPhone = '09907862453';
   static const String managerPin = '2731';
 
-  /// بررسی روشن/تاریک مؤثر (ThemeMode.light را هم در نظر می‌گیرد)
-  static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
-    if (mode == ThemeMode.system) {
-      return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
-    }
-    return mode == ThemeMode.dark;
-  }
-
-  /// تغییر فوری تم با اولین کلیک (حالت system هم به‌درستی هندل می‌شود)
-  static void toggleTheme(BuildContext context) {
-    themeMode.value = isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
+  static Future<void> setThemeColorIndex(int index) async {
+    final safeIndex = index.clamp(0, themeColors.length - 1);
+    themeColorIndex.value = safeIndex;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(themeColorPreferenceKey, safeIndex);
   }
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
       valueListenable: themeColorIndex,
-      builder: (context, colorIndex, _) => ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeMode,
-      builder: (context, mode, _) {
+      builder: (context, colorIndex, _) {
         final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
         return MaterialApp(
-        title: 'سامانه مدیریت ساختمان',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
-            primary: seed,
-            onPrimary: Colors.white,
-            primaryContainer: const Color(0xFFE5F6EF),
-            surface: Colors.white,
-          ),
-          scaffoldBackgroundColor: const Color(0xFFF3F6F5),
-          fontFamily: 'Roboto',
-          appBarTheme: AppBarTheme(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: true,
-            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          navigationBarTheme: NavigationBarThemeData(
-            backgroundColor: Colors.white,
-            indicatorColor: seed.withOpacity(.12),
-            labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-              fontSize: 11,
-              fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
-              color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
+          title: 'سامانه مدیریت ساختمان',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
+              primary: seed,
+              onPrimary: Colors.white,
+              primaryContainer: seed.withOpacity(.12),
+              surface: Colors.white,
+            ),
+            scaffoldBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            fontFamily: 'Roboto',
+            appBarTheme: AppBarTheme(
+              backgroundColor: seed,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: true,
+              titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+              iconTheme: const IconThemeData(color: Colors.white),
+            ),
+            navigationBarTheme: NavigationBarThemeData(
+              backgroundColor: Colors.white,
+              indicatorColor: seed.withOpacity(.12),
+              labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
+                fontSize: 11,
+                fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
+                color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
+              )),
+            ),
+            filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+              backgroundColor: seed,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             )),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: const Color(0xFFF7FAF9),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
+            ),
+            cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE7EEEB)))),
           ),
-          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          )),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFF7FAF9),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
-          ),
-          cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE7EEEB)))),
-        ),
-                        darkTheme: ThemeData(
-                            useMaterial3: true,
-                            colorScheme: ColorScheme.fromSeed(
-                              seedColor: seed,
-                              brightness: Brightness.dark,
-                            ).copyWith(
-                              primary: seed,
-                              onPrimary: Colors.white,
-                              surface: const Color(0xFF1B2320),
-                            ),
-                            scaffoldBackgroundColor: const Color(0xFF121816),
-                            fontFamily: 'Roboto',
-                            appBarTheme: AppBarTheme(
-                              backgroundColor: const Color(0xFF1B2320),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              centerTitle: true,
-                              titleTextStyle: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              iconTheme: const IconThemeData(color: Colors.white),
-                            ),
-                            navigationBarTheme: NavigationBarThemeData(
-                              backgroundColor: const Color(0xFF1B2320),
-                              indicatorColor: seed.withOpacity(0.24),
-                            ),
-                            filledButtonTheme: FilledButtonThemeData(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: seed,
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size.fromHeight(52),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28),
-                                ),
-                              ),
-                            ),
-                            inputDecorationTheme: InputDecorationTheme(
-                              filled: true,
-                              fillColor: const Color(0xFF1B2320),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: seed, width: 1.6),
-                              ),
-                            ),
-                            cardTheme: CardTheme(
-                              color: const Color(0xFF1B2320),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(22),
-                                side: BorderSide(color: Colors.white.withOpacity(0.06)),
-                              ),
-                            ),
-                          ),
-        themeMode: mode,
-        home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
-      );
+          home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
+        );
       },
-      ),
     );
   }
 }
@@ -284,19 +212,6 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
 ];
 
 
-/// کلید شناور واحد برای تغییر تم در تمام مراحل برنامه.
-class _ThemeToggle extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
-    valueListenable: BuildingApp.themeMode,
-    builder: (context, mode, _) => IconButton.filledTonal(
-      tooltip: BuildingApp.isEffectiveDark(context, mode) ? 'تم روشن' : 'تم تاریک',
-      icon: Icon(BuildingApp.isEffectiveDark(context, mode) ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-      onPressed: () => BuildingApp.toggleTheme(context),
-    ),
-  );
-}
-
 class _ThemeColorSelector extends StatelessWidget {
   const _ThemeColorSelector();
   @override
@@ -310,7 +225,7 @@ class _ThemeColorSelector extends StatelessWidget {
         Wrap(spacing: 12, runSpacing: 8, children: List.generate(BuildingApp.themeColors.length, (index) => Tooltip(
           message: BuildingApp.themeNames[index],
           child: InkWell(
-            onTap: () => BuildingApp.themeColorIndex.value = index,
+            onTap: () => BuildingApp.setThemeColorIndex(index),
             customBorder: const CircleBorder(),
             child: CircleAvatar(
               radius: 19,
@@ -706,7 +621,7 @@ void _goBack() {
         title: Text(_stepTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF17352C),
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
       ) : null,
       body: SafeArea(
         top: !showBar,
@@ -745,9 +660,9 @@ void _goBack() {
   Widget _brandMark({double size = 86}) => Container(
     width: size, height: size,
     decoration: BoxDecoration(
-      gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF117D70), Color(0xFF19B794)]),
+      gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary]),
       borderRadius: BorderRadius.circular(size * .31),
-      boxShadow: [BoxShadow(color: const Color(0xFF11947A).withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
+      boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withOpacity(.22), blurRadius: 24, offset: const Offset(0, 12))],
     ),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(size * .31),
@@ -765,7 +680,7 @@ void _goBack() {
       const SizedBox(height: 42),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
-      const Text('همخانه', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.4, color: Color(0xFF0E8A62))),
+      Text('همخانه', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.4, color: Theme.of(context).colorScheme.primary)),
       const SizedBox(height: 6),
       const Text('مدیریت هوشمند ساختمان', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, height: 1.5)),
       const SizedBox(height: 8),
@@ -1948,13 +1863,13 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final onHome = selectedTab == 2;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(children: [
         if (onHome)
           Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 16),
-            color: _isManager ? const Color(0xFF0B6B4A) : const Color(0xFFF7FBF8),
+            color: _isManager ? Theme.of(context).colorScheme.primary : const Color(0xFFF7FBF8),
             child: _isManager
                 ? Row(children: [
                     const Icon(Icons.notifications_none_rounded, color: Colors.white),
@@ -2006,7 +1921,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ? const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab]
                       : const ['خدمات', 'اعلان‌ها', 'خانه', 'پرداخت‌ها', 'تنظیمات'][selectedTab],
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF17352C)),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Theme.of(context).colorScheme.onSurface),
                 )),
                 const SizedBox(width: 48),
               ]),
@@ -2803,12 +2718,12 @@ class _ResidentHomeState extends State<_ResidentHome> {
       Widget mini(String v, String l) => Expanded(child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7EEEB))),
-        child: Column(children: [Text(v, style: const TextStyle(fontWeight: FontWeight.w800)), Text(l, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7A75)))]),
+        child: Column(children: [Text(v, style: TextStyle(fontWeight: FontWeight.w800)), Text(l, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant))]),
       ));
       return ListView(padding: const EdgeInsets.all(16), children: [
         Text('سلام، ${widget.name.isEmpty ? 'همسایه' : widget.name}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
-        const Text('وضعیت ساختمان شما', style: TextStyle(color: Color(0xFF6B7A75))),
+        Text('وضعیت ساختمان شما', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
@@ -2817,10 +2732,10 @@ class _ResidentHomeState extends State<_ResidentHome> {
             Row(children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                Text('طبقه ${widget.myFloor!.toPersianDigits()} • واحد ${widget.myUnit!.toPersianDigits()} • ${widget.ownership}', style: const TextStyle(fontSize: 12, color: Color(0xFF6B7A75))),
+                Text('طبقه ${widget.myFloor!.toPersianDigits()} • واحد ${widget.myUnit!.toPersianDigits()} • ${widget.ownership}', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ])),
               const SizedBox(width: 10),
-              Container(width: 46, height: 46, decoration: BoxDecoration(color: const Color(0xFFE5F6EF), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.home_rounded, color: Color(0xFF0E8A62))),
+              Container(width: 46, height: 46, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.home_rounded, color: Theme.of(context).colorScheme.primary)),
             ]),
           ]),
         ),
@@ -3029,8 +2944,8 @@ class _ChargeTopicPageState extends State<_ChargeTopicPage> {
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Expanded(child: Text('موضوع تعیین شارژ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)))]),
           const SizedBox(height: 8),
-          const Text('پیشنهادهای همه به‌صورت عمومی نمایش داده می‌شود، اما رأی هر واحد محرمانه می‌ماند. مبلغ تصویب‌شده به‌صورت خودکار و منصفانه با میانهٔ رأی‌ها محاسبه می‌شود.', style: TextStyle(color: Color(0xFF6B7280), height: 1.7)),
-          if (approved != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text('شارژ ماهانهٔ تصویب‌شده (میانه): ${formatTomanAmount(approved)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF12A889))))
+          Text('پیشنهادهای همه به‌صورت عمومی نمایش داده می‌شود، اما رأی هر واحد محرمانه می‌ماند. مبلغ تصویب‌شده به‌صورت خودکار و منصفانه با میانهٔ رأی‌ها محاسبه می‌شود.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
+          if (approved != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text('شارژ ماهانهٔ تصویب‌شده (میانه): ${formatTomanAmount(approved)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.primary)))
           else const Padding(padding: EdgeInsets.only(top: 12), child: Text('هنوز رأی یا پیشنهادی ثبت نشده است.')),
         ]))),
         const SizedBox(height: 12),
@@ -3104,7 +3019,7 @@ class _ResidentChargeCardState extends State<_ResidentChargeCard> {
     final topic = widget.building.chargeSettingTopic;
     if (topic == null) return const SizedBox.shrink();
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [Icon(Icons.payments_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), Expanded(child: Text(topic.title, style: const TextStyle(fontWeight: FontWeight.bold)))]),
+      Row(children: [Icon(Icons.payments_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), Expanded(child: Text(topic.title, style: TextStyle(fontWeight: FontWeight.bold)))]),
       const SizedBox(height: 8), Text(topic.finalizedAmount == null ? 'موضوع فعال است؛ پیشنهاد دهید و رأی بدهید.' : 'شارژ ماهانهٔ واحد شما: ${formatTomanAmount(topic.finalizedAmount!)}'),
       const SizedBox(height: 8),
       Text('زمان ایجاد: ${_formatPersianDateTime(topic.createdAt)}', style: const TextStyle(fontSize: 12)),
@@ -3196,7 +3111,7 @@ class _ResidentPollsCardState extends State<_ResidentPollsCard> {
     }
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (active.isNotEmpty) ...[
-        Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), const Text('نظرسنجی‌های فعال', style: TextStyle(fontWeight: FontWeight.bold))]),
+        Row(children: [Icon(Icons.how_to_vote_outlined, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 8), Text('نظرسنجی‌های فعال', style: TextStyle(fontWeight: FontWeight.bold))]),
         for (final poll in active) pollTile(poll),
       ],
       if (history.isNotEmpty) ...[
@@ -3799,9 +3714,9 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     final result = await showDialog<_BuildingPoll>(context: context, builder: (dialogContext) => StatefulBuilder(
       builder: (context, setDialogState) => Dialog.fullscreen(
         child: Directionality(textDirection: TextDirection.rtl, child: Scaffold(
-          backgroundColor: const Color(0xFFF4F7F6),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF0E8A62),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             foregroundColor: Colors.white,
             title: const Text('ثبت موضوع و نظرسنجی جدید', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(dialogContext)),
@@ -3809,13 +3724,13 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 24), children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFFE5F6EF), borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(18)),
               child: const Column(children: [
-                Icon(Icons.how_to_vote_rounded, size: 56, color: Color(0xFF0E8A62)),
+                Icon(Icons.how_to_vote_rounded, size: 56, color: Theme.of(context).colorScheme.primary),
                 SizedBox(height: 8),
                 Text('ایجاد موضوع رأی‌گیری جدید توسط مدیر یا ساکن', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800)),
                 SizedBox(height: 4),
-                Text('لطفاً جزئیات موضوع، هزینه و مهلت رأی‌گیری را وارد کنید.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFF5E726B))),
+                Text('لطفاً جزئیات موضوع، هزینه و مهلت رأی‌گیری را وارد کنید.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ]),
             ),
             const SizedBox(height: 14),
@@ -3981,10 +3896,10 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     padding: const EdgeInsets.symmetric(vertical: 14),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7EEEB))),
     child: Column(children: [
-      Icon(icon, color: const Color(0xFF0E8A62), size: 22),
+      Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
       const SizedBox(height: 6),
       Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-      Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6B7A75))),
+      Text(label, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
     ]),
   ));
 
@@ -3993,7 +3908,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7EEEB))),
     child: Row(children: [
-      const Icon(Icons.receipt_outlined, color: Color(0xFF0E8A62)),
+      Icon(Icons.receipt_outlined, color: Theme.of(context).colorScheme.primary),
       const SizedBox(width: 8),
       Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700))),
       Text(amount, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -4011,10 +3926,10 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
             const SizedBox(height: 4),
-            Text(b.address.isEmpty ? 'آدرس ثبت نشده' : b.address, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7A75))),
+            Text(b.address.isEmpty ? 'آدرس ثبت نشده' : b.address, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ])),
           const SizedBox(width: 12),
-          ClipRRect(borderRadius: BorderRadius.circular(16), child: Container(width: 92, height: 78, color: const Color(0xFFE5F6EF), child: const Icon(Icons.apartment_rounded, color: Color(0xFF0E8A62), size: 36))),
+          ClipRRect(borderRadius: BorderRadius.circular(16), child: Container(width: 92, height: 78, color: Theme.of(context).colorScheme.primaryContainer, child: Icon(Icons.apartment_rounded, color: Theme.of(context).colorScheme.primary, size: 36))),
         ]),
       ),
       const SizedBox(height: 10),
@@ -4032,11 +3947,11 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       if (b.sharedPowerDebt > 0) _activeBillRow('برق مشاع', formatTomanAmount(b.sharedPowerDebt)),
       if (b.monthlyChargeAmount > 0) _activeBillRow('شارژ ماهانه', formatTomanAmount(b.monthlyChargeAmount)),
       if (b.sharedWaterDebt == 0 && b.sharedPowerDebt == 0 && b.monthlyChargeAmount == 0)
-        const Text('قبض فعالی ثبت نشده است.', style: TextStyle(color: Color(0xFF6B7A75), fontSize: 12)),
+        Text('قبض فعالی ثبت نشده است.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
       const SizedBox(height: 12),
       Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(18)),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(18)),
         child: const Row(children: [
           Icon(Icons.support_agent_rounded, color: Colors.white),
           SizedBox(width: 10),
@@ -4513,7 +4428,7 @@ class _SettingsPageState extends State<_SettingsPage> {
     children: [
       Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF0E8A62), borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(24)),
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(widget.role, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
@@ -4540,7 +4455,6 @@ class _SettingsPageState extends State<_SettingsPage> {
         ListTile(leading: const Icon(Icons.manage_accounts_outlined), title: const Text('ویرایش حساب کاربری'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onEditAccount),
         ListTile(leading: const Icon(Icons.workspace_premium_outlined), title: const Text('خرید اشتراک برنامه'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onSubscription),
         ListTile(leading: const Icon(Icons.swap_horiz_rounded), title: const Text('تغییر نقش'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onRoleChange),
-        ListTile(leading: const Icon(Icons.palette_outlined), title: const Text('حالت روشن/تاریک'), trailing: _ThemeToggle()),
         const _ThemeColorSelector(),
         ListTile(leading: const Icon(Icons.support_agent_outlined), title: const Text('تیکت‌های پشتیبانی'), trailing: const Icon(Icons.chevron_left_rounded), onTap: _showSupport),
         ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
@@ -4643,7 +4557,7 @@ class _FeatureHub extends StatelessWidget {
                     child: Container(
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(item.icon, color: const Color(0xFF0E8A62), size: 30),
+                        Icon(item.icon, color: Theme.of(context).colorScheme.primary, size: 30),
                         const SizedBox(height: 8),
                         Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                       ]),
@@ -4990,7 +4904,7 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _sectionTitle(String title, {String? detail, IconData icon = Icons.dashboard_customize_outlined}) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: Row(children: [Icon(icon, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), if (detail != null) Text(detail, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))]))]),
+    child: Row(children: [Icon(icon, color: Theme.of(context).colorScheme.primary), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), if (detail != null) Text(detail, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))]))]),
   );
 
   Widget _subscriptionContent(BuildContext context) {
@@ -5006,11 +4920,11 @@ class _FeaturePageState extends State<_FeaturePage> {
         child: Column(children: [
           Container(
             width: 92, height: 92,
-            decoration: BoxDecoration(color: const Color(0xFF12A37A), borderRadius: BorderRadius.circular(22)),
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(22)),
             child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 48),
           ),
           const SizedBox(height: 14),
-          const Text('۳ ماه رایگان', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF16352C))),
+          Text('۳ ماه رایگان', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 6),
           Text('بدون هزینه در دوره آزمایشی؛ هر زمان قابل لغو است.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black.withOpacity(.55))),
         ]),
@@ -5038,10 +4952,10 @@ class _FeaturePageState extends State<_FeaturePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: selected ? const Color(0xFF0E8A62) : const Color(0xFFE6EEEA), width: selected ? 1.6 : 1),
+              border: Border.all(color: selected ? Theme.of(context).colorScheme.primary : const Color(0xFFE6EEEA), width: selected ? 1.6 : 1),
             ),
             child: Row(children: [
-              Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off, color: const Color(0xFF0E8A62)),
+              Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off, color: Theme.of(context).colorScheme.primary),
               const Spacer(),
               Text('${plan.$3}  ${plan.$2} تومان', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             ]),
@@ -5088,7 +5002,7 @@ class _FeaturePageState extends State<_FeaturePage> {
     final average = _criteria.map((x) => _ratings[x] ?? 4).fold<int>(0, (a, b) => a + b) / _criteria.length;
     return Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _sectionTitle('ارزیابی شش‌ماههٔ مدیر', detail: 'دوره: شش ماه گذشته • امتیازدهی از ۱ تا ۵', icon: Icons.fact_check_outlined),
-      Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Theme.of(context).colorScheme.secondaryContainer, borderRadius: BorderRadius.circular(16)), child: Row(children: [const Icon(Icons.star_rounded, color: Colors.amber, size: 32), const SizedBox(width: 8), Text(average.toStringAsFixed(1), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)), const SizedBox(width: 8), const Expanded(child: Text('میانگین ارزیابی فعلی'))])),
+      Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Theme.of(context).colorScheme.secondaryContainer, borderRadius: BorderRadius.circular(16)), child: Row(children: [Icon(Icons.star_rounded, color: Colors.amber, size: 32), const SizedBox(width: 8), Text(average.toStringAsFixed(1), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)), const SizedBox(width: 8), const Expanded(child: Text('میانگین ارزیابی فعلی'))])),
       const SizedBox(height: 14),
       for (final criterion in _criteria) _ratingRow(criterion),
       const SizedBox(height: 8), const Text('ارزیابی‌ها به‌صورت تجمیعی برای بهبود مدیریت استفاده می‌شوند.', style: TextStyle(height: 1.5, fontSize: 12)),
