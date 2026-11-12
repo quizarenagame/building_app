@@ -680,7 +680,7 @@ void _goBack() {
       const SizedBox(height: 42),
       Center(child: _brandMark()),
       const SizedBox(height: 25),
-      Text('همخانه', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.4, color: Theme.of(context).colorScheme.primary)),
+      Text('ساختمان ما', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.4, color: Theme.of(context).colorScheme.primary)),
       const SizedBox(height: 6),
       const Text('مدیریت هوشمند ساختمان', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, height: 1.5)),
       const SizedBox(height: 8),
@@ -1799,7 +1799,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final hasUnreadDueTasks = _joinedBuilding?.tasks.any((task) =>
         task.isInAnnouncementWindow && !task.seenByUsers.contains(currentUserId)) ?? false;
     Widget noticesIcon(IconData icon) => Stack(clipBehavior: Clip.none, children: [
-      Icon(icon),
+      Icon(icon, color: colors.primary),
       if (hasUnreadDueTasks) Positioned(top: -2, right: -3, child: Container(
         width: 10, height: 10, decoration: BoxDecoration(
           color: colors.error, shape: BoxShape.circle,
@@ -1810,7 +1810,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final body = isServiceRole
         ? switch (selectedTab) {
             0 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties, showRequestsOnly: true),
-            1 => _FeatureHub(index: 2, isManager: false, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen),
+            1 => _FeatureHub(index: 2, isManager: false, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen, onRefreshRequested: () async { await _restoreResidentMembership(); }),
             2 => _ServiceHome(name: widget.name, specialties: _serviceSpecialties),
             3 => _FeatureHub(index: 3, isManager: false, building: _joinedBuilding),
             4 => _SettingsPage(
@@ -1826,7 +1826,7 @@ class _DashboardPageState extends State<DashboardPage> {
           }
         : switch (selectedTab) {
             0 => _FeatureHub(index: 1, isManager: _isManager, building: _joinedBuilding),
-            1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen),
+            1 => _FeatureHub(index: 2, isManager: _isManager, building: _joinedBuilding, userId: currentUserId, onTaskSeen: _markScheduledTaskSeen, onRefreshRequested: () async { if (_isManager) { await _loadManagerBuildings(); } else { await _restoreResidentMembership(); } }),
             2 => _isManager ? _ManagerHome(building: _joinedBuilding, managerName: widget.name, showMyBuildings: widget.showMyBuildings, onBuildingChanged: (building) => setState(() { _joinedBuilding = building; })) : _ResidentHome(
               building: _joinedBuilding, name: widget.name, myFloor: _myFloor, myUnit: _myUnit,
               ownership: widget.ownership,
@@ -4496,12 +4496,21 @@ class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
 }
 
 class _FeatureHub extends StatelessWidget {
-  const _FeatureHub({required this.index, required this.isManager, this.building, this.userId = 'guest', this.onTaskSeen});
+  const _FeatureHub({
+    required this.index,
+    required this.isManager,
+    this.building,
+    this.userId = 'guest',
+    this.onTaskSeen,
+    this.onRefreshRequested,
+  });
+
   final int index;
   final bool isManager;
   final _Building? building;
   final String userId;
   final Future<void> Function(_ScheduledTask task)? onTaskSeen;
+  final Future<void> Function()? onRefreshRequested;
 
   @override
   Widget build(BuildContext context) {
@@ -4536,67 +4545,79 @@ class _FeatureHub extends StatelessWidget {
             _FeatureItem('درخواست خدمت', '', Icons.handyman_outlined, 'service'),
           ]
         : const <_FeatureItem>[];
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      children: [
-        Text(index == 1 ? 'خدمات' : index == 2 ? 'اطلاعیه‌ها' : 'پرداخت‌ها',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        if (grid.isNotEmpty) ...[
-          GridView.count(
-            crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.35,
-            children: [
-              for (final item in grid)
-                Material(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  child: InkWell(
+
+    return RefreshIndicator(
+      color: Theme.of(context).colorScheme.primary,
+      onRefresh: () async {
+        if (onRefreshRequested != null) {
+          await onRefreshRequested!();
+        } else {
+          await Future<void>.delayed(const Duration(milliseconds: 600));
+        }
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        children: [
+          Text(index == 1 ? 'خدمات' : index == 2 ? 'اطلاعیه‌ها' : 'پرداخت‌ها',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          if (grid.isNotEmpty) ...[
+            GridView.count(
+              crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.35,
+              children: [
+                for (final item in grid)
+                  Material(
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(22),
-                    onTap: () => open(item),
-                    child: Container(
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
-                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(item.icon, color: Theme.of(context).colorScheme.primary, size: 30),
-                        const SizedBox(height: 8),
-                        Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ]),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(22),
+                      onTap: () => open(item),
+                      child: Container(
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE7EEEB))),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Icon(item.icon, color: Theme.of(context).colorScheme.primary, size: 30),
+                          const SizedBox(height: 8),
+                          Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        ]),
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (index == 2) ...[
-          if (announcementTasks.isEmpty)
-            const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر اطلاعیهٔ سررسیدِ خوانده‌نشده‌ای وجود ندارد.')))),
-          ...announcementTasks.map((task) => Padding(
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (index == 2) ...[
+            if (announcementTasks.isEmpty)
+              const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: Text('در حال حاضر اطلاعیهٔ سررسیدِ خوانده‌نشده‌ای وجود ندارد.')))),
+            ...announcementTasks.map((task) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Card(child: ListTile(
+                leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? Theme.of(context).colorScheme.error : null)),
+                title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text('${task.isDue ? 'یادآور فعال — سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)}\nتاریخ و ساعت ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
+                isThreeLine: true,
+                onTap: () async {
+                  if (!task.seenByUsers.add(userId)) return;
+                  await onTaskSeen?.call(task);
+                },
+              )),
+            )),
+          ],
+          ...items.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Card(child: ListTile(
-              leading: CircleAvatar(child: Icon(task.isDue ? Icons.notifications_active_outlined : Icons.event_available_outlined, color: task.isDue ? Theme.of(context).colorScheme.error : null)),
-              title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text('${task.isDue ? 'یادآور فعال — سررسید شده' : 'سررسید'}: ${_formatPersianDateTime(task.dueAt)}\nتاریخ و ساعت ایجاد: ${_formatPersianDateTime(task.createdAt)}')),
-              isThreeLine: true,
-              onTap: () async {
-                if (!task.seenByUsers.add(userId)) return;
-                await onTaskSeen?.call(task);
-              },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              leading: CircleAvatar(radius: 25, child: Icon(item.icon)),
+              title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(item.subtitle)),
+              trailing: const Icon(Icons.chevron_left_rounded),
+              onTap: () => open(item),
             )),
           )),
         ],
-        ...items.map((item) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Card(child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            leading: CircleAvatar(radius: 25, child: Icon(item.icon)),
-            title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(item.subtitle)),
-            trailing: const Icon(Icons.chevron_left_rounded),
-            onTap: () => open(item),
-          )),
-        )),
-      ],
+      ),
     );
   }
 }
