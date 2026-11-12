@@ -3918,7 +3918,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   Widget _managerDashboardSection() {
   return const SizedBox.shrink();
 }
-  }
 
   @override
   Widget build(BuildContext context) {
