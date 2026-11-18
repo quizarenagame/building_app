@@ -99,10 +99,10 @@ class BuildingApp extends StatelessWidget {
               navigationBarTheme: NavigationBarThemeData(
                 backgroundColor: Colors.white,
                 indicatorColor: seed.withOpacity(.12),
-                labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+                labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
                   fontSize: 11,
-                  fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-                  color: states.contains(WidgetState.selected) ? seed : const Color(0xFF8A9692),
+                  fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
+                  color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
                 )),
               ),
               filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
@@ -120,7 +120,7 @@ class BuildingApp extends StatelessWidget {
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
               ),
-              cardTheme: CardThemeData(
+              cardTheme: CardTheme(
                 color: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -833,7 +833,7 @@ void _goBack() {
       const SizedBox(height: 16),
       _fieldLabel('استان'), const SizedBox(height: 7),
       DropdownButtonFormField<String>(
-        initialValue: _selectedProvince,
+        value: _selectedProvince,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.map_outlined)),
         items: _iranProvinceCities.map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.key))).toList(),
         onChanged: (value) => setState(() { _selectedProvince = value; _selectedCity = null; }),
@@ -842,7 +842,7 @@ void _goBack() {
       _fieldLabel('شهر'), const SizedBox(height: 7),
       DropdownButtonFormField<String>(
         key: ValueKey(_selectedProvince),
-        initialValue: _selectedCity,
+        value: _selectedCity,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.location_city_outlined)),
         items: _iranProvinceCities.where((entry) => entry.key == _selectedProvince).expand((entry) => entry.value).map((city) => DropdownMenuItem<String>(value: city, child: Text(city))).toList(),
         onChanged: _selectedProvince == null ? null : (value) => setState(() => _selectedCity = value),
@@ -2451,7 +2451,7 @@ class _CreateBuildingPageState extends State<_CreateBuildingPage> {
                   onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
                   title: const Text('همکف دارای واحد مسکونی است')),
                 DropdownButtonFormField<String>(
-                  initialValue: _unitNamingPattern,
+                  value: _unitNamingPattern,
                   decoration: const InputDecoration(labelText: 'الگوی نام‌گذاری واحدها'),
                   items: const [
                     DropdownMenuItem(value: 'standard', child: Text('استاندارد (عددی: ۱، ۲، ...)')),
@@ -3715,7 +3715,7 @@ class _UnitTile extends StatelessWidget {
     final occupied = member != null;
     final tileColor = isManagerUnit
         ? const Color(0xFFFFC107).withOpacity(.28)
-        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceContainerHighest.withOpacity(.6));
+        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceVariant.withOpacity(.6));
     final tileBorder = isManagerUnit
         ? const Color(0xFFFFB300).withOpacity(.85)
         : (occupied ? colors.primary.withOpacity(.4) : colors.outlineVariant);
@@ -4260,7 +4260,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
                   },
                 ),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedRole,
+                  value: selectedRole,
                   decoration: const InputDecoration(labelText: 'نقش'),
                   items: const [
                     DropdownMenuItem(value: 'ساکن', child: Text('ساکن')),
@@ -4271,7 +4271,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
                   },
                 ),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedOwnership,
+                  value: selectedOwnership,
                   decoration: const InputDecoration(labelText: 'نوع سکونت / مالکیت'),
                   items: const [
                     DropdownMenuItem(value: 'مالک', child: Text('مالک')),
@@ -5572,7 +5572,7 @@ class _FeaturePageState extends State<_FeaturePage> {
             const SizedBox(height: 14),
             if (kind == 'service') ...[
               DropdownButtonFormField<String>(
-                initialValue: _registeredServiceSpecialties.contains(_selectedServiceSpecialty)
+                value: _registeredServiceSpecialties.contains(_selectedServiceSpecialty)
                     ? _selectedServiceSpecialty
                     : _registeredServiceSpecialties.first,
                 decoration: InputDecoration(
@@ -5957,7 +5957,7 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     _sectionTitle('گفت‌وگوی ساختمان ${widget.building?.name ?? ''}', detail: 'گفت‌وگوی گروهی و اطلاعیه‌های اعضای این ساختمان', icon: Icons.forum_outlined),
-        Expanded(child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
+        Expanded(child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
       for (final message in _messages) _chatBubble(message),
     ]))),
     const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _chatController, minLines: 1, maxLines: 4, textInputAction: TextInputAction.send, onSubmitted: (_) => _sendChat(), decoration: InputDecoration(hintText: 'پیام خود را بنویسید…', border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)))), const SizedBox(width: 8), IconButton.filled(onPressed: _sendChat, tooltip: 'ارسال پیام', icon: const Icon(Icons.send_rounded))]),
