@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   @override
@@ -20,8 +21,13 @@ late final PocketBase pb;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  final savedThemeColorIndex = prefs.getInt('theme_color_index') ?? 0;
-  BuildingApp.themeColorIndex.value = savedThemeColorIndex.clamp(0, BuildingApp.themeColors.length - 1);
+  
+  // بارگذاری رنگ ذخیره‌شده سفارشی
+  final savedColorValue = prefs.getInt('custom_theme_color');
+  if (savedColorValue != null) {
+    BuildingApp.customPrimaryColor.value = Color(savedColorValue);
+  }
+
   pb = PocketBase(
     'https://api.pgem.ir',
     authStore: AsyncAuthStore(
@@ -35,79 +41,103 @@ Future<void> main() async {
 
 class BuildingApp extends StatelessWidget {
   BuildingApp({super.key});
-  static const List<Color> themeColors = [Color(0xFF0E8A62), Color(0xFF2196F3), Color(0xFF3F51B5), Color(0xFFFF9800), Color(0xFF9C27B0)];
-  static const List<String> themeNames = ['سبز پیش‌فرض', 'آبی', 'نیلی', 'نارنجی', 'بنفش'];
-  static const String themeColorPreferenceKey = 'theme_color_index';
-  static final ValueNotifier<int> themeColorIndex = ValueNotifier<int>(0);
+
+  static final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+  
+  // رنگ اصلی سفارشی پالت پیشرفته
+  static final ValueNotifier<Color> customPrimaryColor = ValueNotifier<Color>(const Color(0xFF0E8A62));
+  static const String themeColorPreferenceKey = 'custom_theme_color';
+
   static const String managerPhone = '09907862453';
   static const String managerPin = '2731';
 
-  static Future<void> setThemeColorIndex(int index) async {
-    final safeIndex = index.clamp(0, themeColors.length - 1);
-    themeColorIndex.value = safeIndex;
+  static Future<void> setCustomColor(Color color) async {
+    customPrimaryColor.value = color;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(themeColorPreferenceKey, safeIndex);
+    await prefs.setInt(themeColorPreferenceKey, color.value);
+  }
+
+  static bool isEffectiveDark(BuildContext context, ThemeMode mode) {
+    if (mode == ThemeMode.system) {
+      return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    }
+    return mode == ThemeMode.dark;
+  }
+
+  static void toggleTheme(BuildContext context) {
+    themeMode.value = isEffectiveDark(context, themeMode.value) ? ThemeMode.light : ThemeMode.dark;
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: themeColorIndex,
-      builder: (context, colorIndex, _) {
-        final seed = themeColors[colorIndex.clamp(0, themeColors.length - 1)];
-        return MaterialApp(
-          title: 'سامانه مدیریت ساختمان',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
-              primary: seed,
-              onPrimary: Colors.white,
-              primaryContainer: seed.withOpacity(.12),
-              surface: Colors.white,
-            ),
-            scaffoldBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            fontFamily: 'Roboto',
-            appBarTheme: AppBarTheme(
-              backgroundColor: seed,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              centerTitle: true,
-              titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-              iconTheme: const IconThemeData(color: Colors.white),
-            ),
-            navigationBarTheme: NavigationBarThemeData(
-              backgroundColor: Colors.white,
-              indicatorColor: seed.withOpacity(.12),
-              labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-                fontSize: 11,
-                fontWeight: states.contains(MaterialState.selected) ? FontWeight.w700 : FontWeight.w500,
-                color: states.contains(MaterialState.selected) ? seed : const Color(0xFF8A9692),
+    return ValueListenableBuilder<Color>(
+      valueListenable: customPrimaryColor,
+      builder: (context, seed, _) => ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeMode,
+        builder: (context, mode, _) {
+          return MaterialApp(
+            title: 'سامانه مدیریت ساختمان',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light).copyWith(
+                primary: seed,
+                onPrimary: Colors.white,
+                primaryContainer: seed.withOpacity(.12),
+                surface: Colors.white,
+              ),
+              scaffoldBackgroundColor: const Color(0xFFF3F6F5),
+              fontFamily: 'Roboto',
+              appBarTheme: AppBarTheme(
+                backgroundColor: seed,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                centerTitle: true,
+                titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                iconTheme: const IconThemeData(color: Colors.white),
+              ),
+              navigationBarTheme: NavigationBarThemeData(
+                backgroundColor: Colors.white,
+                indicatorColor: seed.withOpacity(.12),
+                labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+                  fontSize: 11,
+                  fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+                  color: states.contains(WidgetState.selected) ? seed : const Color(0xFF8A9692),
+                )),
+              ),
+              filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+                backgroundColor: seed,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
               )),
+              inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: const Color(0xFFF7FAF9),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
+              ),
+              cardTheme: CardThemeData(
+                color: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  side: const BorderSide(color: Color(0xFFE7EEEB)),
+                ),
+              ),
             ),
-            filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-              backgroundColor: seed,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-              textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-            )),
-            inputDecorationTheme: InputDecorationTheme(
-              filled: true,
-              fillColor: const Color(0xFFF7FAF9),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE3EBE7))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: seed, width: 1.6)),
-            ),
-            cardTheme: CardTheme(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE7EEEB)))),
-          ),
-          home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
-        );
-      },
+            themeMode: mode,
+            home: Builder(builder: (context) => Directionality(textDirection: TextDirection.rtl, child: _initialHome(context))),
+          );
+        },
+      ),
     );
   }
 }
+
 
 String _normalizeRole(String? value) => const {'مدیر', 'ساکن', 'خدماتی'}.contains(value) ? value! : 'ساکن';
 
@@ -210,34 +240,6 @@ const List<MapEntry<String, List<String>>> _iranProvinceCities = [
   MapEntry('همدان', ['اسدآباد', 'بهار', 'پیرسلیمان', 'پیشخور', 'تویسرکان', 'جوکار', 'خزل', 'درگزین', 'رزن', 'زرین دشت', 'زند', 'سامن', 'سردرود', 'شاهنجرین', 'شراء', 'شیرین سو', 'صالح آباد', 'فامنین', 'قلقل رود', 'کبودرآهنگ', 'گل تپه', 'گیان', 'لالجین', 'ملایر', 'نهاوند', 'همدان']),
   MapEntry('یزد', ['ابرکوه', 'اردکان', 'اسفیچ', 'اشکذر', 'ایثار', 'بافق', 'بفروئیه', 'بهاباد', 'بهمن', 'تفت', 'چاهک', 'حمیدیا', 'خاتم', 'خرانق', 'خضر آباد', 'زارچ', 'عقدا', 'گاریزات', 'مروست', 'مهریز', 'میبد', 'ندوشن', 'نیر', 'یزد']),
 ];
-
-
-class _ThemeColorSelector extends StatelessWidget {
-  const _ThemeColorSelector();
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<int>(
-    valueListenable: BuildingApp.themeColorIndex,
-    builder: (context, selected, _) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('رنگ برنامه', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Wrap(spacing: 12, runSpacing: 8, children: List.generate(BuildingApp.themeColors.length, (index) => Tooltip(
-          message: BuildingApp.themeNames[index],
-          child: InkWell(
-            onTap: () => BuildingApp.setThemeColorIndex(index),
-            customBorder: const CircleBorder(),
-            child: CircleAvatar(
-              radius: 19,
-              backgroundColor: BuildingApp.themeColors[index],
-              child: selected == index ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
-            ),
-          ),
-        ))),
-      ]),
-    ),
-  );
-}
 
 class LoginFlow extends StatefulWidget {
   const LoginFlow({super.key, this.startAtAccount = false});
@@ -605,7 +607,9 @@ void _goBack() {
         onPopInvoked: (didPop) { if (!didPop) _goBack(); },
         child: Scaffold(
           body: SafeArea(
-            child: DashboardPage(name: _nameController.text.trim(), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', showMyBuildings: _showMyBuildings, onSwitch: () => setState(() { _fromDashboard = true; _step = _LoginStep.account; }), onRoleChanged: (role) => setState(() => _role = role)),
+            child: DashboardPage(name: [_nameController.text.trim(), _lastNameController.text.trim()]
+      .where((part) => part.isNotEmpty)
+      .join(' '), role: _role ?? 'ساکن', buildingName: _buildingController.text.trim(), ownership: _ownership ?? 'ساکن', showMyBuildings: _showMyBuildings, onSwitch: () => setState(() { _fromDashboard = true; _step = _LoginStep.account; }), onRoleChanged: (role) => setState(() => _role = role)),
           ),
         ),
       );
@@ -829,7 +833,7 @@ void _goBack() {
       const SizedBox(height: 16),
       _fieldLabel('استان'), const SizedBox(height: 7),
       DropdownButtonFormField<String>(
-        value: _selectedProvince,
+        initialValue: _selectedProvince,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.map_outlined)),
         items: _iranProvinceCities.map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.key))).toList(),
         onChanged: (value) => setState(() { _selectedProvince = value; _selectedCity = null; }),
@@ -838,7 +842,7 @@ void _goBack() {
       _fieldLabel('شهر'), const SizedBox(height: 7),
       DropdownButtonFormField<String>(
         key: ValueKey(_selectedProvince),
-        value: _selectedCity,
+        initialValue: _selectedCity,
         decoration: _inputDecoration(hint: 'مثلاً تهران', prefix: const Icon(Icons.location_city_outlined)),
         items: _iranProvinceCities.where((entry) => entry.key == _selectedProvince).expand((entry) => entry.value).map((city) => DropdownMenuItem<String>(value: city, child: Text(city))).toList(),
         onChanged: _selectedProvince == null ? null : (value) => setState(() => _selectedCity = value),
@@ -999,6 +1003,7 @@ Map<String, dynamic> _buildingStructure(_Building b) => <String, dynamic>{
     'movedInAt': e.value.movedInAt.toIso8601String(),
   }},
   'fund_balance': b.fundBalance,
+  'fund_balance_set': b.fundBalanceSet,
   'fund_receivable': b.fundReceivable,
   'shared_water_debt': b.sharedWaterDebt,
   'shared_power_debt': b.sharedPowerDebt,
@@ -1049,21 +1054,35 @@ void _applyBuildingStructure(_Building b, dynamic raw) {
     }
   }
   final rawOccupants = data['occupants'];
-  if (rawOccupants is Map && b.occupants.isEmpty) {
+  var occupantInputs = 0;
+  if (rawOccupants is Map) {
     for (final entry in rawOccupants.entries) {
       final item = entry.value;
       if (item is! Map) continue;
+      occupantInputs++;
       final d = Map<String, dynamic>.from(item);
       final date = DateTime.tryParse((d['movedInAt'] ?? '').toString());
-      b.occupants[entry.key.toString()] = _Member(
-        (d['name'] ?? '').toString(), (d['role'] ?? 'ساکن').toString(),
-        (d['ownership'] ?? 'ساکن').toString(), phone: (d['phone'] ?? '').toString(),
-        waterDebt: int.tryParse((d['waterDebt'] ?? 0).toString()) ?? 0, movedInAt: date,
+      final incoming = _Member(
+        (d['name'] ?? '').toString(),
+        (d['role'] ?? 'ساکن').toString(),
+        (d['ownership'] ?? 'ساکن').toString(),
+        phone: (d['phone'] ?? '').toString(),
+        waterDebt: int.tryParse((d['waterDebt'] ?? 0).toString()) ?? 0,
+        movedInAt: date,
       );
+      final key = entry.key.toString();
+      final existing = b.occupants[key];
+      final existingIsEmpty = existing == null ||
+          (existing.name.trim().isEmpty && existing.phone.trim().isEmpty);
+      if (existingIsEmpty) {
+        b.occupants[key] = incoming;
+      }
     }
   }
+  debugPrint('Building occupants: inputs=$occupantInputs current=${b.occupants.length}');
   int readInt(String key) => int.tryParse((data[key] ?? '').toString()) ?? 0;
   if (data.containsKey('fund_balance')) b.fundBalance = readInt('fund_balance');
+  if (data.containsKey('fund_balance_set')) b.fundBalanceSet = data['fund_balance_set'] == true;
   if (data.containsKey('fund_receivable')) b.fundReceivable = readInt('fund_receivable');
   if (data.containsKey('shared_water_debt')) b.sharedWaterDebt = readInt('shared_water_debt');
   if (data.containsKey('shared_power_debt')) b.sharedPowerDebt = readInt('shared_power_debt');
@@ -1130,6 +1149,96 @@ Future<_Building?> _restoreCachedBuilding(String cacheKey) async {
 }
 
 String _cleanMemberPhone(String phone) => _latinDigits(phone.replaceAll(RegExp(r'\s+|-'), '')).trim();
+// کش برای جلوگیری از درخواست‌های مکرر به سرور
+final Map<String, Future<String>> _profileNameCache = {};
+
+Future<String> _resolveProfileFullName(String phone, String fallback) async {
+  var cleanPhone = _cleanMemberPhone(phone);
+  if (cleanPhone.isEmpty) return fallback;
+
+  // اگر شماره ۱۰ رقمی است و با ۹ شروع شده، صفر اولش را اضافه کن
+  if (cleanPhone.length == 10 && cleanPhone.startsWith('9')) {
+    cleanPhone = '0$cleanPhone';
+  }
+
+  // شماره بدون صفر برای جستجوی دوطرفه
+  final phoneWithoutZero = cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone;
+
+  return _profileNameCache[cleanPhone] ??= () async {
+    try {
+      // جستجو هم با صفر و هم بدون صفر تا در هر حالتی پیدا شود
+      final users = await pb.collection('users').getList(
+        page: 1, 
+        perPage: 1,
+        filter: 'phone = "$cleanPhone" || phone = "$phoneWithoutZero"',
+      );
+      
+      if (users.items.isNotEmpty) {
+        final r = users.items.first;
+        final firstName = (r.data['name'] ?? '').toString().trim();
+        final lastName = (
+          r.data['last_name'] ??
+          r.data['lastname'] ??
+          ''
+        ).toString().trim();
+        
+        final full = [firstName, lastName].where((p) => p.isNotEmpty).join(' ');
+        if (full.isNotEmpty) return full;
+      }
+      return fallback;
+    } catch (_) {
+      // اگر خطایی رخ داد، کش را خالی کن تا در دفعات بعدی دوباره تلاش کند
+      _profileNameCache.remove(cleanPhone);
+      return fallback;
+    }
+  }();
+}
+
+class _ResolvedMemberName extends StatefulWidget {
+  const _ResolvedMemberName({super.key, required this.member, this.style, this.overflow = TextOverflow.clip});
+  final _Member member;
+  final TextStyle? style;
+  final TextOverflow overflow;
+
+  @override
+  State<_ResolvedMemberName> createState() => _ResolvedMemberNameState();
+}
+
+class _ResolvedMemberNameState extends State<_ResolvedMemberName> {
+  late Future<String> _nameFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // لود کردن نام فقط برای یک بار در شروع
+    _nameFuture = _resolveProfileFullName(widget.member.phone, widget.member.name);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ResolvedMemberName oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // اگر شماره تلفن عوض شد، نام جدید را بگیر
+    if (oldWidget.member.phone != widget.member.phone) {
+      _nameFuture = _resolveProfileFullName(widget.member.phone, widget.member.name);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: _nameFuture,
+      builder: (context, snap) {
+        // نمایش نام کامل اگر پیدا شد، وگرنه نام اولیه عضو
+        return Text(
+          snap.data ?? widget.member.name, 
+          style: widget.style, 
+          overflow: widget.overflow
+        );
+      },
+    );
+  }
+}
+
 
 String _residentMembershipKey(String userId) => 'resident_membership_$userId';
 
@@ -1145,59 +1254,146 @@ Future<void> _cacheResidentMembership(String userId, _Building building, int flo
   } catch (_) {}
 }
 
-/// Best-effort member sync. The compact core payload is retried if a deployment
-/// has not yet added the optional building/floor/unit_number fields.
+/// Sync a member record to PocketBase, creating it when no matching record exists.
 Future<void> _syncMemberRecord(_Building building, int floor, dynamic unit, _Member member) async {
-  if (!pb.authStore.isValid) return;
-  final current = pb.authStore.record;
-  final phone = _cleanMemberPhone(member.phone);
-  var targetUserId = '';
-  if (current != null && (phone.isEmpty || _cleanMemberPhone((current.data['phone'] ?? '').toString()) == phone)) {
-    targetUserId = current.id;
+  if (!pb.authStore.isValid) {
+    debugPrint('Member sync skipped: no authenticated PocketBase session.');
+    return;
   }
-  if (targetUserId.isEmpty && phone.isNotEmpty) {
-    try {
-      final users = await pb.collection('users').getList(
-        page: 1, perPage: 1,
-        filter: 'phone = "${phone.replaceAll('"', '\\"')}"',
-      );
-      if (users.items.isNotEmpty) targetUserId = users.items.first.id;
-    } catch (_) {}
-  }
-  if (targetUserId.isEmpty) return; // Can't create a valid PocketBase user relation.
-  final unitKey = building.unitId(floor, unit);
-  final requiredBody = <String, dynamic>{
-    'status': 'active', 'user': targetUserId, 'unit': unitKey,
-    'type': member.role, 'is_resident': member.role != 'مدیر',
-  };
-  final extendedBody = <String, dynamic>{
-    ...requiredBody,
-    if ((building.recordId ?? '').isNotEmpty) 'building': building.recordId,
-    'building_name': building.name, 'floor': floor, 'unit_number': unit.toString(),
-  };
   try {
-    // Update an existing record for this user's unit instead of generating duplicates.
-    final matches = await pb.collection('members').getList(
-      page: 1, perPage: 50,
-      filter: 'user = "$targetUserId" && unit = "$unitKey"',
-    );
-    if (matches.items.isNotEmpty) {
-      try {
-        await pb.collection('members').update(matches.items.first.id, body: extendedBody);
-      } catch (_) {
-        await pb.collection('members').update(matches.items.first.id, body: requiredBody);
-      }
-    } else {
-      try {
-        await pb.collection('members').create(body: extendedBody);
-      } catch (_) {
-        await pb.collection('members').create(body: requiredBody);
+    final current = pb.authStore.record;
+    final phone = _cleanMemberPhone(member.phone);
+    var targetUserId = '';
+    String fetchedFirstName = '';
+    String fetchedLastName = '';
+
+    // بررسی کاربر جاری
+    if (current != null && (phone.isEmpty || _cleanMemberPhone((current.data['phone'] ?? '').toString()) == phone)) {
+      targetUserId = current.id;
+      fetchedFirstName = (current.data['name'] ?? '').toString();
+      fetchedLastName = (current.data['last_name'] ?? current.data['lastname'] ?? '').toString();
+    }
+
+    // اگر کاربر جاری نبود، جستجو در دیتابیس بر اساس شماره تلفن
+    if (targetUserId.isEmpty && phone.isNotEmpty) {
+      final users = await pb.collection('users').getList(
+        page: 1,
+        perPage: 1,
+        filter: 'phone = "$phone"',
+      );
+      if (users.items.isNotEmpty) {
+        final u = users.items.first;
+        targetUserId = u.id;
+        fetchedFirstName = (u.data['name'] ?? '').toString();
+        fetchedLastName = (u.data['last_name'] ?? u.data['lastname'] ?? '').toString();
       }
     }
-  } catch (_) {
-    try { await pb.collection('members').create(body: requiredBody); } catch (_) {}
+
+    if (targetUserId.isEmpty) {
+      debugPrint('Member sync failed: no PocketBase user found for ${member.phone}.');
+      return;
+    }
+
+    final unitKey = building.unitId(floor, unit);
+    final mappedType = (member.ownership == 'مالک' || member.role == 'مدیر') ? 'owner' : 'tenant';
+
+    // تفکیک نام و نام‌خانوادگی در صورت نبود در دیتابیس
+    String finalFirstName = fetchedFirstName;
+    String finalLastName = fetchedLastName;
+    if (finalFirstName.isEmpty && member.name.trim().isNotEmpty) {
+      final parts = member.name.trim().split(RegExp(r'\s+'));
+      finalFirstName = parts.first;
+      if (parts.length > 1) {
+        finalLastName = parts.sublist(1).join(' ');
+      }
+    }
+
+    // بدنه اصلی داده‌ها برای ارسال به جدول members
+    final body = <String, dynamic>{
+      'status': 'active',
+      'user': targetUserId,
+      'unit': unitKey,
+      'type': mappedType,
+      'is_resident': member.role != 'مدیر' || member.ownership == 'مالک',
+      'first_name': finalFirstName,
+      'last_name': finalLastName,
+      'phone': phone.isNotEmpty ? phone : _cleanMemberPhone(member.phone),
+      'building_name': building.name,
+      if ((building.recordId ?? '').isNotEmpty) 'building': building.recordId,
+      'floor': floor,
+    };
+
+    debugPrint('>>> DEBUG: Sending member data: $body');
+
+    // جستجوی سابقه قبلی در members برای به‌روزرسانی یا ایجاد جدید
+    final matches = await pb.collection('members').getList(
+      page: 1,
+      perPage: 1,
+      filter: 'user = "$targetUserId" && unit = "$unitKey"',
+    );
+
+    if (matches.items.isNotEmpty) {
+      await pb.collection('members').update(matches.items.first.id, body: body);
+      debugPrint('Member record updated successfully for $targetUserId in $unitKey');
+    } else {
+      await pb.collection('members').create(body: body);
+      debugPrint('Member record created successfully for $targetUserId in $unitKey');
+    }
+  } catch (e, stack) {
+    debugPrint('Member sync failed with error: $e');
+    debugPrint('Stack: $stack');
   }
 }
+
+
+Future<void> _deactivateMemberRecord(_Building building, int floor, dynamic unit, _Member member) async {
+  if (!pb.authStore.isValid) return;
+  try {
+    final phone = _cleanMemberPhone(member.phone);
+    final unitKey = building.unitId(floor, unit);
+    
+    // پیدا کردن کاربر
+    var targetUserId = '';
+    final current = pb.authStore.record;
+    if (current != null && (phone.isEmpty || _cleanMemberPhone((current.data['phone'] ?? '').toString()) == phone)) {
+      targetUserId = current.id;
+    }
+    if (targetUserId.isEmpty && phone.isNotEmpty) {
+      final users = await pb.collection('users').getList(
+        page: 1,
+        perPage: 1,
+        filter: 'phone = "$phone"',
+      );
+      if (users.items.isNotEmpty) {
+        targetUserId = users.items.first.id;
+      }
+    }
+
+    // جستجوی رکورد عضو در جدول members و تغییر وضعیت به inactive
+    String filterQuery = 'unit = "$unitKey"';
+    if (targetUserId.isNotEmpty) {
+      filterQuery += ' && user = "$targetUserId"';
+    } else if (phone.isNotEmpty) {
+      filterQuery += ' && phone = "$phone"';
+    }
+
+    final matches = await pb.collection('members').getList(
+      page: 1,
+      perPage: 1,
+      filter: filterQuery,
+    );
+
+    if (matches.items.isNotEmpty) {
+      await pb.collection('members').update(matches.items.first.id, body: {
+        'status': 'inactive',
+      });
+      debugPrint('Member status set to inactive in members collection for $unitKey');
+    }
+  } catch (e) {
+    debugPrint('Failed to deactivate member in PocketBase: $e');
+  }
+}
+
 
 class _Member {
   _Member(this.name, this.role, this.ownership, {this.phone = '', this.waterDebt = 0, DateTime? movedInAt})
@@ -1366,18 +1562,19 @@ class _ScheduledTask {
 }
 
 class _Building {
-  _Building(this.name, {this.createdBy, this.address = '', this.buildingCode = '', this.initialBalance = 0, this.fundBalance = 0, this.fundReceivable = 0, this.sharedWaterDebt = 0, this.sharedPowerDebt = 0, this.managerWage = 0, this.monthlyChargeAmount = 0, this.charter = '', String province = '', String city = '', this.recordId}) : province = province, city = city;
+  _Building(this.name, {this.address = '', String province = '', String city = ''}) : province = province, city = city;
   String name;
   String address;
-  String buildingCode;
-  int initialBalance;
-  int fundBalance;
-  int fundReceivable;
-  int sharedWaterDebt;
-  int sharedPowerDebt;
-  int managerWage;
-  int monthlyChargeAmount;
-  String charter;
+  String buildingCode = '';
+  int initialBalance = 0;
+  int fundBalance = 0;
+  bool fundBalanceSet = false;
+  int fundReceivable = 0;
+  int sharedWaterDebt = 0;
+  int sharedPowerDebt = 0;
+  int managerWage = 0;
+  int monthlyChargeAmount = 0;
+  String charter = '';
   String province = '';
   String city = '';
   String? recordId;
@@ -1636,7 +1833,7 @@ class _DashboardPageState extends State<DashboardPage> {
       } catch (_) {}
     }
     if (membership == null) return;
-    final floor = int.tryParse((membership!['floor'] ?? '').toString());
+    final floor = int.tryParse((membership['floor'] ?? '').toString());
     final unit = int.tryParse((membership['unit'] ?? '').toString());
     if (floor == null || unit == null) return;
     _Building? building;
@@ -1664,8 +1861,18 @@ class _DashboardPageState extends State<DashboardPage> {
       if (cached != null) _applyBuildingStructure(building, _buildingStructure(cached));
     }
     if (building == null || !building.floors.containsKey(floor) || !(building.floorUnits[floor] ?? []).contains(unit)) return;
-    final member = _Member(widget.name, 'ساکن', widget.ownership,
-      phone: (pb.authStore.record?.data['phone'] ?? '').toString());
+        final userRecord = pb.authStore.record?.data ?? const <String, dynamic>{};
+    final uFirst = (userRecord['name'] ?? '').toString().trim();
+    final uLast = (userRecord['last_name'] ?? userRecord['lastname'] ?? '').toString().trim();
+    final uFullName = [uFirst, uLast].where((p) => p.isNotEmpty).join(' ');
+
+    final member = _Member(
+      uFullName.isNotEmpty ? uFullName : widget.name,
+      'ساکن',
+      widget.ownership,
+      phone: (userRecord['phone'] ?? '').toString(),
+    );
+
     final key = building.unitId(floor, unit);
     if (!building.occupants.containsKey(key)) building.assign(floor, unit, member);
     if (mounted) setState(() { _joinedBuilding = building; _myFloor = floor; _myUnit = unit; });
@@ -1696,6 +1903,31 @@ class _DashboardPageState extends State<DashboardPage> {
         final address = (record.data['address'] ?? '').toString().trim();
         final building = AppSharedState.instance.buildingByName(name, address: address);
         _applyBuildingRecord(building, record);
+        try {
+          final memberRecords = await pb.collection('members').getFullList(
+            filter: 'building = \"${record.id}\" && status = \"active\"',
+            batch: 200,
+          );
+          for (final memberRecord in memberRecords) {
+            final memberData = memberRecord.data;
+            final unitKey = (memberData['unit'] ?? '').toString().trim();
+            if (unitKey.isEmpty) continue;
+            final firstName = (memberData['first_name'] ?? '').toString().trim();
+            final lastName = (memberData['last_name'] ?? '').toString().trim();
+            final name = [firstName, lastName].where((part) => part.isNotEmpty).join(' ');
+            final type = (memberData['type'] ?? '').toString().trim();
+            final role = type == 'owner' ? 'مالک' : type == 'tenant' ? 'مستأجر' : type;
+            final ownership = type == 'owner' ? 'مالک' : type == 'tenant' ? 'مستأجر' : 'ساکن';
+            building.occupants[unitKey] = _Member(
+              name,
+              role.isEmpty ? 'ساکن' : role,
+              ownership,
+              phone: (memberData['phone'] ?? '').toString(),
+            );
+          }
+        } catch (e) {
+          debugPrint('Failed to load active members for building ${record.id}: $e');
+        }
         final cache = await _restoreCachedBuilding(_buildingCacheKey(building));
         if (building.floors.isEmpty && cache != null) _applyBuildingStructure(building, _buildingStructure(cache));
         await _persistBuilding(building);
@@ -1906,7 +2138,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     else
                       Icon(Icons.notifications_none_rounded, color: colors.primary),
                     const Spacer(),
-                    Text('همخانه', style: TextStyle(color: colors.primary, fontWeight: FontWeight.w900, fontSize: 20)),
+                    Text('ساختمان ما', style: TextStyle(color: colors.primary, fontWeight: FontWeight.w900, fontSize: 20)),
                     const SizedBox(width: 6),
                     Icon(Icons.home_work_outlined, color: colors.primary),
                   ]),
@@ -2073,7 +2305,10 @@ class _CreateBuildingPageState extends State<_CreateBuildingPage> {
     if (isNew || b.createdBy == null) b.createdBy = pb.authStore.record?.id ?? widget.managerName;
     b.address = address;
     b.initialBalance = initialBalance;
-    b.fundBalance = initialBalance;
+    if (isNew) {
+      b.fundBalance = 0;
+      b.fundBalanceSet = false;
+    }
     if (isNew && b.recordId == null) {
       try {
         final code = await _generateUniqueBuildingCode();
@@ -2216,7 +2451,7 @@ class _CreateBuildingPageState extends State<_CreateBuildingPage> {
                   onChanged: (value) => setState(() => _isGroundPilot = value ?? false),
                   title: const Text('همکف دارای واحد مسکونی است')),
                 DropdownButtonFormField<String>(
-                  value: _unitNamingPattern,
+                  initialValue: _unitNamingPattern,
                   decoration: const InputDecoration(labelText: 'الگوی نام‌گذاری واحدها'),
                   items: const [
                     DropdownMenuItem(value: 'standard', child: Text('استاندارد (عددی: ۱، ۲، ...)')),
@@ -2263,7 +2498,7 @@ class _ManagerHomeState extends State<_ManagerHome> {
 
   _Building? get _building => widget.building;
 
-  Future<void> _renameBuilding() async {
+    Future<void> _renameBuilding() async {
     final b = _building;
     if (b == null) return;
     final controller = TextEditingController(text: b.name);
@@ -2271,19 +2506,52 @@ class _ManagerHomeState extends State<_ManagerHome> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('ویرایش نام ساختمان'),
-        content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'نام جدید ساختمان')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'نام جدید ساختمان'),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
-          FilledButton(onPressed: () {
-            final value = controller.text.trim();
-            if (value.length >= 2) Navigator.pop(dialogContext, value);
-          }, child: const Text('ذخیره')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('انصراف'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.length >= 2) Navigator.pop(dialogContext, value);
+            },
+            child: const Text('ذخیره'),
+          ),
         ],
       ),
     );
     controller.dispose();
     if (newName == null || newName.trim() == b.name) return;
-    setState(() => b.rename(newName.trim()));
+
+    final trimmedName = newName.trim();
+
+    // ۱. تلاش برای ذخیره در سرور (پاکت‌بیس)
+    try {
+      if (b.recordId != null && b.recordId!.isNotEmpty) {
+        await pb.collection('buildings').update(b.recordId!, body: {'name': trimmedName});
+      }
+    } catch (e) {
+      // چون آفلاین هستید، احتمالا اینجا خطا می‌دهد؛ پس فقط لاگ می‌گیریم و متوقف نمی‌شویم
+      debugPrint('PocketBase offline or error: $e');
+    }
+
+    // ۲. ذخیره در حافظه داخلی (برای اینکه آفلاین هم بماند)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // ذخیره نام با یک کلید که شامل آی‌دی ساختمان باشد
+      await prefs.setString('building_name_${b.recordId ?? b.name}', trimmedName);
+    } catch (e) {
+      debugPrint('Local storage error: $e');
+    }
+
+    // ۳. اعمال روی ظاهر برنامه
+    setState(() => b.rename(trimmedName));
     widget.onBuildingChanged(b);
     _toast('نام ساختمان به «${b.name}» تغییر کرد.');
   }
@@ -2460,23 +2728,33 @@ class _ManagerHomeState extends State<_ManagerHome> {
 
 /// ------------------------------- ساکن -------------------------------
 class _ResidentHome extends StatefulWidget {
-  const _ResidentHome({
-    required this.building,
-    required this.name,
-    required this.myFloor,
-    required this.myUnit,
-    required this.ownership,
-    required this.onJoined,
-  });
   final _Building? building;
   final String name;
   final int? myFloor;
   final int? myUnit;
-  final String ownership;
-  final void Function(_Building building, int floor, int unit) onJoined;
+  final String? ownership;
+  final void Function(_Building, int?, int?)? onJoined;
+  final VoidCallback? onRefresh;
+  final ValueChanged<_Building>? onSelectBuilding;
+  final List<_Building> allBuildings;
+
+  const _ResidentHome({
+    super.key,
+    required this.building,
+    required this.name,
+    required this.myFloor,
+    required this.myUnit,
+    this.ownership,
+    this.onJoined,
+    this.onRefresh,
+    this.onSelectBuilding,
+    this.allBuildings = const <_Building>[],
+  });
+
   @override
   State<_ResidentHome> createState() => _ResidentHomeState();
 }
+
 
 class _ResidentHomeState extends State<_ResidentHome> {
   final _searchKey = GlobalKey<FormState>();
@@ -2675,35 +2953,92 @@ class _ResidentHomeState extends State<_ResidentHome> {
     if (results.isEmpty) _toast('ساختمانی با این مشخصات یافت نشد.', error: true);
   }
 
-  void _selectBuilding(_Building b) {
-    setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => _ResidentBuildingDetailPage(building: b, residentName: widget.name),
-    ));
-  }
+void _selectBuilding(_Building b) {
+  setState(() { _selectedBuilding = b; _foundBuildingName = b.name; });
+  Navigator.of(context).push(MaterialPageRoute<void>(
+    builder: (_) => _ResidentBuildingDetailPage(
+      building: b, 
+      residentName: widget.name,
+      // اتصال به تابع اصلی که ثبت‌نام را انجام می‌دهد
+      onJoinUnit: (floor, unit) => _showResidentUnit(b, floor, unit),
+    ),
+  ));
+}
 
-  void _joinUnit(_Building b, int floor, dynamic unit) {
+
+
+    Future<void> _joinUnit(_Building b, int floor, dynamic unit) async {
     if (b.isOccupied(floor, unit)) {
       _toast('واحد ${unit.toString().toPersianDigits()} طبقه ${floor.toPersianDigits()} قبلاً به ${b.occupantOf(floor, unit)!.name} اختصاص یافته است.', error: true);
       return;
     }
-    final member = _Member(widget.name, 'ساکن', widget.ownership,
-      phone: (pb.authStore.record?.data['phone'] ?? '').toString());
+
+    // ۱. پرسیدن از کاربر که مالک است یا مستأجر
+    final ownership = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('نوع استقرار در واحد'),
+        content: const Text('آیا در این واحد به عنوان مالک مستقر می‌شوید یا مستأجر؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'مستأجر'),
+            child: const Text('مستأجر هستم'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, 'مالک'),
+            child: const Text('مالک هستم'),
+          ),
+        ],
+      ),
+    );
+
+    // اگر پنجره را بست یا انصراف داد، کاری نکن
+    if (ownership == null) return;
+
+    final userPhone = (pb.authStore.record?.data['phone'] ?? '').toString();
+    if (userPhone.isNotEmpty && b.hasOccupantWithPhone(userPhone)) {
+      _toast('شماره تماس شما قبلاً در واحد دیگری ثبت شده است', error: true);
+      return;
+    }
+
+    final userRecord =
+    pb.authStore.record?.data ?? const <String, dynamic>{};
+
+final uFirst = (userRecord['name'] ?? '').toString().trim();
+
+final uLast = (
+  userRecord['last_name'] ??
+  userRecord['lastname'] ??
+  ''
+).toString().trim();
+
+final uFullName = [
+  uFirst,
+  uLast,
+].where((part) => part.isNotEmpty).join(' ');
+
+final member = _Member(
+  uFullName.isNotEmpty ? uFullName : widget.name,
+  'ساکن',
+  ownership,
+  phone: userPhone,
+);
+
+
     final err = b.assign(floor, unit, member);
     if (err != null) {
       _toast(err, error: true);
       return;
     }
-    widget.onJoined(b, floor, unit);
-    if (mounted) setState(() { if (!_joinedBuildings.contains(b)) _joinedBuildings.add(b); });
-    final userId = pb.authStore.record?.id ?? '';
-    if (userId.isNotEmpty) unawaited(_cacheResidentMembership(userId, b, floor, unit));
-    unawaited(_persistBuilding(b));
-    unawaited(_syncMemberRecord(b, floor, unit, member));
-    _toast('خوش آمدید! شما در واحد ${unit.toString().toPersianDigits()} طبقه ${floor.toPersianDigits()} «${b.name}» قرار گرفتید.');
+
+    await _persistBuilding(b);
+    await _syncMemberRecord(b, floor, unit, member);
+    if (mounted) setState(() {});
+    _toast('با موفقیت در واحد مستقر شدید');
   }
 
-  Future<void> _showResidentUnit(_Building building, int floor, dynamic unit) async {
+
+     Future<void> _showResidentUnit(_Building building, int floor, dynamic unit) async {
     final member = building.occupantOf(floor, unit);
     if (member == null) {
       final join = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
@@ -2720,6 +3055,8 @@ class _ResidentHomeState extends State<_ResidentHome> {
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))],
     ));
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -2741,34 +3078,21 @@ class _ResidentHomeState extends State<_ResidentHome> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                TextButton.icon(
+                  onPressed: () => _selectBuilding(b),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                  label: Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                ),
                 Text('طبقه ${widget.myFloor!.toPersianDigits()} • واحد ${widget.myUnit!.toPersianDigits()} • ${widget.ownership}', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ])),
               const SizedBox(width: 10),
               Container(width: 46, height: 46, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.home_rounded, color: Theme.of(context).colorScheme.primary)),
             ]),
           ]),
-        ),
-        const SizedBox(height: 10),
-        Row(children: [
-          mini('${b.totalUnitCount}'.toPersianDigits(), 'واحد'),
-          const SizedBox(width: 8),
-          mini('${b.occupants.length}'.toPersianDigits(), 'ساکن'),
-          const SizedBox(width: 8),
-          mini('${b.polls.where((p) => p.isActive).length}'.toPersianDigits(), 'رأی فعال'),
-        ]),
-        const SizedBox(height: 12),
-        _BuildingLayout(
-          building: b,
-          onUnitTap: (floor, unit) => _showResidentUnit(b, floor, unit),
-          highlightMemberName: widget.name,
-        ),
-        const SizedBox(height: 12),
-        _ResidentChargeCard(building: b, unitId: b.unitId(widget.myFloor!, widget.myUnit!), onChanged: () { if (mounted) setState(() {}); }),
-        const SizedBox(height: 12),
-        _ResidentPollsCard(building: b, unitId: b.unitId(widget.myFloor!, widget.myUnit!), onChanged: () { if (mounted) setState(() {}); }),
-      ]);
-    }
+        ),  // Container
+      ],
+    );  // ListView
+  }
 
     // جست‌وجوی ساختمان و انتخاب واحد
     final found = _selectedBuilding ?? (_foundBuildingName == null ? null : AppSharedState.instance.findByName(_foundBuildingName!));
@@ -2792,7 +3116,7 @@ class _ResidentHomeState extends State<_ResidentHome> {
                 decoration: InputDecoration(
                   hintText: 'نام، استان، شهر یا شناسهٔ یکتا',
                   prefixIcon: const Icon(Icons.travel_explore_rounded),
-                  suffixIcon: IconButton(icon: _isSearching ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.search_rounded), onPressed: _isSearching ? null : _search),
+                  suffixIcon: _isSearching ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.search_rounded),
                   filled: true, fillColor: Theme.of(context).colorScheme.surface,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
@@ -2853,62 +3177,188 @@ class _ResidentHomeState extends State<_ResidentHome> {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             )));
           }
-          return Column(children: joined.map((building) => Card(
-            margin: const EdgeInsets.only(bottom: 6),
-            child: ListTile(
-              leading: const Icon(Icons.apartment_rounded),
-              title: Text(building.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text([
-                if (building.province.isNotEmpty || building.city.isNotEmpty) '${building.province}${building.province.isNotEmpty && building.city.isNotEmpty ? '، ' : ''}${building.city}',
-                building.address.isEmpty ? 'آدرس ثبت نشده' : building.address,
-                if (building.buildingCode.isNotEmpty) 'شناسه: ${building.buildingCode.toPersianDigits()}',
-              ].join(' • ')),
-              trailing: const Icon(Icons.chevron_left_rounded),
-              onTap: () => _selectBuilding(building),
-            ),
-          )).toList());
+          return Column(
+            children: joined.map((building) => Card(
+              margin: const EdgeInsets.only(bottom: 6),
+              child: ListTile(
+                leading: const Icon(Icons.apartment_rounded),
+                title: Text(building.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text([
+                  if (building.province.isNotEmpty || building.city.isNotEmpty) '${building.province}${building.province.isNotEmpty && building.city.isNotEmpty ? '، ' : ''}${building.city}',
+                  building.address.isEmpty ? 'آدرس ثبت نشده' : building.address,
+                  if (building.buildingCode.isNotEmpty) 'شناسه: ${building.buildingCode.toPersianDigits()}',
+                ].join(' • ')),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: () => _selectBuilding(building),
+              ),
+            )).toList(),
+          );
         }),
       ]),
-      const SizedBox(height: 16),
-      if (found != null) ...[
-        Text('ساختمان: ${found.name}\nآدرس: ${found.address.isEmpty ? 'ثبت نشده' : found.address}\nکد: ${found.buildingCode.isEmpty ? 'در دسترس نیست' : found.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        const SizedBox(height: 10),
-        _BuildingLayout(
-          building: found,
-          onUnitTap: (floor, unit) => _showResidentUnit(found, floor, unit),
-          highlightMemberName: widget.name,
-        ),
-        const SizedBox(height: 12),
-        _ResidentPollsCard(building: found, unitId: null, onChanged: () { if (mounted) setState(() {}); }),
-      ],
     ]);
   }
 }
 
 class _ResidentBuildingDetailPage extends StatelessWidget {
-  const _ResidentBuildingDetailPage({required this.building, required this.residentName});
+  const _ResidentBuildingDetailPage({
+    super.key,
+    required this.building,
+    required this.residentName,
+    required this.onJoinUnit,
+  });
+
   final _Building building;
   final String residentName;
+  final Function(int, dynamic) onJoinUnit;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(building.name)),
-    body: ListView(padding: const EdgeInsets.all(16), children: [
-      Text('آدرس: ${building.address.isEmpty ? 'ثبت نشده' : building.address}\nکد ساختمان: ${building.buildingCode.isEmpty ? 'در دسترس نیست' : building.buildingCode.toPersianDigits()}\nواحدهای ساختمان را ببینید و روی واحد خالی بزنید:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-      const SizedBox(height: 10),
-      _BuildingLayout(building: building, onUnitTap: (floor, unit) {
-        final member = building.occupantOf(floor, unit);
-        if (member != null) {
-          showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()}'), content: _MemberInfoContent(building: building, member: member, unitId: building.unitId(floor, unit)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
-        } else {
-          showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'), content: const Text('این واحد خالی است. برای ثبت‌نام به صفحهٔ جست‌وجو بازگردید.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))]));
-        }
-      }, highlightMemberName: residentName),
-      const SizedBox(height: 12),
-      _ResidentPollsCard(building: building, unitId: null, onChanged: () {}),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(building.name)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // کارت مشخصات ساختمان
+          Card(
+            elevation: 0,
+            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'آدرس: ${building.address.isEmpty ? 'ثبت نشده' : building.address}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'کد ساختمان: ${building.buildingCode.isEmpty ? 'در دسترس نیست' : building.buildingCode.toPersianDigits()}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // دکمه ورود به صفحه مستقل اعضا، طبقات و واحدها
+          Card(
+            elevation: 1,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: const Icon(Icons.apartment_rounded, color: Colors.teal),
+              title: const Text(
+                'اعضا، طبقات و واحدها',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              subtitle: const Text(
+                'مشاهده وضعیت واحدها، همسایگان و انتخاب واحد خالی',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => _ResidentUnitsPage(
+                      building: building,
+                      residentName: residentName,
+                      onJoinUnit: onJoinUnit,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          _ResidentPollsCard(building: building, unitId: null, onChanged: () {}),
+        ],
+      ),
+    );
+  }
 }
+
+class _ResidentUnitsPage extends StatelessWidget {
+  const _ResidentUnitsPage({
+    super.key,
+    required this.building,
+    required this.residentName,
+    required this.onJoinUnit,
+  });
+
+  final _Building building;
+  final String residentName;
+  final Function(int, dynamic) onJoinUnit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('اعضا، طبقات و واحدها'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'برای مشاهده اطلاعات یا ثبت‌نام در واحد خالی، روی واحد مورد نظر بزنید:',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          _BuildingLayout(
+            building: building,
+            highlightMemberName: residentName,
+            onUnitTap: (floor, unit) {
+              final member = building.occupantOf(floor, unit);
+              if (member != null) {
+                showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text('واحد ${unit.toString().toPersianDigits()}'),
+                    content: _MemberInfoContent(
+                      building: building,
+                      member: member,
+                      unitId: building.unitId(floor, unit),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('بستن'),
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text('واحد ${unit.toString().toPersianDigits()} — طبقه ${floor.toPersianDigits()}'),
+                    content: const Text('این واحد خالی است. آیا می‌خواهید در این واحد ثبت‌نام کنید؟'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('بستن'),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          onJoinUnit(floor, unit);
+                        },
+                        child: const Text('ثبت‌نام'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
 /// ------------------------- نمای طبقات و واحدها -------------------------
 
@@ -3046,21 +3496,65 @@ class _MemberInfoContent extends StatelessWidget {
   final _Building building;
   final _Member member;
   final String? unitId;
-  @override Widget build(BuildContext context) {
+
+  @override
+  Widget build(BuildContext context) {
     final charge = building.monthlyCharge;
-    Widget row(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 112, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600))), Expanded(child: Text(value))]));
-    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      row('نام', member.name), row('شماره تماس', member.phone.isEmpty ? 'ثبت نشده' : member.phone),
-      row('بدهی شارژ', charge == null ? 'شارژ مصوب نشده' : formatTomanAmount(charge)),
-      if (unitId != null && building.financialDebtFor(unitId!) > 0) row('سهم بدهی مالی', formatTomanAmount(building.financialDebtFor(unitId!))),
-      if (unitId != null) ...[
-        row('مجموع بدهی آب', formatTomanAmount(building.totalWaterDebtFor(unitId!))),
-        for (final bill in (building.waterDebtByUnitAndBill[unitId!] ?? const <String, int>{}).entries)
-          row('قبض ${bill.key}', formatTomanAmount(bill.value)),
-      ] else if (member.waterDebt > 0) row('بدهی آب', formatTomanAmount(member.waterDebt)),
-      row('نوع مالکیت', member.ownership),
-      row('تاریخ و ساعت سکونت', _formatPersianDateTime(member.movedInAt)),
-    ]);
+    String displayName = member.name;
+
+    final userData = pb.authStore.record?.data ?? const <String, dynamic>{};
+    
+    // تابع برای نرمال‌سازی شماره تلفن
+    String normalize(String raw) {
+      var s = raw.trim().replaceAll(RegExp(r'\s+|-'), '');
+      const fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+      for (var i = 0; i < 10; i++) { s = s.replaceAll(fa[i], '$i'); }
+      if (s.length == 10 && s.startsWith('9')) s = '0$s';
+      return s;
+    }
+    
+    final memberPhone = normalize(member.phone);
+    final userPhone = normalize((userData['phone'] ?? '').toString());
+    
+    if (memberPhone.isNotEmpty && memberPhone == userPhone) {
+      final firstName = (userData['name'] ?? '').toString().trim();
+      final lastName = (userData['last_name'] ?? userData['lastname'] ?? '').toString().trim();
+      final fullName = [firstName, lastName].where((p) => p.isNotEmpty).join(' ');
+      if (fullName.isNotEmpty) {
+        displayName = fullName;
+      }
+    }
+
+    Widget row(String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 112, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(child: Text(value)),
+            ],
+          ),
+        );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        row('نام ', displayName),
+        row('شماره تماس', member.phone.isEmpty ? 'ثبت نشده' : member.phone),
+        row('بدهی شارژ', charge == null ? 'شارژ مصوب نشده' : formatTomanAmount(charge)),
+        if (unitId != null && building.financialDebtFor(unitId!) > 0)
+          row('سهم بدهی مالی', formatTomanAmount(building.financialDebtFor(unitId!))),
+        if (unitId != null) ...[
+          row('مجموع بدهی آب', formatTomanAmount(building.totalWaterDebtFor(unitId!))),
+          for (final bill in (building.waterDebtByUnitAndBill[unitId!] ?? const <String, int>{}).entries)
+            row('قبض ${bill.key}', formatTomanAmount(bill.value)),
+        ] else if (member.waterDebt > 0)
+          row('بدهی آب', formatTomanAmount(member.waterDebt)),
+        row('نوع مالکیت', member.ownership),
+        row('زمان سکونت', _formatPersianDateTime(member.movedInAt)),
+      ],
+    );
   }
 }
 
@@ -3221,7 +3715,7 @@ class _UnitTile extends StatelessWidget {
     final occupied = member != null;
     final tileColor = isManagerUnit
         ? const Color(0xFFFFC107).withOpacity(.28)
-        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceVariant.withOpacity(.6));
+        : (occupied ? colors.primaryContainer.withOpacity(.45) : colors.surfaceContainerHighest.withOpacity(.6));
     final tileBorder = isManagerUnit
         ? const Color(0xFFFFB300).withOpacity(.85)
         : (occupied ? colors.primary.withOpacity(.4) : colors.outlineVariant);
@@ -3247,15 +3741,34 @@ class _UnitTile extends StatelessWidget {
           if (occupied)
             Row(children: [
               CircleAvatar(
-                radius: 11,
-                backgroundColor: isManagerUnit ? const Color(0xFFFFB300) : colors.primary,
-                child: Text(
-                  member!.name.characters.isNotEmpty ? member.name.characters.first : '؟',
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ),
+  radius: 11,
+  backgroundColor:
+      isManagerUnit ? const Color(0xFFFFB300) : colors.primary,
+  child: FutureBuilder<String>(
+    future: _resolveProfileFullName(member.phone, member.name),
+    builder: (context, snapshot) {
+      final name = snapshot.data ?? member.name;
+      return Text(
+        name.characters.isNotEmpty ? name.characters.first : '؟',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    },
+  ),
+), // CircleAvatar
               const SizedBox(width: 6),
-              Expanded(child: Text(member.name, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: isManagerUnit ? const Color(0xFF8A5A00) : (isMine ? colors.primary : colors.onSurface), fontWeight: isManagerUnit || isMine ? FontWeight.bold : FontWeight.w500))),
+              Expanded(child: _ResolvedMemberName(
+  member: member,
+  overflow: TextOverflow.ellipsis,
+  style: TextStyle(
+    fontSize: 11, 
+    color: isManagerUnit ? const Color(0xFF8A5A00) : (isMine ? colors.primary : colors.onSurface), 
+    fontWeight: isManagerUnit || isMine ? FontWeight.bold : FontWeight.w500,
+  ),
+))
             ]),
           if (isManagerUnit) ...[
             const SizedBox(height: 5),
@@ -3273,7 +3786,7 @@ class _UnitTile extends StatelessWidget {
             ),
           ]
           else
-            Text('خالی — برای انتخاب بزنید', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+            Text('خالی — برای انتخاب کلیک کنید', style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
           if (building.financialDebtFor(building.unitId(floor, unit)) > 0) ...[
             const SizedBox(height: 5),
             Text('سهم بدهی مالی: ${formatTomanAmount(building.financialDebtFor(building.unitId(floor, unit)))}', style: TextStyle(fontSize: 10, color: colors.error, fontWeight: FontWeight.bold)),
@@ -3536,7 +4049,6 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
   }
   int _moneyOf(TextEditingController c) => int.tryParse(_latinDigits(c.text.replaceAll(',', '').trim())) ?? 0;
   Future<void> _saveFinance() async {
-    b.fundBalance = _moneyOf(_fundCtrl);
     b.fundReceivable = _moneyOf(_recvCtrl);
     b.sharedWaterDebt = _moneyOf(_waterCtrl);
     b.sharedPowerDebt = _moneyOf(_powerCtrl);
@@ -3547,6 +4059,58 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     if (mounted) setState(() {});
     _toast('اطلاعات مالی ساختمان ذخیره شد.');
   }
+  Future<void> _showFundBalanceDialog(_Building b) async {
+    if (b.fundBalanceSet) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('عدم امکان ویرایش'),
+          content: const Text('موجودی صندوق قبلاً ثبت نهایی شده و امکان ویرایش مجدد آن وجود ندارد.'),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('متوجه شدم'))],
+        ),
+      );
+      return;
+    }
+    final controller = TextEditingController();
+    final amount = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('شما فقط یکبار مجاز به ثبت موجودی صندوق هستید ، موجودی واقعی را وارد نمایید'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textDirection: TextDirection.ltr,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, ThousandsSeparatorInputFormatter()],
+              decoration: const InputDecoration(labelText: 'موجودی صندوق (تومان)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+          FilledButton(
+            onPressed: () {
+              final value = parseTomanAmount(controller.text.trim());
+              if (value == null) return;
+              Navigator.pop(dialogContext, value);
+            },
+            child: const Text('ثبت نهایی'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (amount == null) return;
+    b.fundBalance = amount;
+    b.fundBalanceSet = true;
+    await _persistBuilding(b);
+    if (mounted) setState(() {});
+  }
+
   String get _dateTimeText => _formatPersianDateTime(_now);
   _Building get b => widget.building;
 
@@ -3583,38 +4147,67 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
       ),
     );
     if (!mounted || action == null || action == 'no') return;
-    if (action == 'self') {
+            if (action == 'self') {
+      final currentUserId = pb.authStore.record?.id ?? '';
+      
+      // بررسی اینکه آیا کاربرِ فعلی، سازنده اصلی این ساختمان است؟
+      if ((b.createdBy ?? '').isNotEmpty && currentUserId.isNotEmpty && b.createdBy != currentUserId) {
+        _toast('شما مدیر اصلی و سازنده این ساختمان نیستید و نمی‌توانید نقش مدیر را در اینجا ثبت کنید.', error: true);
+        return;
+      }
+
       final managerPhone = (pb.authStore.record?.data['phone'] ?? '').toString();
       if (managerPhone.isNotEmpty && b.hasOccupantWithPhone(managerPhone, excludeKey: key)) {
-        _toast('این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.', error: true);
+        _toast('این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است', error: true);
         return;
       }
-      if (member != null && !(member.name == widget.managerName && member.role == 'مدیر')) {
-        _toast('این واحد در اختیار ${member.name} است؛ برای تغییر جایگاه او از «تغییر واحد» یا «ویرایش عضو» استفاده کنید.', error: true);
-        return;
-      }
-      final managerMember = _Member(widget.managerName, 'مدیر', 'مدیر', phone: managerPhone);
+
+      // پرسیدن اینکه مدیر مالک است یا مستأجر
+      final ownership = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('نوع استقرار در واحد'),
+          content: const Text('در این واحد به عنوان مالک مستقر می‌شوید یا مستأجر؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'مستأجر'),
+              child: const Text('مستأجر هستم'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'مالک'),
+              child: const Text('مالک هستم'),
+            ),
+          ],
+        ),
+      );
+
+      if (ownership == null) return;
+
+      final managerMember = _Member(
+        widget.managerName, 
+        'مدیر', 
+        ownership, 
+        phone: managerPhone,
+      );
+
       final previousManagerKeys = b.occupants.entries
           .where((entry) => entry.value.name == widget.managerName && entry.value.role == 'مدیر' && entry.key != key)
           .map((entry) => entry.key).toList();
       for (final previousKey in previousManagerKeys) { b.occupants.remove(previousKey); }
+      
       final assignError = b.assign(floor, unit, managerMember);
       if (assignError != null) {
-        for (final previousKey in previousManagerKeys) {
-          final parts = previousKey.split('/');
-          final oldFloor = int.tryParse(parts.first);
-          if (oldFloor != null && parts.length > 1) {
-            b.occupants[previousKey] = managerMember;
-          }
-        }
         _toast(assignError, error: true);
         return;
       }
+      
       await _persistBuilding(b);
       await _syncMemberRecord(b, floor, unit, managerMember);
       if (mounted) setState(() {});
-      _toast('شما در واحد ${unit.toString().toPersianDigits()} طبقه ${floor.toPersianDigits()} مستقر شدید.');
-    } else if (action == 'register') {
+      _toast('با موفقیت مستقر شدید');
+    }
+
+    else if (action == 'register') {
       await _editOrAddMember(key, null);
     } else if (member != null && action == 'edit') {
       await _editOrAddMember(key, member);
@@ -3625,52 +4218,110 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
         title: const Text('حذف عضو'), content: Text('عضو «${member.name}» از این واحد حذف شود؟'),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف عضو'))],
       ));
-      if (confirmed == true && mounted) { setState(() => b.occupants.remove(key)); _toast('عضو از واحد تخلیه شد.'); }
+            if (confirmed == true && mounted) { 
+        setState(() => b.occupants.remove(key)); 
+        await _persistBuilding(b);
+        await _deactivateMemberRecord(b, floor, unit, member);
+        _toast('عضو از واحد تخلیه شد.'); 
+      }
     }
   }
 
-  Future<void> _editOrAddMember(String key, _Member? existing) async {
+    Future<void> _editOrAddMember(String key, _Member? existing) async {
     final nameController = TextEditingController(text: existing?.name ?? '');
     final phoneController = TextEditingController(text: existing?.phone ?? '');
-    var phoneError;
+    String? phoneError;
     var selectedRole = existing?.role == 'مدیر' ? 'مدیر' : 'ساکن';
     var selectedOwnership = existing?.ownership == 'مستأجر' ? 'مستأجر' : 'مالک';
-    final result = await showDialog<_Member>(context: context, builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        title: Text(existing == null ? 'ثبت ساکن' : 'ویرایش عضو'),
-        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'نام عضو')),
-          TextField(controller: phoneController, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, decoration: InputDecoration(labelText: 'شماره تماس', errorText: phoneError), onChanged: (_) { if (phoneError != null) setDialogState(() => phoneError = null); }),
-          DropdownButtonFormField<String>(
-            value: selectedRole,
-            decoration: const InputDecoration(labelText: 'نقش'),
-            items: const [
-              DropdownMenuItem(value: 'ساکن', child: Text('ساکن')),
-              DropdownMenuItem(value: 'مدیر', child: Text('مدیر')),
-            ],
-            onChanged: (value) { if (value != null) setDialogState(() => selectedRole = value); },
+    final result = await showDialog<_Member>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (builderContext, setDialogState) => AlertDialog(
+          title: Text(existing == null ? 'ثبت ساکن' : 'ویرایش عضو'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: 'نام عضو'),
+                ),
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  textDirection: TextDirection.ltr,
+                  decoration: InputDecoration(
+                    labelText: 'شماره تماس',
+                    errorText: phoneError,
+                  ),
+                  onChanged: (_) {
+                    if (phoneError != null) setDialogState(() => phoneError = null);
+                  },
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedRole,
+                  decoration: const InputDecoration(labelText: 'نقش'),
+                  items: const [
+                    DropdownMenuItem(value: 'ساکن', child: Text('ساکن')),
+                    DropdownMenuItem(value: 'مدیر', child: Text('مدیر')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setDialogState(() => selectedRole = value);
+                  },
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedOwnership,
+                  decoration: const InputDecoration(labelText: 'نوع سکونت / مالکیت'),
+                  items: const [
+                    DropdownMenuItem(value: 'مالک', child: Text('مالک')),
+                    DropdownMenuItem(value: 'مستأجر', child: Text('مستأجر')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setDialogState(() => selectedOwnership = value);
+                  },
+                ),
+              ],
+            ),
           ),
-          DropdownButtonFormField<String>(
-            value: selectedOwnership,
-            decoration: const InputDecoration(labelText: 'نوع سکونت / مالکیت'),
-            items: const [
-              DropdownMenuItem(value: 'مالک', child: Text('مالک')),
-              DropdownMenuItem(value: 'مستأجر', child: Text('مستأجر')),
-            ],
-            onChanged: (value) { if (value != null) setDialogState(() => selectedOwnership = value); },
-          ),
-        ])),
-        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')), FilledButton(onPressed: () {
-          final name = nameController.text.trim();
-          final phone = _latinDigits(phoneController.text.trim());
-          if (!RegExp(r'^09\d{9}$').hasMatch(phone)) { setDialogState(() => phoneError = 'شماره همراه باید ۱۱ رقم و با 09 شروع شود.'); return; }
-          if (b.hasOccupantWithPhone(phone, excludeKey: key)) { setDialogState(() => phoneError = 'این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.'); return; }
-          if (name.isNotEmpty) Navigator.pop(dialogContext, _Member(name, selectedRole, selectedOwnership, phone: phone, waterDebt: existing?.waterDebt ?? 0, movedInAt: existing?.movedInAt ?? DateTime.now()));
-        }, child: const Text('ذخیره'))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('انصراف'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                final phone = _latinDigits(phoneController.text.trim());
+                if (!RegExp(r'^09\d{9}$').hasMatch(phone)) {
+                  setDialogState(() => phoneError = 'شماره همراه باید ۱۱ رقم و با 09 شروع شود.');
+                  return;
+                }
+                if (b.hasOccupantWithPhone(phone, excludeKey: key)) {
+                  setDialogState(() => phoneError = 'این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.');
+                  return;
+                }
+                if (name.isNotEmpty) {
+                  Navigator.pop(
+                    dialogContext,
+                    _Member(
+                      name,
+                      selectedRole,
+                      selectedOwnership,
+                      phone: phone,
+                      waterDebt: existing?.waterDebt ?? 0,
+                      movedInAt: existing?.movedInAt ?? DateTime.now(),
+                    ),
+                  );
+                }
+              },
+              child: const Text('ذخیره'),
+            ),
+          ],
+        ),
       ),
-    ));
-    nameController.dispose();
-    phoneController.dispose();
+    );
+
     if (result == null || !mounted) return;
     if (b.hasOccupantWithPhone(result.phone, excludeKey: key)) {
       _toast('این شماره تماس قبلاً در واحد دیگری از ساختمان ثبت شده است.', error: true);
@@ -3682,7 +4333,10 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     if (floor == null || unit.isEmpty) return;
     if (existing == null) {
       final assignError = b.assign(floor, unit, result);
-      if (assignError != null) { _toast(assignError, error: true); return; }
+      if (assignError != null) {
+        _toast(assignError, error: true);
+        return;
+      }
     } else {
       b.occupants[key] = result;
     }
@@ -3691,6 +4345,7 @@ class _BuildingDetailPageState extends State<_BuildingDetailPage> {
     if (mounted) setState(() {});
     _toast(existing == null ? 'ساکن در واحد ثبت شد.' : 'اطلاعات عضو به‌روزرسانی شد.');
   }
+
 
   Future<void> _moveMember(String fromKey, _Member member) async {
     final available = <String>[];
@@ -3955,24 +4610,39 @@ Card(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
           children: [
             _statChip(
               context,
               Icons.stairs_outlined,
               '${b.floors.length.toPersianDigits()} طبقه',
             ),
-            const SizedBox(width: 10),
             _statChip(
               context,
               Icons.door_sliding_outlined,
               '${totalUnits.toPersianDigits()} واحد',
             ),
-            const SizedBox(width: 10),
             _statChip(
               context,
               Icons.people_outline,
               '${b.occupants.length.toPersianDigits()} عضو',
+            ),
+            if ((b.recordId ?? '').isNotEmpty)
+              _statChip(
+                context,
+                Icons.fingerprint,
+                'شناسه یکتا ${b.buildingCode.toPersianDigits()}',
+              ),
+            InkWell(
+              onTap: () => _showFundBalanceDialog(b),
+              borderRadius: BorderRadius.circular(20),
+              child: _statChip(
+                context,
+                Icons.account_balance_wallet_outlined,
+                'موجودی صندوق: ${b.fundBalance.toPersianDigits()}',
+              ),
             ),
           ],
         ),
@@ -3980,7 +4650,8 @@ Card(
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Text(
-              'شارژ ماهانهٔ تصویب‌شده: ${formatTomanAmount(b.monthlyCharge!)}',
+              'شارژ ماهانهٔ تصویب‌شده: '
+              '${formatTomanAmount(b.monthlyCharge!)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -3988,6 +4659,7 @@ Card(
     ),
   ),
 ),
+
   
         const SizedBox(height: 14),
         Card(
@@ -4020,7 +4692,6 @@ Card(
         const Text('اطلاعات مالی و قوانین', style: TextStyle(fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         Wrap(spacing: 10, runSpacing: 10, children: [
-          _moneyBox('موجودی صندوق', _fundCtrl),
           _moneyBox('کل طلب صندوق', _recvCtrl),
           _moneyBox('بدهی آب مشاع', _waterCtrl),
           _moneyBox('بدهی برق مشاع', _powerCtrl),
@@ -4379,6 +5050,36 @@ class _SettingsPageState extends State<_SettingsPage> {
     if (mounted) _showSuccess();
   }
 
+void _showColorPicker(BuildContext context) {
+  Color currentColor = Theme.of(context).colorScheme.primary; // رنگ فعلی برنامه
+  showDialog<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('انتخاب رنگ دلخواه تم', textAlign: TextAlign.right),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: currentColor,
+            onColorChanged: (Color color) => currentColor = color,
+            pickerAreaHeightPercent: 0.8,
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('تأیید'),
+            onPressed: () async {
+              await BuildingApp.setCustomColor(currentColor);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
   void _showSupport() {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _TicketSupportPage(
       userName: (pb.authStore.record?.data['name'] ?? '').toString(),
@@ -4386,47 +5087,150 @@ class _SettingsPageState extends State<_SettingsPage> {
     )));
   }
 
-  @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(24)),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(widget.role, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
-            const SizedBox(height: 4),
-            Text(widget.phoneNumber, style: TextStyle(color: Colors.white.withOpacity(.85))),
-          ])),
-          const SizedBox(width: 12),
-          Container(width: 52, height: 52, decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.person_rounded, color: Colors.white)),
-        ]),
-      ),
-      const SizedBox(height: 12),
-      if (widget.role == 'خدماتی') ...[
-        Card(child: ListTile(
-          leading: const Icon(Icons.handyman_outlined),
-          title: const Text('تخصص‌های من', style: TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text(widget.specialties.isEmpty ? 'برای انتخاب تخصص‌ها لمس کنید' : '${widget.specialties.length} تخصص انتخاب شده'),
-          trailing: const Icon(Icons.chevron_left_rounded),
-          onTap: _openSpecialties,
-        )),
-        const SizedBox(height: 10),
-      ],
-      Card(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        ListTile(leading: const Icon(Icons.phone_outlined), title: Text('شماره همراه: ${widget.phoneNumber}')),
-        ListTile(leading: const Icon(Icons.manage_accounts_outlined), title: const Text('ویرایش حساب کاربری'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onEditAccount),
-        ListTile(leading: const Icon(Icons.workspace_premium_outlined), title: const Text('خرید اشتراک برنامه'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onSubscription),
-        ListTile(leading: const Icon(Icons.swap_horiz_rounded), title: const Text('تغییر نقش'), trailing: const Icon(Icons.chevron_left_rounded), onTap: widget.onRoleChange),
-        const _ThemeColorSelector(),
-        ListTile(leading: const Icon(Icons.support_agent_outlined), title: const Text('تیکت‌های پشتیبانی'), trailing: const Icon(Icons.chevron_left_rounded), onTap: _showSupport),
-        ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('خروج از حساب کاربری'), onTap: widget.onLogout),
-      ])),
-    ],
-  );
-}
 
+    @override
+  Widget build(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.primary,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      widget.role,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.phoneNumber,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white.withOpacity(0.85)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.person_rounded, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // دکمه پالت پیشرفته انتخاب رنگ
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFE7EEEB)),
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: cs.primary.withOpacity(0.1),
+              child: Icon(Icons.palette_outlined, color: cs.primary),
+            ),
+            title: const Text(
+              'پالت پیشرفته انتخاب رنگ',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: const Text('انتخاب طیف رنگ دلخواه با پالت کامل'),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+            onTap: () => _showColorPicker(context),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        if (widget.role == 'خدماتی') ...[
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.handyman_outlined),
+              title: const Text(
+                'تخصص‌های من',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                widget.specialties.isEmpty
+                    ? 'برای انتخاب تخصص‌ها لمس کنید'
+                    : '${widget.specialties.length} تخصص انتخاب شده',
+              ),
+              trailing: const Icon(Icons.chevron_left_rounded),
+              onTap: _openSpecialties,
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        Card(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.phone_outlined),
+                title: Text('شماره همراه: ${widget.phoneNumber}'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.manage_accounts_outlined),
+                title: const Text('ویرایش حساب کاربری'),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: widget.onEditAccount,
+              ),
+              ListTile(
+                leading: const Icon(Icons.workspace_premium_outlined),
+                title: const Text('خرید اشتراک برنامه'),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: widget.onSubscription,
+              ),
+              ListTile(
+                leading: const Icon(Icons.swap_horiz_rounded),
+                title: const Text('تغییر نقش'),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: widget.onRoleChange,
+              ),
+              ListTile(
+                leading: const Icon(Icons.support_agent_outlined),
+                title: const Text('تیکت‌های پشتیبانی'),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: _showSupport,
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout_rounded),
+                title: const Text('خروج از حساب کاربری'),
+                onTap: widget.onLogout,
+              ),
+            ],
+          ),
+        ),
+      ],
+    ); // بستن ListView
+  } // <--- بستن متد build
+} // <--- بستن کلاس _SettingsPageState (این خط حتماً لازم است تا خطای 4572 رفع شود)
+
+// شروع کلاس بعدی در بالاترین سطح:
 class _SpecialtySelectionPage extends StatefulWidget {
   const _SpecialtySelectionPage({required this.initial});
   final List<String> initial;
@@ -4435,28 +5239,46 @@ class _SpecialtySelectionPage extends StatefulWidget {
 }
 
 class _SpecialtySelectionPageState extends State<_SpecialtySelectionPage> {
-  static const List<String> _available = ['لوله‌کشی و تأسیسات', 'برق‌کاری ساختمان', 'نظافت مشاعات', 'سرویس آسانسور'];
+  static const List<String> _available = [
+    'لوله‌کشی و تأسیسات',
+    'برق‌کاری ساختمان',
+    'نظافت مشاعات',
+    'سرویس آسانسور',
+  ];
   late final Set<String> _selected = Set<String>.of(widget.initial);
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('تخصص‌های من')),
-    body: SafeArea(child: Column(children: [
-      Expanded(child: ListView(padding: const EdgeInsets.all(16), children: [
-        Text('تخصص‌هایی را که ارائه می‌دهید انتخاب کنید.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 12),
-        Card(child: Column(children: [for (final specialty in _available) CheckboxListTile(
-          controlAffinity: ListTileControlAffinity.leading,
-          title: Text(specialty), value: _selected.contains(specialty),
-          onChanged: (checked) => setState(() { if (checked == true) { _selected.add(specialty); } else { _selected.remove(specialty); } }),
-        )])),
-      ])),
-      SizedBox(width: double.infinity, child: Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), child: FilledButton.icon(
-        onPressed: () => Navigator.of(context).pop(_available.where(_selected.contains).toList()),
-        icon: const Icon(Icons.check_rounded), label: const Text('ثبت تخصص‌ها'),
-      ))),
-    ])),
-  );
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('تخصص‌های من'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check),
+            onPressed: () => Navigator.pop(context, _selected.toList()),
+          ),
+        ],
+      ),
+      body: ListView(
+        children: _available.map((item) {
+          final isChecked = _selected.contains(item);
+          return CheckboxListTile(
+            title: Text(item),
+            value: isChecked,
+            onChanged: (val) {
+              setState(() {
+                if (val == true) {
+                  _selected.add(item);
+                } else {
+                  _selected.remove(item);
+                }
+              });
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
 }
 
 class _FeatureHub extends StatelessWidget {
@@ -4750,7 +5572,7 @@ class _FeaturePageState extends State<_FeaturePage> {
             const SizedBox(height: 14),
             if (kind == 'service') ...[
               DropdownButtonFormField<String>(
-                value: _registeredServiceSpecialties.contains(_selectedServiceSpecialty)
+                initialValue: _registeredServiceSpecialties.contains(_selectedServiceSpecialty)
                     ? _selectedServiceSpecialty
                     : _registeredServiceSpecialties.first,
                 decoration: InputDecoration(
@@ -5135,7 +5957,7 @@ class _FeaturePageState extends State<_FeaturePage> {
 
   Widget _chatInterface(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     _sectionTitle('گفت‌وگوی ساختمان ${widget.building?.name ?? ''}', detail: 'گفت‌وگوی گروهی و اطلاعیه‌های اعضای این ساختمان', icon: Icons.forum_outlined),
-        Expanded(child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
+        Expanded(child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.35), borderRadius: BorderRadius.circular(18)), child: ListView(children: [
       for (final message in _messages) _chatBubble(message),
     ]))),
     const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: _chatController, minLines: 1, maxLines: 4, textInputAction: TextInputAction.send, onSubmitted: (_) => _sendChat(), decoration: InputDecoration(hintText: 'پیام خود را بنویسید…', border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)))), const SizedBox(width: 8), IconButton.filled(onPressed: _sendChat, tooltip: 'ارسال پیام', icon: const Icon(Icons.send_rounded))]),
