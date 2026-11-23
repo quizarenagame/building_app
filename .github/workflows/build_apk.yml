@@ -46,13 +46,12 @@ jobs:
           cp /home/runner/.android/debug.keystore \
             /home/runner/.config/.android/debug.keystore
 
-      # نصب آخرین نسخه پایدار Flutter
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-          cache-dependency-path: pubspec.lock
+            - name: Set up Flutter
+             uses: subosito/flutter-action@v2
+             with:
+             flutter-version: '3.50.1'
+             channel: stable
+             cache: true
 
       # بررسی محیط
       - name: Check Flutter
