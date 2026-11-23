@@ -1,84 +1,130 @@
+
 name: Build Release APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # دریافت سورس پروژه
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # نصب Java
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
+      # ایجاد Debug Keystore
       - name: Create default debug keystore
         run: |
           mkdir -p /home/runner/.android
           mkdir -p /home/runner/.config/.android
-          keytool -genkey -v -keystore /home/runner/.android/debug.keystore \
-            -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-          cp /home/runner/.android/debug.keystore /home/runner/.config/.android/debug.keystore
 
+          keytool -genkey -v \
+            -keystore /home/runner/.android/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+          cp /home/runner/.android/debug.keystore \
+            /home/runner/.config/.android/debug.keystore
+
+      # نصب آخرین نسخه پایدار Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
-          channel: 'stable'
+          channel: stable
           cache: true
+          cache-dependency-path: pubspec.lock
 
+      # بررسی محیط
+      - name: Check Flutter
+        run: |
+          flutter --version
+          dart --version
+          flutter doctor -v
+
+      # نصب ابزارهای آیکون
+      - name: Install icon tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y imagemagick librsvg2-bin
+
+      # ساخت آیکون اختصاصی ساختمان
       - name: Generate Building App Icon
         run: |
-          sudo apt-get update -y && sudo apt-get install -y imagemagick librsvg2-bin
-
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
 
-          # ساخت آیکون شکیل و باکیفیت وکتور ساختمان
           cat << 'EOF' > icon.svg
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
             <rect width="512" height="512" rx="115" fill="#12A889"/>
             <path d="M120 420h272" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
             <path d="M160 420V170l120-60v310" stroke="#FFFFFF" stroke-width="24" stroke-linejoin="round" fill="none"/>
             <path d="M280 210h80v210h-80z" stroke="#FFFFFF" stroke-width="24" fill="#0E856D"/>
-            <!-- پنجره‌های ساختمان چپ -->
             <rect x="190" y="200" width="30" height="30" rx="4" fill="#FFFFFF"/>
             <rect x="190" y="260" width="30" height="30" rx="4" fill="#FFFFFF"/>
             <rect x="190" y="320" width="30" height="30" rx="4" fill="#FFFFFF"/>
-            <!-- پنجره‌های ساختمان راست -->
             <rect x="305" y="240" width="30" height="24" rx="4" fill="#FFFFFF"/>
             <rect x="305" y="290" width="30" height="24" rx="4" fill="#FFFFFF"/>
             <rect x="305" y="340" width="30" height="24" rx="4" fill="#FFFFFF"/>
           </svg>
           EOF
 
-          # تبدیل فایل SVG به تمام سایزهای استاندارد لانچر اندروید
           rsvg-convert -w 48 -h 48 icon.svg -o android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           rsvg-convert -w 72 -h 72 icon.svg -o android/app/src/main/res/mipmap-hdpi/ic_launcher.png
           rsvg-convert -w 96 -h 96 icon.svg -o android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           rsvg-convert -w 144 -h 144 icon.svg -o android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           rsvg-convert -w 192 -h 192 icon.svg -o android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
+      # دریافت وابستگی‌ها
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
+      # بررسی کد
+      - name: Analyze Flutter Project
+        run: flutter analyze --no-pub
+        continue-on-error: true
+
+      # پاک‌سازی خروجی‌های قبلی
+      - name: Clean project
+        run: flutter clean
+
+      # ساخت APK
+      - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
+      # بررسی وجود APK
+      - name: Verify APK
+        run: |
+          test -f build/app/outputs/flutter-apk/app-release.apk
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
+
+      # آپلود APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: Building-App-Release-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+          retention-days: 14
