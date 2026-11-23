@@ -27,8 +27,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # ایجاد Debug Keystore
+      # نصب Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.50.1'
+          channel: stable
+          cache: true
 
+      # بررسی نصب Flutter و Dart
+      - name: Check Flutter
+        run: |
+          flutter --version
+          dart --version
+          flutter doctor -v
+
+      # ایجاد Debug Keystore
       - name: Create default debug keystore
         run: |
           mkdir -p /home/runner/.android
@@ -46,14 +60,6 @@ jobs:
 
           cp /home/runner/.android/debug.keystore \
             /home/runner/.config/.android/debug.keystore
-
-
-      # بررسی محیط
-      - name: Check Flutter
-        run: |
-          flutter --version
-          dart --version
-          flutter doctor -v
 
       # نصب ابزارهای آیکون
       - name: Install icon tools
@@ -95,14 +101,18 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # پاک‌سازی پروژه
+      - name: Clean project
+        run: flutter clean
+
+      # دریافت دوباره وابستگی‌ها بعد از پاک‌سازی
+      - name: Get dependencies
+        run: flutter pub get
+
       # بررسی کد
       - name: Analyze Flutter Project
         run: flutter analyze --no-pub
         continue-on-error: true
-
-      # پاک‌سازی خروجی‌های قبلی
-      - name: Clean project
-        run: flutter clean
 
       # ساخت APK
       - name: Build Release APK
