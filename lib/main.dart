@@ -314,6 +314,7 @@ class _LoginFlowState extends State<LoginFlow> {
   Timer? _timer;
   int _secondsLeft = 0;
   bool _isSendingOtp = false;
+  bool _acceptedPrivacyTerms = false;
   bool _isVerifyingOtp = false;
   bool _hidePassword = true;
   bool _hideConfirmPassword = true;
@@ -438,7 +439,7 @@ void _goBack() {
 
 
   Future<void> _resendOtp() async {
-    if (_isSendingOtp) return;
+    if (!_acceptedPrivacyTerms || _isSendingOtp) return;
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) return;
     setState(() => _isSendingOtp = true);
@@ -446,7 +447,7 @@ void _goBack() {
   }
 
   Future<void> _submitPhone() async {
-    if (_isSendingOtp || !(_phoneKey.currentState?.validate() ?? false)) return;
+    if (!_acceptedPrivacyTerms || _isSendingOtp || !(_phoneKey.currentState?.validate() ?? false)) return;
     _phoneController.text = _latinDigits(_phoneController.text).replaceAll(' ', '').trim();
     final phone = _phoneController.text;
     setState(() {
@@ -610,15 +611,28 @@ void _goBack() {
       }
 
       if (!mounted) return;
-      // پس از ذخیره، صفحهٔ ویرایش باز می‌ماند تا کاربر پیام را ببیند و خودش بازگردد.
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(
-          content: Text('تغییرات با موفقیت ذخیره شد'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ));
+      if (_fromDashboard) {
+        // ویرایش حساب از داخل داشبورد: همان صفحه باز بماند.
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+            content: Text('تغییرات با موفقیت ذخیره شد'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ));
+      } else {
+        // ثبت‌نام اولیه: پس از ذخیره، کاربر مستقیماً به انتخاب نقش برود.
+        _timer?.cancel();
+        setState(() => _step = _LoginStep.success);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+            content: Text('حساب کاربری با موفقیت ایجاد شد؛ نقش خود را انتخاب کنید.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ));
+      }
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -636,7 +650,7 @@ void _goBack() {
   String get _stepTitle => switch (_step) {
     _LoginStep.phone => '',
     _LoginStep.otp => '',
-    _LoginStep.account => 'ساخت حساب کاربری',
+    _LoginStep.account => _fromDashboard ? 'ویرایش حساب کاربری' : 'ساخت حساب کاربری',
     _LoginStep.managerChoice => 'انتخاب نقش مدیر',
     _ => '',
   };
@@ -750,6 +764,44 @@ void _goBack() {
     ]);
   }
 
+
+  void _showPrivacyPolicy() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('سیاست حریم خصوصی و قوانین استفاده'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'در بخش سیاست حریم خصوصی:\n\n'
+            '۱. اطلاعاتی که دریافت می‌شود\n'
+            'برای ایجاد و اداره حساب کاربری، شماره همراه، نام و نام خانوادگی، رمز عبور (در صورت ثبت)، نقش کاربر، نوع مالکیت، نام ساختمان، استان و شهر و اطلاعات مربوط به طبقه و واحد دریافت یا ثبت می‌شود. '
+            'در جریان استفاده از امکانات ساختمان، اطلاعات مربوط به ساختمان، اعضا، شارژ و امور مالی و رأی‌گیری نیز ممکن است ثبت شود.\n\n'
+            '۲. هدف از دریافت اطلاعات\n'
+            'اطلاعات برای شناسایی و ورود کاربر، مدیریت عضویت و واحدها، ارتباط با خدمات ورود پیامکی، اداره ساختمان، ثبت و پیگیری شارژ و امور مالی و اجرای رأی‌گیری‌های ساختمان استفاده می‌شود.\n\n'
+            '۳. محل نگهداری و انتقال اطلاعات\n'
+            'اطلاعات حساب و داده‌های مربوط به ساختمان از طریق اینترنت با سرویس مدیریت برنامه در نشانی مشخص، تبادل و در آن نگهداری می‌شود. برخی تنظیمات و اطلاعات کمکی حساب، از جمله رمز عبور واردشده در صورت ثبت، نیز در حافظه محلی برنامه روی دستگاه ذخیره می‌شود. برای ورود، شماره همراه به سرویس ارسال کد تأیید ارسال می‌شود و کد از طریق پیامک به همان شماره فرستاده می‌شود.\n\n'
+            '۴. دسترسی به اطلاعات\n'
+            'دسترسی به اطلاعات بر اساس نقش کاربر و سطح دسترسی تعریف‌شده در برنامه و سرور انجام می‌شود. اطلاعات مالی و شارژ و اطلاعات مربوط به رأی‌گیری ساختمان می‌تواند در اختیار مدیر و ساکنان همان ساختمان قرار گیرد. کاربران باید از ثبت اطلاعات صحیح و خودداری از انتشار اطلاعات ورود خود اطمینان حاصل کنند.\n\n'
+            '۵. حفاظت و مسئولیت کاربر\n'
+            'برای استفاده از برنامه اتصال اینترنت لازم است. کاربر باید از دستگاه و اطلاعات ورود خود محافظت کند و در صورت مشاهده دسترسی غیرمجاز یا اشتباه در اطلاعات، موضوع را از طریق پشتیبانی برنامه پیگیری کند. این متن به معنی تضمین امنیت مطلق یا رمزنگاری داده‌ها نیست.\n\n'
+            '۶. اصلاح و حذف اطلاعات\n'
+            'برای اصلاح اطلاعات حساب یا درخواست بررسی و حذف اطلاعات، کاربر باید با پشتیبانی برنامه یا مدیر مربوط به ساختمان تماس بگیرد. حذف برخی سوابق ممکن است به دلیل نیازهای اجرایی ساختمان یا الزامات قانونی امکان‌پذیر نباشد.\n\n'
+            '۷. تغییرات این متن\n'
+            'در صورت تغییر امکانات یا شیوه پردازش اطلاعات، این سیاست به‌روزرسانی می‌شود. ادامه استفاده از برنامه پس از نمایش نسخه جدید، تابع پذیرش مجدد آن خواهد بود.',
+            textDirection: TextDirection.rtl,
+            style: TextStyle(height: 1.8, fontSize: 13),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('بستن'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _phoneForm(BuildContext context) => Form(
     key: _phoneKey,
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -774,8 +826,28 @@ void _goBack() {
         },
         onFieldSubmitted: (_) => _submitPhone(),
       ),
-      const SizedBox(height: 20),
-      _primaryButton(label: 'دریافت کد تأیید', onPressed: _submitPhone),
+      const SizedBox(height: 12),
+      CheckboxListTile(
+        value: _acceptedPrivacyTerms,
+        onChanged: (value) => setState(() => _acceptedPrivacyTerms = value ?? false),
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        dense: true,
+        title: const Text('قوانین استفاده و سیاست حریم خصوصی را مطالعه کرده‌ام و می‌پذیرم.', style: TextStyle(fontSize: 12, height: 1.6)),
+      ),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: _showPrivacyPolicy,
+          icon: const Icon(Icons.open_in_new_rounded, size: 17),
+          label: const Text('مطالعه سیاست حریم خصوصی و قوانین'),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _primaryButton(
+        label: 'دریافت کد تأیید',
+        onPressed: _acceptedPrivacyTerms && !_isSendingOtp ? _submitPhone : null,
+      ),
       const SizedBox(height: 15),
       Text('پس از ارسال، کد تأیید از طریق پیامک برای شما فرستاده می‌شود.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, height: 1.8)),
     ]),
@@ -822,9 +894,9 @@ void _goBack() {
       const SizedBox(height: 8),
       _stepIcon(Icons.person_add_alt_1_rounded),
       const SizedBox(height: 17),
-      const Text('ساخت حساب کاربری', textAlign: TextAlign.center, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+      Text(_fromDashboard ? 'ویرایش حساب کاربری' : 'ساخت حساب کاربری', textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       const SizedBox(height: 8),
-      Text('برای ادامه، اطلاعات خود را کامل وارد کنید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
+      Text(_fromDashboard ? 'اطلاعات حساب کاربری خود را ویرایش کنید.' : 'برای ادامه، اطلاعات خود را کامل وارد کنید.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.7)),
       const SizedBox(height: 22),
       _fieldLabel('نام'), const SizedBox(height: 7),
       TextFormField(controller: _nameController, textCapitalization: TextCapitalization.words,
@@ -891,7 +963,7 @@ void _goBack() {
         onChanged: _selectedProvince == null ? null : (value) => setState(() => _selectedCity = value),
         validator: (v) => v != null ? null : 'شهر را وارد کنید.'),
       const SizedBox(height: 22),
-      _primaryButton(label: 'ثبت تغییرات', onPressed: _submitAccount),
+      _primaryButton(label: _fromDashboard ? 'ثبت تغییرات' : 'ایجاد حساب کاربری', onPressed: _submitAccount),
       const SizedBox(height: 12),
       Text('شماره همراه تأییدشده: ${_phoneController.text}', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
     ]),
@@ -968,7 +1040,7 @@ void _goBack() {
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.8)),
     errorMaxLines: 2,
   );
-  Widget _primaryButton({required String label, required VoidCallback onPressed}) => SizedBox(height: 54, child: FilledButton(onPressed: onPressed, style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)), child: Text(label)));
+  Widget _primaryButton({required String label, required VoidCallback? onPressed}) => SizedBox(height: 54, child: FilledButton(onPressed: onPressed, style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)), child: Text(label)));
 }
 
 class _MiniFeatures extends StatelessWidget {
