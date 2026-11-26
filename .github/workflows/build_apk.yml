@@ -1,5 +1,5 @@
 
-name: Sakhtemane_ma
+name: Build Release APK
 
 on:
   push:
