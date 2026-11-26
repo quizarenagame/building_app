@@ -195,6 +195,35 @@ jobs:
 
           "$APKSIGNER" verify --verbose --print-certs "$APK"
 
+
+      # بررسی مجوزهای نهایی برنامه
+      - name: Check Final Android Permissions
+        shell: bash
+        run: |
+          echo "Searching for merged AndroidManifest.xml..."
+
+          FOUND=0
+
+          for DIR in build/app/intermediates android/app/build/intermediates; do
+            if [ -d "$DIR" ]; then
+              while IFS= read -r FILE; do
+                if [[ "$FILE" == *merged_manifest* ]]; then
+                  FOUND=1
+                  echo ""
+                  echo "Manifest: $FILE"
+                  echo "Permissions:"
+
+                  grep -oE '<uses-permission[^>]*/>' "$FILE" || true
+                fi
+              done < <(find "$DIR" -type f -name AndroidManifest.xml)
+            fi
+          done
+
+          if [ "$FOUND" -eq 0 ]; then
+            echo "No merged manifest found."
+            find build/app -type f -name AndroidManifest.xml || true
+          fi
+
       # آپلود APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
