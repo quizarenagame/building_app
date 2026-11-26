@@ -1,5 +1,5 @@
 
-name: Build Release APK
+name: Sakhtemane_ma
 
 on:
   push:
@@ -41,25 +41,6 @@ jobs:
           flutter --version
           dart --version
           flutter doctor -v
-
-      # ایجاد Debug Keystore
-      - name: Create default debug keystore
-        run: |
-          mkdir -p /home/runner/.android
-          mkdir -p /home/runner/.config/.android
-
-          keytool -genkeypair \
-            -keystore /home/runner/.android/debug.keystore \
-            -alias androiddebugkey \
-            -storepass android \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-
-          cp /home/runner/.android/debug.keystore \
-            /home/runner/.config/.android/debug.keystore
 
       # نصب ابزارهای آیکون
       - name: Install icon tools
@@ -105,7 +86,7 @@ jobs:
       - name: Clean project
         run: flutter clean
 
-      # دریافت دوباره وابستگی‌ها بعد از پاک‌سازی
+      # دریافت دوباره وابستگی‌ها
       - name: Get dependencies
         run: flutter pub get
 
@@ -114,7 +95,82 @@ jobs:
         run: flutter analyze --no-pub
         continue-on-error: true
 
-      # ساخت APK
+      # آماده‌سازی کلید اختصاصی انتشار
+      - name: Configure Release Keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import base64
+
+          required = [
+              "ANDROID_KEYSTORE_BASE64",
+              "ANDROID_KEYSTORE_PASSWORD",
+              "ANDROID_KEY_ALIAS",
+              "ANDROID_KEY_PASSWORD",
+          ]
+
+          for name in required:
+              if not os.environ.get(name):
+                  raise SystemExit(f"Missing GitHub Secret: {name}")
+
+          def escape_property(value):
+              result = []
+              for char in value:
+                  code = ord(char)
+                  if char == "\\":
+                      result.append("\\\\")
+                  elif char == "\t":
+                      result.append("\\t")
+                  elif char == "\n":
+                      result.append("\\n")
+                  elif char == "\r":
+                      result.append("\\r")
+                  elif char in " =:#!":
+                      result.append("\\" + char)
+                  elif code < 32 or code > 126:
+                      result.append("\\u" + format(code, "04x"))
+                  else:
+                      result.append(char)
+              return "".join(result)
+
+          os.makedirs("android", exist_ok=True)
+
+          keystore = base64.b64decode(
+              os.environ["ANDROID_KEYSTORE_BASE64"],
+              validate=True
+          )
+
+          if not keystore:
+              raise SystemExit("Keystore file is empty")
+
+          with open("android/upload-keystore.jks", "wb") as file:
+              file.write(keystore)
+
+          properties = {
+              "storeFile": "upload-keystore.jks",
+              "storePassword": os.environ["ANDROID_KEYSTORE_PASSWORD"],
+              "keyAlias": os.environ["ANDROID_KEY_ALIAS"],
+              "keyPassword": os.environ["ANDROID_KEY_PASSWORD"],
+          }
+
+          with open("android/key.properties", "w", encoding="ascii") as file:
+              for key, value in properties.items():
+                  file.write(
+                      key + "=" + escape_property(value) + "\n"
+                  )
+
+          os.chmod("android/upload-keystore.jks", 0o600)
+          os.chmod("android/key.properties", 0o600)
+
+          print("Release keystore configured successfully.")
+          PY
+
+      # ساخت APK با کلید اختصاصی
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
