@@ -180,6 +180,21 @@ jobs:
           test -f build/app/outputs/flutter-apk/app-release.apk
           ls -lh build/app/outputs/flutter-apk/app-release.apk
 
+      # بررسی اعتبار امضای APK
+      - name: Verify APK Signature
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+
+          APKSIGNER=$(find "$SDK/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "ERROR: apksigner not found"
+            exit 1
+          fi
+
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
       # آپلود APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
